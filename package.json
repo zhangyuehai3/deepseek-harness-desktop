@@ -58,6 +58,8 @@
     "dist:win": "yarn workspace dsh-plugin-desktop dist:win",
     "upstream:version": "cd deepseek-harness && corepack pnpm --version",
     "upstream:install": "cd deepseek-harness && corepack pnpm install --frozen-lockfile",
-    "upstream:build": "cd deepseek-harness && corepack pnpm run build"
+    "upstream:build": "cd deepseek-harness && corepack pnpm run build",
+    "upstream:sync": "node dsh-plugin-desktop/scripts/sync-upstream-to-desktop.mjs",
+    "upstream:build-and-sync": "yarn upstream:build && yarn upstream:sync"
   }
 }
