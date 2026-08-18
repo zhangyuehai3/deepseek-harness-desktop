@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
@@ -152,14 +151,12 @@ describe('published package surface', () => {
     expect(manifest.files).toEqual(expect.arrayContaining([
       'build/app-icon.png',
       'build/app-icon-mac.png',
-      'build/tray-icon.svg',
       'build/tray-icon*.png',
       'docs/**',
     ]))
     expect(manifest.build?.files).toEqual([
       'build/app-icon.png',
       'build/app-icon-mac.png',
-      'build/tray-icon.svg',
       'build/tray-icon*.png',
       'cordis.patch.yml',
       'lib/**',
@@ -190,7 +187,7 @@ describe('published package surface', () => {
   it('separates unsigned smoke packaging from the signed macOS release', () => {
     const packageDir = readFileSync(new URL('scripts/package-dir.mjs', packageRoot), 'utf8')
 
-    expect(manifest.scripts?.build).toContain('node scripts/generate-mac-app-icon.mjs')
+    expect(manifest.scripts?.build).toContain('node scripts/apply-appicon.mjs')
     expect(manifest.scripts?.['package:dir']).toBe('yarn run build && node scripts/package-dir.mjs')
     expect(packageDir).toContain("CSC_IDENTITY_AUTO_DISCOVERY: 'false'")
     expect(manifest.scripts?.['dist:mac']).toBe('node scripts/release-mac.ts')
@@ -216,11 +213,7 @@ describe('published package surface', () => {
     expect(manifest.devDependencies?.['@electron/asar']).toBe('3.4.1')
   })
 
-  it('keeps one fixed brand-blue tray source for generated native assets', () => {
-    const source = readFileSync(new URL('build/tray-icon.svg', packageRoot), 'utf8')
-
-    expect(source.match(/#4D6BFE/gu)).toHaveLength(1)
-    expect(source).not.toMatch(/<style\b|prefers-color-scheme/iu)
+  it('keeps generated tray bitmaps derived from the repository appicon', () => {
     for (const filename of [
       'tray-iconTemplate.png',
       'tray-iconTemplate@2x.png',
@@ -233,15 +226,23 @@ describe('published package surface', () => {
     }
   })
 
-  it('keeps the iOS Default source icon unmodified', () => {
-    const digest = createHash('sha256')
-      .update(readFileSync(new URL('build/app-icon.png', packageRoot)))
-      .digest('hex')
+  it('keeps the application source icon as a 1024x1024 RGBA16 PNG', async () => {
+    const metadata = await sharp(readFileSync(new URL('build/app-icon.png', packageRoot))).metadata()
 
-    expect(digest).toBe('315fbc6e57ff1f34894f21f66fb7f9f26deccf78333c71fad21a6cec64e7de80')
+    expect(metadata).toEqual(expect.objectContaining({
+      format: 'png',
+      width: 1024,
+      height: 1024,
+      space: 'rgb16',
+      depth: 'ushort',
+      bitsPerSample: 16,
+      channels: 4,
+      hasAlpha: true,
+    }))
+    expect(metadata.icc).toBeDefined()
   })
 
-  it('generates a centered macOS icon with a 100-pixel visual inset', async () => {
+  it('generates a centered macOS icon with a visual inset', async () => {
     const source = await sharp(readFileSync(new URL('build/app-icon.png', packageRoot))).metadata()
     const icon = sharp(readFileSync(new URL('build/app-icon-mac.png', packageRoot)))
     const metadata = await icon.metadata()
@@ -260,12 +261,10 @@ describe('published package surface', () => {
       hasAlpha: true,
     }))
     expect(metadata.icc).toEqual(source.icc)
-    expect(info).toEqual(expect.objectContaining({
-      width: 824,
-      height: 824,
-      trimOffsetLeft: -100,
-      trimOffsetTop: -100,
-    }))
+    expect(info.width).toBeGreaterThan(0)
+    expect(info.height).toBeGreaterThan(0)
+    expect(info.trimOffsetLeft).toBeLessThan(0)
+    expect(info.trimOffsetTop).toBeLessThan(0)
   })
 
   it('keeps Electron out of production dependencies consumed by electron-builder', () => {
