@@ -1,4 +1,4 @@
-/** Private RunAsNode bootstrap for the packaged DeepSeek Harness CLI. */
+/** Private RunAsNode bootstrap for the packaged EZAIGC Harness CLI. */
 
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath, pathToFileURL } from 'node:url'

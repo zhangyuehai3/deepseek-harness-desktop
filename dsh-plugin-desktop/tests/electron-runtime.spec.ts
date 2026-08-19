@@ -223,7 +223,7 @@ const spec: DesktopShellSpec = {
   minHeight: 640,
   url: 'http://127.0.0.1:43120/',
   productName: 'DSH Desktop',
-  windowTitle: '金石易服',
+  windowTitle: 'EZAIGC Harness Desktop',
   iconPath: '/tmp/app-icon.png',
   trayIcons: {
     templatePath: '/tmp/tray-iconTemplate.png',
@@ -312,7 +312,7 @@ describe('Electron desktop runtime', () => {
     ]) {
       expect(options).not.toHaveProperty(option)
     }
-    expect(electron.browserWindows[0]?.accessibleTitle).toBe('金石易服')
+    expect(electron.browserWindows[0]?.accessibleTitle).toBe('EZAIGC Harness Desktop')
     expect(spec.readThemeSource).not.toHaveBeenCalled()
     expect(electron.nativeTheme.themeSource).toBe('system')
     expect(electron.browserWindows[0]?.removeMenu).not.toHaveBeenCalled()
@@ -343,10 +343,10 @@ describe('Electron desktop runtime', () => {
     await runtime.mountScheduled()
 
     expect(electron.browserWindowOptions[0]).toEqual(expect.objectContaining({
-      title: '金石易服',
+      title: 'EZAIGC Harness Desktop',
       autoHideMenuBar: true,
     }))
-    expect(electron.browserWindows[0]?.accessibleTitle).toBe('金石易服')
+    expect(electron.browserWindows[0]?.accessibleTitle).toBe('EZAIGC Harness Desktop')
     expect(electron.browserWindows[0]?.removeMenu).toHaveBeenCalledOnce()
     expect(electron.app.dock.setIcon).not.toHaveBeenCalled()
     expect(electron.trays[0]?.image).toBe(electron.blueIcon)

@@ -16,7 +16,7 @@ const spec: DesktopShellSpec = {
   minHeight: 640,
   url: 'http://127.0.0.1:43120/',
   productName: 'DSH Desktop',
-  windowTitle: 'DeepSeek Harness Desktop',
+  windowTitle: 'EZAIGC Harness Desktop',
   iconPath: '/tmp/app-icon.png',
   trayIcons: {
     templatePath: '/tmp/tray-iconTemplate.png',
@@ -70,7 +70,7 @@ describe('compatibility BrowserWindow options', () => {
   it('uses the native Windows caption while hiding the application menu', () => {
     const options = compatibilityWindowOptions(spec, {} as NativeImage, 'win32', preload)
 
-    expect(options.title).toBe('DeepSeek Harness Desktop')
+    expect(options.title).toBe('EZAIGC Harness Desktop')
     expect(options.autoHideMenuBar).toBe(true)
   })
 
