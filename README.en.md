@@ -2,7 +2,8 @@
 
 <p align="center">
   <strong>An open-source DeepSeek Harness desktop client for Windows and macOS.</strong><br>
-  Electron, Node.js, pnpm, and pinned DSH dependencies are included, so you can install and launch without setting up a command-line environment.
+  One-click download, ready to use out of the box.<br>
+  Everything is a plugin — the desktop itself is a plugin.
 </p>
 
 <p align="center"><sub>Community maintained and not an official DeepSeek product. <a href="README.md">中文</a> · English</sub></p>
@@ -30,14 +31,14 @@ DSH Desktop packages the local Web UI, Host service, and plugin system from [Dee
 
 ## Download and install
 
-Current release installers support Windows x64 and Apple Silicon macOS. Ordinary users do not need to install Node.js, pnpm, or DSH separately.
+Current release installers support Windows x64 and macOS Universal. No extra environment is needed — download, install, and start using it with one click.
 
 | Platform | Download | Installation |
 | --- | --- | --- |
 | Windows x64 | [Download installer](https://www.dshdesktop.cn/api/downloads/windows) | Run the NSIS installer and follow its prompts |
-| macOS Apple Silicon | [Download DMG](https://www.dshdesktop.cn/api/downloads/mac) | Open the DMG and drag DSH Desktop into Applications |
+| macOS Universal | [Download DMG](https://www.dshdesktop.cn/api/downloads/mac) | Open the DMG and drag DSH Desktop into Applications |
 
-Installers and SHA-256 digests are also available from [GitHub Releases](https://github.com/anywhere-labs/deepseek-harness-desktop/releases/latest). The first launch creates the default `desktop` profile and starts the official DSH Web interface locally. See the [user guide](docs/user-guide.en.md) and [FAQ](docs/faq.en.md) for plugin commands, platform details, and troubleshooting.
+See the [user guide](docs/user-guide.en.md) and [FAQ](docs/faq.en.md) for plugin commands, platform details, and troubleshooting.
 
 Together with every plugin author, we want to build an open, composable, and sustainable DSH plugin ecosystem where plugins grow alongside each other. Read the [DSH plugin ecosystem manifesto](docs/plugin-ecosystem.en.md).
 
@@ -82,8 +83,8 @@ Ordinary users can start with the [user guide](docs/user-guide.en.md); the devel
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <h3><a href="dsh-community-market/README.md">Plugin Marketplace</a> <img src="https://img.shields.io/badge/IN_DESIGN-F59E0B?style=flat-square" alt="In design"></h3>
-      <p>We are using DSH Community Market to design plugin discovery, details, and confirmed installation. It currently contains product and safety documentation, not a usable market page.</p>
+      <h3><a href="dsh-community-market/README.md">Plugin Marketplace</a> <img src="https://img.shields.io/badge/BUILT_IN-2EA44F?style=flat-square" alt="Built in"></h3>
+      <p>DSH Community Market is complete and built in, with plugin discovery, details, installation, and management. The market openly connects to a wide range of plugin data sources: anyone can provide, integrate, and use a source that follows the public schemas, while existing APIs can join as cooperating sources through a reviewed adapter.</p>
     </td>
     <td width="50%" valign="top">
       <h3>Co-build the Plugin Ecosystem</h3>
@@ -174,16 +175,19 @@ Ecosystem projects and developer tools around DeepSeek Harness.
 | Project | About | Link |
 | --- | --- | --- |
 | dshfind | The learning & sharing community for DeepSeek Harness (DSH). | [GitHub](https://github.com/hikariming/dshfind) |
+| DSH 1024Store | A community plugin directory for the DeepSeek Harness (DSH) ecosystem (4,120 plugins), open-sourcing an online marketplace, a collection pipeline, and a public query API — fork it to deploy your own marketplace. | [GitHub](https://github.com/imsai-sh/awesome-deepseek-harness-plugins) |
 | ModLens | Adds OCR, layout, and semantic vision capabilities to DeepSeek Harness and text-only coding agents. | [GitHub](https://github.com/liustack/modlens) · [Website](https://liustack.dev) |
 | DeepSeek Harness Orange Book | Community field manual for DeepSeek Harness. | [GitHub](https://github.com/alchaincyf/deepseek-harness-orange-book) |
 | dsh-web-ui | DeepSeek Harness Web UI plugins and themes. | [GitHub](https://github.com/zhu1090093659/dsh-web-ui) · [Gallery](https://gallery.dsh-market.com) |
 | dsh-TUI | Full-screen interactive terminal interface for DeepSeek Harness. | [GitHub](https://github.com/ccch1mneyyy/dsh-TUI) |
+| dsh-tianshu-tui | Minimalist interactive terminal UI plugin for the DSH web client with a self-developed ANSI rendering core for silky-smooth output; adds TDD, evidence gates, and vision/image module workflows on top of the official UI. | [GitHub](https://github.com/huiliyi37/dsh-tianshu-tui) |
+| dsh-context | DSH context insight panel: Context dashboard + `/context` command + Context browser for one-stop context lifecycle management — category composition, content details, evolution trends, compaction/injection events, and statistics. | [GitHub](https://github.com/bowenliang123/dsh-context) · [NPM](https://www.npmjs.com/package/dsh-context) |
 | Agents-Anywhere | Remote-control your desktop coding agent from your phone. | [GitHub](https://github.com/anywhere-labs/Agents-Anywhere) |
 | DSH-better-sidebar | Sidebar workbench for DeepSeek Harness with files, terminal, Git, and subagents. | [GitHub](https://github.com/omdsh-dev/DSH-better-sidebar) |
 | Awesome DeepSeek Harness | Curated list of DeepSeek Harness plugins, tools, and infrastructure. | [GitHub](https://github.com/0xsline/awesome-deepseek-harness) · [Website](https://deepseekdocs.com/) |
-| MkSaaS · TanStarter (Sponsor) | Commercial SaaS starter templates for indie developers. MkSaaS is built on Next.js; TanStarter on TanStack Start and Cloudflare, with AI, auth, payments, and admin baked in. | [MkSaaS](https://mksaas.com) · [TanStarter](https://tanstarter.dev) |
+| MkSaaS · TanStarter | Commercial SaaS starter templates for indie developers. MkSaaS is built on Next.js; TanStarter on TanStack Start and Cloudflare, with AI, auth, payments, and admin baked in. | [MkSaaS](https://mksaas.com) · [TanStarter](https://tanstarter.dev) |
 
-<sub>To list your project, join the WeChat group and message @王博升Benson.</sub>
+<sub>To list your project, join the WeChat group and message @王博升Benson, or contact t4wefan@qq.com, or <a href="https://github.com/anywhere-labs/deepseek-harness-desktop/issues">open an issue</a>.</sub>
 
 ## License
 
@@ -192,3 +196,13 @@ This project is licensed under the [MIT License](LICENSE).
 > This is a community desktop edition built on DeepSeek Harness. It is not an official DeepSeek product.
 
 > DeepSeek is a trademark of DeepSeek AI. DSH Desktop is an independent community project, not affiliated with or endorsed by DeepSeek.
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=anywhere-labs%2Fdeepseek-harness-desktop&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=anywhere-labs/deepseek-harness-desktop&type=date&theme=dark&legend=top-left&sealed_token=BRTkOyC4czCEkIyFb5-QxrsC-kaDotBJ8tsjxrWs-UGfmBqfRCXSwieZPlVTCYOjJVEZ29uLvmBjAPREB524J5dPN1jk-UA7ajFdLdrbjumJqoOBeGWmig" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=anywhere-labs/deepseek-harness-desktop&type=date&legend=top-left&sealed_token=BRTkOyC4czCEkIyFb5-QxrsC-kaDotBJ8tsjxrWs-UGfmBqfRCXSwieZPlVTCYOjJVEZ29uLvmBjAPREB524J5dPN1jk-UA7ajFdLdrbjumJqoOBeGWmig" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=anywhere-labs/deepseek-harness-desktop&type=date&legend=top-left&sealed_token=BRTkOyC4czCEkIyFb5-QxrsC-kaDotBJ8tsjxrWs-UGfmBqfRCXSwieZPlVTCYOjJVEZ29uLvmBjAPREB524J5dPN1jk-UA7ajFdLdrbjumJqoOBeGWmig" />
+ </picture>
+</a>
