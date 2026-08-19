@@ -157,7 +157,7 @@ export function readDesktopShellMode(config: SettingsFileConfig): DesktopShellMo
   return readDesktopStartupSettings(config).mode
 }
 
-/** Resolve the public Web template once and reject an incompatible DSH release. */
+/** Resolve the public Web template once and reject an incompatible EZAIGC release. */
 function requiredWebBundles(): string[] {
   const bundles = PROFILE_TEMPLATES.web
   if (bundles === undefined) {
@@ -403,7 +403,7 @@ function omitUnresolvedOptionalEntries(
 
 /**
  * Load and compose one desktop profile generation.
- * @param telemetryDisabled - inherited DSH telemetry opt-out value.
+ * @param telemetryDisabled - inherited EZAIGC telemetry opt-out value.
  * @param home - Harness home containing profiles and the machine-wide patch.
  * @param platform - native platform selecting launcher-owned safety overlays.
  * @param profileName - existing or lazily available Web profile to compose.

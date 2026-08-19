@@ -34,7 +34,7 @@ const MAX_STATE_BYTES = 4 * 1024
 const STATE_DIRECTORY_MODE = 0o700
 const STATE_FILE_MODE = 0o600
 
-/** One discovered or lazily available DSH profile. */
+/** One discovered or lazily available EZAIGC profile. */
 export interface DesktopProfileSummary {
   /** Profile name passed to `dsh --profile`. */
   readonly name: string

@@ -1,4 +1,4 @@
-/** Desktop-owned package-manager capability for the active DSH profile. */
+/** Desktop-owned package-manager capability for the active EZAIGC profile. */
 
 import { delimiter, isAbsolute } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -39,7 +39,7 @@ export interface DesktopPnpmBootstrap {
   readonly nodeShimPath: string
   /** Preloaded module that removes RunAsNode before a JavaScript entry executes. */
   readonly clearEnvironmentPath: string
-  /** Desktop bootstrap that clears RunAsNode before importing the packaged DSH CLI. */
+  /** Desktop bootstrap that clears RunAsNode before importing the packaged EZAIGC CLI. */
   readonly dshBootstrapPath: string
   /** Desktop-private install recovery WAL shared with the launcher and built-in terminal. */
   readonly installRecoveryStatePath: string
@@ -57,9 +57,9 @@ export interface DesktopPnpmOutcome {
 
 /** Streaming handle for one package-manager operation. */
 export interface DesktopPnpmHandle {
-  /** Standard output emitted by DSH and pnpm. */
+  /** Standard output emitted by EZAIGC and pnpm. */
   readonly stdout: Readable
-  /** Standard error emitted by DSH and pnpm. */
+  /** Standard error emitted by EZAIGC and pnpm. */
   readonly stderr: Readable
   /** Settles only after the complete operation process tree has exited. */
   readonly done: Promise<DesktopPnpmOutcome>
@@ -119,7 +119,7 @@ function validateBootstrap(bootstrap: DesktopPnpmBootstrap): void {
     ['Node command directory', bootstrap.nodeBinDir],
     ['Node command', bootstrap.nodeShimPath],
     ['environment preloader', bootstrap.clearEnvironmentPath],
-    ['DSH bootstrap', bootstrap.dshBootstrapPath],
+    ['EZAIGC bootstrap', bootstrap.dshBootstrapPath],
     ['install recovery state', bootstrap.installRecoveryStatePath],
   ] as const) assertAbsolutePath(label, value)
   if (bootstrap.electronVersion.length === 0 || bootstrap.electronVersion.includes('\0')) {

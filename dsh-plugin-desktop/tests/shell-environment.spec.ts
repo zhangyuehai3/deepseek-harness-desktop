@@ -210,7 +210,7 @@ describe('desktop shell environment selection', () => {
     })
   })
 
-  it('lets the upstream scrub preserve recovered tools while removing ambient credentials and DSH facts', () => {
+  it('lets the upstream scrub preserve recovered tools while removing ambient credentials and EZAIGC facts', () => {
     const saved = {
       PATH: process.env.PATH,
       JAVA_HOME: process.env.JAVA_HOME,

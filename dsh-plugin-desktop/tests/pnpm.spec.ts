@@ -73,7 +73,7 @@ function bootstrap(root = '/desktop runtime'): DesktopPnpmBootstrap {
     activeProfileName: '工作 profile',
     activeProfileDir: join(root, 'profiles', '工作 profile'),
     homeDir: join(root, 'harness home'),
-    appExecutable: join(root, 'DSH Desktop'),
+    appExecutable: join(root, 'EZAIGC Desktop'),
     pnpmBinPath: join(root, 'node_modules', 'pnpm', 'bin', 'pnpm.mjs'),
     electronVersion: '43.4.0',
     nodeBinDir: join(root, 'private', 'node-bin'),
@@ -164,7 +164,7 @@ describe('desktop pnpm Host service', () => {
     expect(harness.ctx.get('desktopPnpm')).toBeUndefined()
   })
 
-  it('runs the packaged DSH plugin command from the caller directory', async () => {
+  it('runs the packaged EZAIGC plugin command from the caller directory', async () => {
     const child = controlledSubprocess()
     const harness = await createHarness([child])
     const invokingDir = '/workspace/third-party-plugin'

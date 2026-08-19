@@ -1,4 +1,4 @@
-/** Cordis Host surface for selecting the launcher-owned DSH profile. */
+/** Cordis Host surface for selecting the launcher-owned EZAIGC profile. */
 
 import type { Context } from '@deepseek-ai/cordis'
 import type { DesktopProfileSummary } from './profile-manager.ts'

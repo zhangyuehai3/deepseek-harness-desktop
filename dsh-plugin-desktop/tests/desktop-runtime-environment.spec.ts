@@ -35,11 +35,11 @@ function options(
   return {
     platform,
     appExecutable: platform === 'win32'
-      ? 'C:\\Program Files\\DSH 100% Desktop\\DSH Desktop.exe'
-      : "/Applications/DSH O'Brien.app/Contents/MacOS/DSH Desktop",
+      ? 'C:\\Program Files\\EZAIGC 100% Desktop\\EZAIGC Desktop.exe'
+      : "/Applications/EZAIGC O'Brien.app/Contents/MacOS/EZAIGC Desktop",
     pnpmBinPath: platform === 'win32'
-      ? 'C:\\Program Files\\DSH Desktop\\resources\\app.asar.unpacked\\node_modules\\pnpm\\bin\\pnpm.mjs'
-      : "/Applications/DSH O'Brien.app/Contents/Resources/app.asar.unpacked/node_modules/pnpm/bin/pnpm.mjs",
+      ? 'C:\\Program Files\\EZAIGC Desktop\\resources\\app.asar.unpacked\\node_modules\\pnpm\\bin\\pnpm.mjs'
+      : "/Applications/EZAIGC O'Brien.app/Contents/Resources/app.asar.unpacked/node_modules/pnpm/bin/pnpm.mjs",
     electronVersion: '43.4.0',
     stateDir,
     environment,

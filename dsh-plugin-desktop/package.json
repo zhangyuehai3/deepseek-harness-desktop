@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-desktop",
   "version": "2.0.1",
-  "description": "DSH Desktop: an Electron shell composed as an EZAIGC Harness Cordis plugin",
+  "description": "EZAIGC Desktop: an Electron shell composed as an EZAIGC Harness Cordis plugin",
   "license": "MIT",
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
@@ -248,7 +248,7 @@
   },
   "build": {
     "appId": "ai.deepseek.dsh.desktop",
-    "productName": "DSH Desktop",
+    "productName": "EZAIGC Desktop",
     "asar": true,
     "asarUnpack": [
       "package.json",
@@ -294,7 +294,7 @@
           ]
         }
       ],
-      "artifactName": "DSH-Desktop-${version}-${arch}-Portable.${ext}",
+      "artifactName": "EZAIGC-Desktop-${version}-${arch}-Portable.${ext}",
       "icon": "build/app-icon.png"
     },
     "nsis": {
@@ -306,9 +306,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "differentialPackage": false,
-      "shortcutName": "DSH Desktop",
+      "shortcutName": "EZAIGC Desktop",
       "useZip": true,
-      "artifactName": "DSH-Desktop-${version}-${arch}-Setup.${ext}"
+      "artifactName": "EZAIGC-Desktop-${version}-${arch}-Setup.${ext}"
     },
     "linux": {
       "target": [

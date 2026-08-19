@@ -33,11 +33,11 @@ describe('packaged dsh bootstrap', () => {
       DSH_DESKTOP_DEFAULT_PROFILE: 'desktop',
       KEEP: 'value',
     }
-    const argv = ['/Applications/DSH Desktop', '/app.asar/lib/desktop-cli.js', '--dump-config']
+    const argv = ['/Applications/EZAIGC Desktop', '/app.asar/lib/desktop-cli.js', '--dump-config']
     const load = vi.fn(async (url: string) => {
       expect(environment).toEqual({ KEEP: 'value' })
       expect(argv).toEqual([
-        '/Applications/DSH Desktop',
+        '/Applications/EZAIGC Desktop',
         '/app.asar/lib/desktop-cli.js',
         '--profile',
         'desktop',
@@ -79,7 +79,7 @@ describe('packaged dsh bootstrap', () => {
     expect(() => withDefaultDesktopProfile([], '../desktop')).toThrow('invalid profile name')
   })
 
-  it('snapshots plugin installs launched from the built-in DSH Terminal', async () => {
+  it('snapshots plugin installs launched from the built-in EZAIGC Terminal', async () => {
     const root = mkdtempSync(join(tmpdir(), 'dsh-desktop-terminal-recovery-'))
     const homeDir = join(root, 'home')
     const profileDir = join(homeDir, 'profiles', 'desktop')
@@ -183,12 +183,12 @@ describe('packaged dsh bootstrap', () => {
   })
 
   it('uses the physical unpacked dependency tree only inside an Electron package', () => {
-    expect(unpackedAsarPath('/Applications/DSH Desktop.app/Contents/Resources/app.asar/node_modules/pkg'))
-      .toBe('/Applications/DSH Desktop.app/Contents/Resources/app.asar.unpacked/node_modules/pkg')
-    expect(unpackedAsarPath('C:\\Program Files\\DSH Desktop\\resources\\app.asar\\node_modules\\pkg'))
-      .toBe('C:\\Program Files\\DSH Desktop\\resources\\app.asar.unpacked\\node_modules\\pkg')
-    expect(unpackedAsarPath('/Applications/DSH Desktop.app/Contents/Resources/app.asar/package.json'))
-      .toBe('/Applications/DSH Desktop.app/Contents/Resources/app.asar.unpacked/package.json')
+    expect(unpackedAsarPath('/Applications/EZAIGC Desktop.app/Contents/Resources/app.asar/node_modules/pkg'))
+      .toBe('/Applications/EZAIGC Desktop.app/Contents/Resources/app.asar.unpacked/node_modules/pkg')
+    expect(unpackedAsarPath('C:\\Program Files\\EZAIGC Desktop\\resources\\app.asar\\node_modules\\pkg'))
+      .toBe('C:\\Program Files\\EZAIGC Desktop\\resources\\app.asar.unpacked\\node_modules\\pkg')
+    expect(unpackedAsarPath('/Applications/EZAIGC Desktop.app/Contents/Resources/app.asar/package.json'))
+      .toBe('/Applications/EZAIGC Desktop.app/Contents/Resources/app.asar.unpacked/package.json')
     expect(unpackedAsarPath('/workspace/node_modules/pkg')).toBe('/workspace/node_modules/pkg')
     expect(() => packagedDependencyPath(import.meta.url, '../outside.js'))
       .toThrow('relative POSIX path')
@@ -222,7 +222,7 @@ describe('packaged dsh bootstrap', () => {
     }
   })
 
-  it('resolves the DSH entry from a pnpm profile with flat package dependencies', () => {
+  it('resolves the EZAIGC entry from a pnpm profile with flat package dependencies', () => {
     const root = mkdtempSync(join(tmpdir(), 'dsh-desktop-flat-profile-'))
     const desktopLib = join(root, 'node_modules', 'dsh-plugin-desktop', 'lib')
     const dshPackage = join(root, 'node_modules', '@deepseek-ai', 'dsh')

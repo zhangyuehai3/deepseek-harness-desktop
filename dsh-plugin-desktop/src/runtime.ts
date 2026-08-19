@@ -2,7 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { RendererBootReport } from './renderer-boot-contract.ts'
 import type { UpdateCheckResult, UpdateRequest } from './update-checker.ts'
 
-/** Electron platforms supported by the DSH Desktop native adapter. */
+/** Electron platforms supported by the EZAIGC Desktop native adapter. */
 export type DesktopPlatform = 'darwin' | 'win32' | 'linux'
 
 /** Native presentation modes selected by the desktop-shell Cordis row. */
@@ -107,19 +107,19 @@ export interface DesktopUpdateAdapter {
   notify(notification: DesktopNotification): void
 }
 
-/** Profile identity needed to open the packaged DSH command environment. */
+/** Profile identity needed to open the packaged EZAIGC command environment. */
 export interface DesktopTerminalSpec {
-  /** DSH profile selected by the desktop launcher. */
+  /** EZAIGC profile selected by the desktop launcher. */
   profileName: string
   /** Absolute directory containing the profile manifest and dependencies. */
   profileDir: string
-  /** Active DSH home shared with the desktop launcher. */
+  /** Active EZAIGC home shared with the desktop launcher. */
   homeDir: string
 }
 
 /** Values the desktop-shell plugin hands to the Electron adapter. */
 export interface DesktopShellSpec extends DesktopWindowConfig {
-  /** Unmodified Web root served by the active DSH profile. */
+  /** Unmodified Web root served by the active EZAIGC profile. */
   url: string
   /** Native application and tray label. */
   productName: string
@@ -175,7 +175,7 @@ export interface DesktopRuntime {
    */
   registerTrayItem(item: DesktopTrayItem): DesktopTrayItemRegistration
 
-  /** Open a native terminal containing packaged DSH command shims. */
+  /** Open a native terminal containing packaged EZAIGC command shims. */
   openTerminal(): void
 
   /** Export a diagnostics zip and reveal it in the system file manager. */
@@ -205,7 +205,7 @@ export interface DesktopRuntime {
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
-    /** Electron adapter provided by the DSH Desktop launcher. */
+    /** Electron adapter provided by the EZAIGC Desktop launcher. */
     desktopRuntime: DesktopRuntime
   }
 }

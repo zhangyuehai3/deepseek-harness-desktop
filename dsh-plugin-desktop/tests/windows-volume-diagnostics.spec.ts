@@ -21,7 +21,7 @@ describe('Windows volume diagnostics', () => {
   })
 
   it('skips non-Windows hosts without touching the query', () => {
-    const result = diagnoseWindowsVolumes('darwin', [{ label: 'DSH home', path: '/Users/a/.dsh' }], () => {
+    const result = diagnoseWindowsVolumes('darwin', [{ label: 'EZAIGC home', path: '/Users/a/.dsh' }], () => {
       throw new Error('should not run')
     })
 
@@ -29,12 +29,12 @@ describe('Windows volume diagnostics', () => {
   })
 
   it('accepts fixed NTFS and ReFS volumes', () => {
-    expect(diagnoseWindowsVolumes('win32', [{ label: 'install', path: 'C:\\App\\DSH Desktop.exe' }], query({
+    expect(diagnoseWindowsVolumes('win32', [{ label: 'install', path: 'C:\\App\\EZAIGC Desktop.exe' }], query({
       root: 'C:\\',
       fileSystem: 'NTFS',
       driveType: 3,
     }))).toEqual([])
-    expect(diagnoseWindowsVolumes('win32', [{ label: 'install', path: 'D:\\App\\DSH Desktop.exe' }], query({
+    expect(diagnoseWindowsVolumes('win32', [{ label: 'install', path: 'D:\\App\\EZAIGC Desktop.exe' }], query({
       root: 'D:\\',
       fileSystem: 'REFS',
       driveType: 3,
@@ -114,12 +114,12 @@ describe('Windows volume diagnostics', () => {
 
   it('formats the concern for stderr diagnostics', () => {
     expect(formatWindowsVolumeConcern({
-      label: 'DSH home',
+      label: 'EZAIGC home',
       path: 'E:\\.dsh',
       root: 'E:\\',
       fileSystem: 'FAT32',
       driveType: 2,
       reason: 'unsupported',
-    })).toContain('DSH home: unsupported (path=E:\\.dsh; root=E:\\; fs=FAT32; driveType=2)')
+    })).toContain('EZAIGC home: unsupported (path=E:\\.dsh; root=E:\\; fs=FAT32; driveType=2)')
   })
 })

@@ -18,7 +18,7 @@ const DSH_ENTRY_URL = pathToFileURL(
   packagedDependencyPath(import.meta.url, '@deepseek-ai/dsh/lib/bin.js'),
 ).href
 
-/** Remove Electron Node mode before the DSH CLI creates any child process. */
+/** Remove Electron Node mode before the EZAIGC CLI creates any child process. */
 export function clearElectronRunAsNode(environment: NodeJS.ProcessEnv): void {
   for (const key of Object.keys(environment)) {
     if (key.toUpperCase() === RUN_AS_NODE) delete environment[key]
@@ -29,7 +29,7 @@ export function clearElectronRunAsNode(environment: NodeJS.ProcessEnv): void {
  * Apply the terminal-owned default without overriding global help or an explicit profile.
  * @param argv - arguments after the executable and bootstrap entry.
  * @param profileName - validated profile selected by the desktop launcher.
- * @returns argv accepted by the upstream DSH command parser.
+ * @returns argv accepted by the upstream EZAIGC command parser.
  */
 export function withDefaultDesktopProfile(argv: readonly string[], profileName: string): string[] {
   assertDesktopProfileName(profileName)
@@ -163,7 +163,7 @@ async function loadWithInstallRecovery(
 }
 
 /**
- * Enter the packaged DSH CLI after removing the Electron-only launch marker.
+ * Enter the packaged EZAIGC CLI after removing the Electron-only launch marker.
  * @param environment - process environment inherited from the generated shim.
  * @param load - ESM loader used by the executable and focused tests.
  * @param argv - mutable process arguments presented to the upstream CLI.
