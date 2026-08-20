@@ -65,7 +65,7 @@ describe('community market client registration', () => {
     expect(NS).toBe('community-market')
   })
 
-  it('registers locale, styles, settings tab, sidebar launcher, and shell overlay effects', () => {
+  it('registers locale, styles, and shell overlay effects; hides the market launcher and settings tab', () => {
     const test = testContext()
 
     apply(test.context)
@@ -75,44 +75,23 @@ describe('community market client registration', () => {
       'community-market: styles',
     ])
     expect(test.injections.map(value => value.name)).toEqual([
-      'settings.plugins.tab',
-      'sidebar.footer.action',
       'shell.overlay',
     ])
   })
 
-  it('projects all slot registrations with the market identity, locale, and shared view store', () => {
+  it('projects the shell overlay registration with the market identity, locale, and shared view store', () => {
     const test = testContext()
 
     apply(test.context)
     test.injections.forEach(value => { value.factory() })
 
-    expect(test.registrations).toHaveLength(3)
-    expect(test.registrations.map(value => value.spec)).toEqual([
-      expect.objectContaining({
-        name: 'settings.plugins.tab',
-        id: 'community-market',
-        order: 20,
-        locale: NS,
-      }),
-      expect.objectContaining({
-        name: 'sidebar.footer.action',
-        id: 'community-market',
-        order: 10,
-        locale: NS,
-      }),
-      expect.objectContaining({
-        name: 'shell.overlay',
-        id: 'community-market',
-        order: 10,
-        locale: NS,
-      }),
-    ])
-    const [settings, launcher, overlay] = test.registrations.map(value => value.spec)
-    expect(typeof settings?.label).toBe('function')
-    expect(typeof settings?.inject).toBe('function')
-    expect(typeof launcher?.label).toBe('function')
-    expect(launcher?.store).toBe(overlay?.store)
-    expect(typeof overlay?.inject).toBe('function')
+    expect(test.registrations).toHaveLength(1)
+    expect(test.registrations[0]!.spec).toEqual(expect.objectContaining({
+      name: 'shell.overlay',
+      id: 'community-market',
+      order: 10,
+      locale: NS,
+    }))
+    expect(typeof test.registrations[0]!.spec.inject).toBe('function')
   })
 })

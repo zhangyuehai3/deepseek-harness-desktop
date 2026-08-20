@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { apply, inject, NS } from '../src/client/index.js'
-import { MarketLauncher } from '../src/client/MarketLauncher.js'
+// import { MarketLauncher } from '../src/client/MarketLauncher.js'
 import { MarketOverlay } from '../src/client/MarketOverlay.js'
-import { MarketSettingsTab } from '../src/client/MarketSettingsTab.js'
-import { en, zh } from '../src/client/locales.js'
+// import { en, zh } from '../src/client/locales.js'
 
 interface TestEntry {
   readonly component: unknown
@@ -126,7 +125,7 @@ describe('community market browser plugin', () => {
     b.dispose()
   })
 
-  it('registers one shared Market surface in official settings and sidebar slots without fetching', () => {
+  it('registers only the shell overlay and hides the market settings tab and sidebar launcher', () => {
     const b = bench()
     for (const name of ['settings.plugins.tab', 'sidebar.footer.action', 'shell.overlay']) b.declare(name)
     const fetch = vi.spyOn(globalThis, 'fetch')
@@ -137,31 +136,18 @@ describe('community market browser plugin', () => {
     const settings = b.entries('settings.plugins.tab')
     const launcher = b.entries('sidebar.footer.action')
     const overlay = b.entries('shell.overlay')
-    expect(settings).toHaveLength(1)
-    expect(launcher).toHaveLength(1)
+    expect(settings).toHaveLength(0)
+    expect(launcher).toHaveLength(0)
     expect(overlay).toHaveLength(1)
-    expect(settings[0]?.component).toBe(MarketSettingsTab)
-    expect(launcher[0]?.component).toBe(MarketLauncher)
     expect(overlay[0]?.component).toBe(MarketOverlay)
-    expect(settings[0]?.options).toMatchObject({ id: 'community-market', order: 20 })
-    expect(launcher[0]?.options).toMatchObject({ id: 'community-market', order: 10 })
     expect(overlay[0]?.options).toMatchObject({ id: 'community-market', order: 10 })
-    expect(launcher[0]?.options.store).toBe(overlay[0]?.options.store)
-    expect(settings[0]?.locale).toBe(NS)
-    expect(launcher[0]?.locale).toBe(NS)
     expect(overlay[0]?.locale).toBe(NS)
-    expect((settings[0]?.options.label as () => string)()).toBe(zh.tab)
-    expect((launcher[0]?.options.label as () => string)()).toBe(zh.tab)
     expect(fetch).not.toHaveBeenCalled()
 
-    const settingsInject = settings[0]?.inject?.() as { readLocale: () => string }
     const overlayInject = overlay[0]?.inject?.() as { readLocale: () => string }
-    expect(settingsInject.readLocale()).toBe('zh')
     expect(overlayInject.readLocale()).toBe('zh')
     b.setLocale('en')
-    expect((settings[0]?.options.label as () => string)()).toBe(en.tab)
-    expect((launcher[0]?.options.label as () => string)()).toBe(en.tab)
-    expect(settingsInject.readLocale()).toBe('en')
+    expect(overlayInject.readLocale()).toBe('en')
 
     b.dispose()
     expect(b.entries('settings.plugins.tab')).toHaveLength(0)
@@ -170,20 +156,21 @@ describe('community market browser plugin', () => {
     expect(document.querySelector('style[data-plugin="dsh-community-market/styles"]')).toBeNull()
   })
 
-  it('follows late declaration and declaration reload for all three entries', () => {
+  it('follows late declaration and declaration reload for the overlay only', () => {
     const b = bench()
     b.apply()
-    const names = ['settings.plugins.tab', 'sidebar.footer.action', 'shell.overlay'] as const
+    const hidden = ['settings.plugins.tab', 'sidebar.footer.action'] as const
+    const names = ['shell.overlay'] as const
+    for (const name of hidden) expect(b.entries(name)).toHaveLength(0)
     for (const name of names) expect(b.entries(name)).toHaveLength(0)
 
     const stops = names.map(name => b.declare(name))
+    for (const name of hidden) expect(b.entries(name)).toHaveLength(0)
     for (const name of names) expect(b.entries(name)).toHaveLength(1)
     for (const stop of stops) stop()
     for (const name of names) expect(b.entries(name)).toHaveLength(0)
 
     for (const name of names) b.declare(name)
-    expect(b.entries('settings.plugins.tab')[0]?.component).toBe(MarketSettingsTab)
-    expect(b.entries('sidebar.footer.action')[0]?.component).toBe(MarketLauncher)
     expect(b.entries('shell.overlay')[0]?.component).toBe(MarketOverlay)
 
     b.dispose()

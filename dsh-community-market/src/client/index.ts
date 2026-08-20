@@ -4,9 +4,9 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type { MarketLocaleKey } from './locales.js'
-import { MarketLauncher } from './MarketLauncher.js'
+// import { MarketLauncher } from './MarketLauncher.js'
 import { MarketOverlay } from './MarketOverlay.js'
-import { MarketSettingsTab } from './MarketSettingsTab.js'
+// import { MarketSettingsTab } from './MarketSettingsTab.js'
 import { createMarketViewStore } from './market-view-store.js'
 import { en, zh } from './locales.js'
 import { installMarketStyles } from './styles.js'
@@ -25,22 +25,23 @@ export function apply(ctx: ClientContext): void {
   const readLocale = () => ctx.locale.getLocale().active
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'community-market: dictionaries')
   ctx.effect(() => installMarketStyles(), 'community-market: styles')
-  ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
-    name: 'settings.plugins.tab',
-    id: 'community-market',
-    order: 20,
-    label: () => ctx.locale.bind(NS)('tab'),
-    locale: NS,
-    inject: () => ({ readLocale }),
-  }, MarketSettingsTab))
-  ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({
-    name: 'sidebar.footer.action',
-    id: 'community-market',
-    order: 10,
-    label: () => ctx.locale.bind(NS)('tab'),
-    locale: NS,
-    store: marketView,
-  }, MarketLauncher))
+  // The plugin-market entry points are hidden in this desktop build.
+  // ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
+  //   name: 'settings.plugins.tab',
+  //   id: 'community-market',
+  //   order: 20,
+  //   label: () => ctx.locale.bind(NS)('tab'),
+  //   locale: NS,
+  //   inject: () => ({ readLocale }),
+  // }, MarketSettingsTab))
+  // ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({
+  //   name: 'sidebar.footer.action',
+  //   id: 'community-market',
+  //   order: 10,
+  //   label: () => ctx.locale.bind(NS)('tab'),
+  //   locale: NS,
+  //   store: marketView,
+  // }, MarketLauncher))
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
     name: 'shell.overlay',
     id: 'community-market',
