@@ -620,7 +620,7 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
     })
   }
 
-  /** Download a confirmed installer and hand it to the native installation flow. */
+  /** Download a confirmed installer and notify the user without launching it. */
   private async downloadAndOpenUpdate(version: string, signal: AbortSignal, url?: string): Promise<void> {
     const platform = this.platformStrategy.updateDownloadPlatform
     if (platform === undefined) {
@@ -645,40 +645,20 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       this.logError(`dsh-plugin-desktop: failed to remember update installer for cleanup: ${cause instanceof Error ? cause.message : String(cause)}`)
     }
 
-    if (platform === 'darwin') {
-      const openError = await shell.openPath(artifactPath)
-      if (openError !== '') throw new Error(`dsh-plugin-desktop: failed to open update disk image: ${openError}`)
-      signal.throwIfAborted()
-      await dialog.showMessageBox({
-        type: 'info',
-        title: 'EZAIGC Desktop Update Downloaded',
-        message: `EZAIGC Desktop ${version} is ready to install.`,
-        detail: 'The disk image has opened. Replace EZAIGC Desktop in Applications, then reopen it.',
-        buttons: ['OK'],
-        defaultId: 0,
-        noLink: true,
-      })
-      return
-    }
-
-    const result = await dialog.showMessageBox({
+    const zh = this.currentLocale === 'zh'
+    await dialog.showMessageBox({
       type: 'info',
-      title: 'EZAIGC Desktop Update Downloaded',
-      message: `EZAIGC Desktop ${version} is ready to install.`,
-      detail: 'Restart EZAIGC Desktop and run the installer now?',
-      buttons: ['Restart and Install', 'Later'],
-      defaultId: 1,
-      cancelId: 1,
+      title: zh ? 'EZAIGC Desktop 更新已下载' : 'EZAIGC Desktop Update Downloaded',
+      message: zh
+        ? `EZAIGC Desktop ${version} 安装包已下载。`
+        : `EZAIGC Desktop ${version} has been downloaded.`,
+      detail: zh
+        ? `安装包已保存到本地，请手动运行安装程序。\n\n${artifactPath}`
+        : `The installer has been saved locally. Please run it manually to install.\n\n${artifactPath}`,
+      buttons: [zh ? '确定' : 'OK'],
+      defaultId: 0,
       noLink: true,
     })
-    if (result.response !== 0) return
-
-    const spec = this.scheduled
-    if (spec === undefined) throw new Error('dsh-plugin-desktop: no active shell can exit for update installation')
-    signal.throwIfAborted()
-    await this.launchWindowsUpdateInstaller(artifactPath)
-    this.quitting = true
-    spec.requestQuit(0)
   }
 
   private async chooseUpdateDestination(version: string): Promise<string | undefined> {
@@ -731,34 +711,6 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       noLink: true,
     })
     await resolveDesktopUpdateArtifact(userDataPath, artifact, result.response === 0)
-  }
-
-  /** Start the downloaded NSIS installer before releasing the current process. */
-  private async launchWindowsUpdateInstaller(installerPath: string): Promise<void> {
-    await new Promise<void>((resolve, reject) => {
-      let child: ReturnType<typeof spawn>
-      try {
-        child = spawn(installerPath, ['--updated', '--force-run'], {
-          detached: true,
-          stdio: 'ignore',
-          shell: false,
-          windowsHide: false,
-        })
-      } catch (cause) {
-        reject(cause)
-        return
-      }
-      const fail = (cause: Error): void => { reject(cause) }
-      child.once('error', fail)
-      child.once('spawn', () => {
-        child.off('error', fail)
-        child.once('error', cause => {
-          this.logError(`dsh-plugin-desktop: update installer failed after launch: ${cause.message}`)
-        })
-        child.unref()
-        resolve()
-      })
-    })
   }
 
   /** Keep native-terminal launch failures visible in a packaged GUI process. */

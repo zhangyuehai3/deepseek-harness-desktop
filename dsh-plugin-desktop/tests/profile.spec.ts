@@ -239,10 +239,7 @@ describe('desktop profile composition', {
       name: '@deepseek-ai/dsh-pwsh-sandbox',
     }))
     expect(rows.map(row => row.id)).not.toContain('desktop-windows-pwsh-sandbox')
-    expect(rows.find(row => row.id === 'desktop-terminal')).toEqual(expect.objectContaining({
-      name: 'dsh-plugin-desktop/terminal',
-      disabled: { __jsExpr: "process.platform === 'linux'" },
-    }))
+    expect(rows.map(row => row.id)).not.toContain('desktop-terminal')
     expect(rows.find(row => row.id === 'desktop-pnpm')).toEqual(expect.objectContaining({
       name: 'dsh-plugin-desktop/pnpm',
     }))

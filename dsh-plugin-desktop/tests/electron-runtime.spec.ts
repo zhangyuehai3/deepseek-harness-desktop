@@ -11,31 +11,11 @@ const updater = vi.hoisted(() => ({
   record: vi.fn(),
   resolve: vi.fn(),
 }))
-const childProcess = vi.hoisted(() => {
-  type Listener = (...args: unknown[]) => void
-  const listeners = new Map<string, Listener[]>()
-  const child = {
-    once: vi.fn((event: string, listener: Listener) => {
-      listeners.set(event, [...(listeners.get(event) ?? []), listener])
-      return child
-    }),
-    off: vi.fn((event: string, listener: Listener) => {
-      listeners.set(event, (listeners.get(event) ?? []).filter(candidate => candidate !== listener))
-      return child
-    }),
-    unref: vi.fn(),
-  }
-  return {
-    child,
-    emit(event: string, ...args: unknown[]) {
-      const current = [...(listeners.get(event) ?? [])]
-      listeners.delete(event)
-      for (const listener of current) listener(...args)
-    },
-    reset() { listeners.clear() },
-    spawn: vi.fn(() => child),
-  }
-})
+
+vi.mock('../src/desktop-terminal.ts', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../src/desktop-terminal.ts')>(),
+  openDesktopTerminal: terminal.open,
+}))
 
 vi.mock('../src/desktop-terminal.ts', async (importOriginal) => ({
   ...await importOriginal<typeof import('../src/desktop-terminal.ts')>(),
@@ -52,11 +32,6 @@ vi.mock('../src/update-download.ts', () => ({
   pendingDesktopUpdateArtifact: updater.pending,
   recordDesktopUpdateArtifact: updater.record,
   resolveDesktopUpdateArtifact: updater.resolve,
-}))
-
-vi.mock('node:child_process', async (importOriginal) => ({
-  ...await importOriginal<typeof import('node:child_process')>(),
-  spawn: childProcess.spawn,
 }))
 
 const electron = vi.hoisted(() => {
@@ -244,7 +219,6 @@ describe('Electron desktop runtime', () => {
     electron.trays.length = 0
     electron.menuTemplates.length = 0
     electron.notifications.length = 0
-    childProcess.reset()
     vi.clearAllMocks()
     updater.download.mockReset()
     updater.filename.mockReset()
@@ -1281,14 +1255,16 @@ describe('Electron desktop runtime', () => {
       request: expect.any(Function),
       signal: controller.signal,
     })
-    expect(electron.shell.openPath).toHaveBeenCalledWith('/tmp/EZAIGC-Desktop-2.1.0-mac.dmg')
+    expect(electron.shell.openPath).not.toHaveBeenCalled()
     expect(updater.record).toHaveBeenCalledWith('/tmp/dsh-desktop-user-data', {
       platform: 'darwin',
       version: '2.1.0',
       path: '/tmp/EZAIGC-Desktop-2.1.0-mac.dmg',
     })
     expect(electron.dialog.showMessageBox).toHaveBeenLastCalledWith(expect.objectContaining({
+      type: 'info',
       title: 'EZAIGC Desktop Update Downloaded',
+      message: 'EZAIGC Desktop 2.1.0 has been downloaded.',
       buttons: ['OK'],
     }))
 
@@ -1327,7 +1303,7 @@ describe('Electron desktop runtime', () => {
     await expect(runtime.updates.confirmDownload('2.1.0', { forceUpdate: true })).resolves.toBe(true)
   })
 
-  it('starts the downloaded Windows installer before requesting orderly exit', async () => {
+  it('notifies after downloading a Windows installer without launching it', async () => {
     vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
     updater.download.mockResolvedValueOnce('C:\\Updates\\EZAIGC-Desktop-2.1.0-windows.exe')
     const requestQuit = vi.fn()
@@ -1339,62 +1315,26 @@ describe('Electron desktop runtime', () => {
       filePath: 'C:\\Updates\\EZAIGC-Desktop-2.1.0-windows.exe',
     })
 
-    const pending = runtime.updates.downloadAndOpen('2.1.0', new AbortController().signal)
-    await vi.waitFor(() => { expect(childProcess.spawn).toHaveBeenCalledOnce() })
-    expect(childProcess.spawn).toHaveBeenCalledWith(
-      'C:\\Updates\\EZAIGC-Desktop-2.1.0-windows.exe',
-      ['--updated', '--force-run'],
-      {
-        detached: true,
-        stdio: 'ignore',
-        shell: false,
-        windowsHide: false,
-      },
-    )
-    expect(requestQuit).not.toHaveBeenCalled()
-    childProcess.emit('spawn')
-    await pending
+    await runtime.updates.downloadAndOpen('2.1.0', new AbortController().signal)
 
-    expect(childProcess.child.unref).toHaveBeenCalledOnce()
     expect(updater.record).toHaveBeenCalledWith('/tmp/dsh-desktop-user-data', {
       platform: 'win32',
       version: '2.1.0',
       path: 'C:\\Updates\\EZAIGC-Desktop-2.1.0-windows.exe',
     })
-    expect(requestQuit).toHaveBeenCalledWith(0)
-  })
-
-  it('does not exit when the downloaded Windows installer fails to spawn', async () => {
-    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
-    updater.download.mockResolvedValueOnce('C:\\Updates\\EZAIGC-Desktop-2.1.0-windows.exe')
-    const requestQuit = vi.fn()
-    const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
-    const runtime = new ElectronDesktopRuntime(async () => {})
-    runtime.schedule({ ...spec, requestQuit })
-    electron.dialog.showSaveDialog.mockResolvedValueOnce({
-      canceled: false,
-      filePath: 'C:\\Updates\\EZAIGC-Desktop-2.1.0-windows.exe',
-    })
-
-    const pending = runtime.updates.downloadAndOpen('2.1.0', new AbortController().signal)
-    await vi.waitFor(() => { expect(childProcess.spawn).toHaveBeenCalledOnce() })
-    childProcess.emit('error', new Error('blocked'))
-
-    await expect(pending).rejects.toThrow('blocked')
-    expect(updater.record).toHaveBeenCalledWith('/tmp/dsh-desktop-user-data', {
-      platform: 'win32',
-      version: '2.1.0',
-      path: 'C:\\Updates\\EZAIGC-Desktop-2.1.0-windows.exe',
-    })
-    expect(updater.resolve).not.toHaveBeenCalled()
-    expect(childProcess.child.unref).not.toHaveBeenCalled()
     expect(requestQuit).not.toHaveBeenCalled()
+    expect(electron.dialog.showMessageBox).toHaveBeenLastCalledWith(expect.objectContaining({
+      type: 'info',
+      title: 'EZAIGC Desktop Update Downloaded',
+      message: 'EZAIGC Desktop 2.1.0 has been downloaded.',
+      detail: expect.stringContaining('C:\\Updates\\EZAIGC-Desktop-2.1.0-windows.exe'),
+      buttons: ['OK'],
+    }))
   })
 
-  it('keeps a downloaded Windows installer idle when installation is deferred', async () => {
+  it('records a downloaded Windows installer and shows the saved path', async () => {
     vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
     updater.download.mockResolvedValueOnce('C:\\Updates\\EZAIGC-Desktop-2.1.0-windows.exe')
-    electron.dialog.showMessageBox.mockResolvedValueOnce({ response: 1, checkboxChecked: false })
     const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
     const runtime = new ElectronDesktopRuntime(async () => {})
     electron.dialog.showSaveDialog.mockResolvedValueOnce({
@@ -1404,15 +1344,19 @@ describe('Electron desktop runtime', () => {
 
     await runtime.updates.downloadAndOpen('2.1.0', new AbortController().signal)
 
-    expect(childProcess.spawn).not.toHaveBeenCalled()
     expect(updater.record).toHaveBeenCalledOnce()
+    expect(electron.dialog.showMessageBox).toHaveBeenLastCalledWith(expect.objectContaining({
+      type: 'info',
+      title: 'EZAIGC Desktop Update Downloaded',
+      detail: expect.stringContaining('C:\\Updates\\EZAIGC-Desktop-2.1.0-windows.exe'),
+      buttons: ['OK'],
+    }))
   })
 
   it('continues the update handoff when cleanup tracking cannot be persisted', async () => {
     vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
     updater.download.mockResolvedValueOnce('C:\\Updates\\EZAIGC-Desktop-2.1.0-windows.exe')
     updater.record.mockRejectedValueOnce(new Error('read-only user data'))
-    electron.dialog.showMessageBox.mockResolvedValueOnce({ response: 1, checkboxChecked: false })
     electron.dialog.showSaveDialog.mockResolvedValueOnce({
       canceled: false,
       filePath: 'C:\\Updates\\EZAIGC-Desktop-2.1.0-windows.exe',
@@ -1427,7 +1371,10 @@ describe('Electron desktop runtime', () => {
     expect(logger.error).toHaveBeenCalledWith(
       'dsh-plugin-desktop: failed to remember update installer for cleanup: read-only user data',
     )
-    expect(childProcess.spawn).not.toHaveBeenCalled()
+    expect(electron.dialog.showMessageBox).toHaveBeenLastCalledWith(expect.objectContaining({
+      type: 'info',
+      title: 'EZAIGC Desktop Update Downloaded',
+    }))
   })
 
   it('does not download when the update destination picker is cancelled', async () => {
@@ -1466,46 +1413,6 @@ describe('Electron desktop runtime', () => {
       buttons: ['Delete Installer', 'Keep Installer'],
     }))
     expect(updater.resolve).toHaveBeenCalledWith('/tmp/dsh-desktop-user-data', artifact, remove)
-  })
-
-  it('rejects a macOS handoff when the operating system cannot open the DMG', async () => {
-    vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin')
-    updater.download.mockResolvedValueOnce('/tmp/EZAIGC-Desktop-2.1.0-mac.dmg')
-    electron.shell.openPath.mockResolvedValueOnce('Launch Services rejected the image')
-    const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
-    const runtime = new ElectronDesktopRuntime(async () => {})
-    electron.dialog.showSaveDialog.mockResolvedValueOnce({
-      canceled: false,
-      filePath: '/tmp/EZAIGC-Desktop-2.1.0-mac.dmg',
-    })
-
-    await expect(runtime.updates.downloadAndOpen('2.1.0', new AbortController().signal))
-      .rejects.toThrow('Launch Services rejected the image')
-    expect(electron.dialog.showMessageBox).not.toHaveBeenCalled()
-  })
-
-  it('does not show macOS completion after the update generation is cancelled', async () => {
-    vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin')
-    updater.download.mockResolvedValueOnce('/tmp/EZAIGC-Desktop-2.1.0-mac.dmg')
-    let finishOpen!: (result: string) => void
-    electron.shell.openPath.mockImplementationOnce(async () => new Promise<string>(resolve => {
-      finishOpen = resolve
-    }))
-    const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
-    const runtime = new ElectronDesktopRuntime(async () => {})
-    const controller = new AbortController()
-    electron.dialog.showSaveDialog.mockResolvedValueOnce({
-      canceled: false,
-      filePath: '/tmp/EZAIGC-Desktop-2.1.0-mac.dmg',
-    })
-
-    const pending = runtime.updates.downloadAndOpen('2.1.0', controller.signal)
-    await vi.waitFor(() => { expect(electron.shell.openPath).toHaveBeenCalledOnce() })
-    controller.abort()
-    finishOpen('')
-
-    await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
-    expect(electron.dialog.showMessageBox).not.toHaveBeenCalled()
   })
 
   it('uses advanced macOS material options and offers compatibility mode', async () => {

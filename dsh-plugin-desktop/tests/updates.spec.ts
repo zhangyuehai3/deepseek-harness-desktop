@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
@@ -187,43 +187,36 @@ describe('desktop update Host plugin', () => {
     await harness.dispose()
   })
 
-  it('prompts once for a background update and persists only state v2 prompt history', async () => {
+  it('records an automatic update as available without prompting or persisting history', async () => {
     vi.useFakeTimers()
     const request = vi.fn(async () => versionResponse('2.1.0'))
     const harness = await createHarness({ request })
 
     await vi.advanceTimersByTimeAsync(testConfig.initialDelayMs)
-    await vi.waitFor(() => { expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0', expect.objectContaining({ forceUpdate: false })) })
+    await vi.waitFor(() => { expect(request).toHaveBeenCalledOnce() })
+    expect(harness.confirmDownload).not.toHaveBeenCalled()
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
     expect(harness.tray.label()).toBe('EZAIGC Desktop 2.1.0 Available')
-    await vi.waitFor(async () => {
-      expect(JSON.parse(await readFile(harness.statePath, 'utf8'))).toEqual({
-        version: 2,
-        lastPromptedVersion: '2.1.0',
-      })
-    })
-    if (process.platform !== 'win32') {
-      expect((await stat(harness.statePath)).mode & 0o777).toBe(0o600)
-    }
+    await expect(readFile(harness.statePath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
 
     await vi.advanceTimersByTimeAsync(testConfig.intervalMs)
     await vi.waitFor(() => { expect(request).toHaveBeenCalledTimes(2) })
-    expect(harness.confirmDownload).toHaveBeenCalledOnce()
+    expect(harness.confirmDownload).not.toHaveBeenCalled()
     expect(harness.notifications).toEqual([])
     expect(harness.warnings).toEqual([])
   })
 
-  it('downloads and opens only after confirmation', async () => {
-    vi.useFakeTimers()
+  it('downloads and opens only after a manual confirmation', async () => {
     let resolveDownload!: () => void
     const download = new Promise<void>(resolve => { resolveDownload = resolve })
     const harness = await createHarness({
+      packaged: false,
       request: async () => versionResponse('2.1.0'),
       confirmDownload: async () => true,
-      downloadAndOpen: async () => download,
+      downloadAndOpen: () => download,
     })
 
-    await vi.advanceTimersByTimeAsync(testConfig.initialDelayMs)
+    const pending = harness.tray.invoke()
     await vi.waitFor(() => { expect(harness.downloadAndOpen).toHaveBeenCalledOnce() })
     const [version, signal] = harness.downloadAndOpen.mock.calls[0] as [string, AbortSignal]
     expect(version).toBe('2.1.0')
@@ -233,9 +226,11 @@ describe('desktop update Host plugin', () => {
     expect(harness.notifications).toEqual([])
 
     resolveDownload()
-    await vi.waitFor(() => { expect(harness.tray.label()).toBe('EZAIGC Desktop 2.1.0 Available') })
+    await pending
     expect(harness.notifications).toEqual([])
     expect(harness.tray.label()).toBe('EZAIGC Desktop 2.1.0 Available')
+
+    await harness.dispose()
   })
 
   it('treats a manual available-version selection as a fresh confirmation', async () => {
@@ -257,6 +252,8 @@ describe('desktop update Host plugin', () => {
     expect(confirmDownload).toHaveBeenCalledTimes(2)
     expect(harness.downloadAndOpen).toHaveBeenCalledOnce()
     expect(harness.showManualCheckResult).not.toHaveBeenCalled()
+
+    await harness.dispose()
   })
 
   it('rechecks the version after confirmation and skips a rotated download', async () => {
@@ -276,6 +273,8 @@ describe('desktop update Host plugin', () => {
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
     expect(harness.showManualCheckResult).not.toHaveBeenCalled()
     expect(harness.tray.label()).toBe('EZAIGC Desktop 2.2.0 Available')
+
+    await harness.dispose()
   })
 
   it.each([
@@ -292,6 +291,8 @@ describe('desktop update Host plugin', () => {
     expect(harness.showManualCheckResult).not.toHaveBeenCalled()
     expect(harness.confirmDownload).not.toHaveBeenCalled()
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
+
+    await harness.dispose()
   })
 
   it.each([
@@ -315,35 +316,35 @@ describe('desktop update Host plugin', () => {
     expect(harness.notifications).toEqual([])
     expect(harness.warnings).toEqual([])
     expect(harness.tray.label()).toBe('Check for Updates…')
+
+    await harness.dispose()
   })
 
   it('silently resets legacy state and does not use it as an available version cache', async () => {
     vi.useFakeTimers()
+    const legacyState = JSON.stringify({
+      version: 1,
+      checkedVersion: '2.0.0',
+      etag: '"legacy"',
+      lastNotifiedVersion: '2.1.0',
+      availableRelease: {
+        tagName: 'v2.1.0',
+        version: '2.1.0',
+        htmlUrl: 'https://example.test/legacy',
+      },
+    })
     const harness = await createHarness({
       request: async () => versionResponse('2.1.0'),
-      state: JSON.stringify({
-        version: 1,
-        checkedVersion: '2.0.0',
-        etag: '"legacy"',
-        lastNotifiedVersion: '2.1.0',
-        availableRelease: {
-          tagName: 'v2.1.0',
-          version: '2.1.0',
-          htmlUrl: 'https://example.test/legacy',
-        },
-      }),
+      state: legacyState,
     })
 
     expect(harness.tray.label()).toBe('Check for Updates…')
     await vi.advanceTimersByTimeAsync(testConfig.initialDelayMs)
-    await vi.waitFor(() => { expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0', expect.objectContaining({ forceUpdate: false })) })
-    await vi.waitFor(async () => {
-      expect(JSON.parse(await readFile(harness.statePath, 'utf8'))).toEqual({
-        version: 2,
-        lastPromptedVersion: '2.1.0',
-      })
-    })
+    await vi.waitFor(() => { expect(harness.confirmDownload).not.toHaveBeenCalled() })
+    expect(JSON.parse(await readFile(harness.statePath, 'utf8'))).toEqual(JSON.parse(legacyState))
     expect(harness.warnings).toEqual([])
+
+    await harness.dispose()
   })
 
   it('does not prompt on a platform without a fixed download entry', async () => {
@@ -366,6 +367,8 @@ describe('desktop update Host plugin', () => {
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
     expect(harness.notifications).toEqual([])
     expect(harness.tray.label()).toBe('Check for Updates…')
+
+    await harness.dispose()
   })
 
   it('shares one pending download and silently restores availability after failure', async () => {
@@ -375,7 +378,7 @@ describe('desktop update Host plugin', () => {
       packaged: false,
       request: async () => versionResponse('2.1.0'),
       confirmDownload: async () => true,
-      downloadAndOpen: async () => download,
+      downloadAndOpen: () => download,
     })
 
     const first = harness.tray.invoke()
@@ -389,6 +392,8 @@ describe('desktop update Host plugin', () => {
     expect(harness.notifications).toEqual([])
     expect(harness.warnings).toEqual([])
     expect(harness.tray.label()).toBe('EZAIGC Desktop 2.1.0 Available')
+
+    await harness.dispose()
   })
 
   it('aborts checks and downloads and removes the tray item on effect disposal', async () => {
@@ -474,5 +479,7 @@ describe('desktop update Host plugin', () => {
     expect(harness.notifications).toEqual([])
     expect(harness.warnings).toEqual([])
     expect(harness.tray.label()).toBe('Check for Updates…')
+
+    await harness.dispose()
   })
 })

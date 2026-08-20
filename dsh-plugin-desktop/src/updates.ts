@@ -183,6 +183,9 @@ export function apply(ctx: Context, config: Config): void {
       if (disposed || !adapter.canDownload) return
       await stateReady
       if (disposed || (automatic && !availableForceUpdate && state.lastPromptedVersion === version)) return
+      // Automatic background checks only prompt when the service forces the
+      // update. Manual tray checks still ask the user before downloading.
+      if (automatic && !availableForceUpdate) return
       if (!availableForceUpdate) await rememberPrompt(version)
       if (!disposed) await startDownload(version)
     }

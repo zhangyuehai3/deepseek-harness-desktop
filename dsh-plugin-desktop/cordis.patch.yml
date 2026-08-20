@@ -7,9 +7,11 @@
         mode: compatibility
     - id: community-market
       name: dsh-community-market
-    - id: desktop-terminal
-      name: dsh-plugin-desktop/terminal
-      disabled: !!js process.platform === 'linux'
+    # The tray terminal command is hidden while the terminal remains available
+    # through plugin recovery and the active profile.
+    # - id: desktop-terminal
+    #   name: dsh-plugin-desktop/terminal
+    #   disabled: !!js process.platform === 'linux'
     - id: desktop-diagnostics
       name: dsh-plugin-desktop/diagnostics
     - id: desktop-pnpm
