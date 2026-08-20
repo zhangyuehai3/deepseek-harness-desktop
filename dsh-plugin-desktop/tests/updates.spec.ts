@@ -38,6 +38,7 @@ interface Harness {
 async function createHarness(options: {
   readonly packaged?: boolean
   readonly canDownload?: boolean
+  readonly platform?: DesktopRuntime['platform']
   readonly config?: UpdateConfig
   readonly request?: DesktopRuntime['updates']['request']
   readonly confirmDownload?: (version: string) => Promise<boolean>
@@ -64,6 +65,7 @@ async function createHarness(options: {
   let disposer: (() => void | Promise<void>) | undefined
   const runtime = {
     locale: options.locale ?? 'en',
+    platform: options.platform ?? 'darwin',
     updates: {
       isPackaged: options.packaged ?? true,
       currentVersion: '2.0.0',
@@ -151,11 +153,38 @@ describe('desktop update Host plugin', () => {
       status: 'up-to-date',
       currentVersion: '2.0.0',
       latestVersion: '2.0.0',
+      forceUpdate: false,
+      urls: undefined,
     })
     expect(harness.confirmDownload).not.toHaveBeenCalled()
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
     expect(harness.notifications).toEqual([])
     expect(harness.warnings).toEqual([])
+  })
+
+  it('passes force-update and platform URL to the adapter and skips prompt history', async () => {
+    vi.useFakeTimers()
+    const request = vi.fn(async () => Response.json({
+      version: '2.1.0',
+      forceUpdate: true,
+      mac: 'https://example.test/mac.dmg',
+      windows: 'https://example.test/win.exe',
+    }))
+    const harness = await createHarness({ platform: 'win32', request, confirmDownload: async () => true })
+
+    await vi.advanceTimersByTimeAsync(testConfig.initialDelayMs)
+    await vi.waitFor(() => { expect(harness.downloadAndOpen).toHaveBeenCalledOnce() })
+    expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0', expect.objectContaining({
+      forceUpdate: true,
+      downloadUrl: 'https://example.test/win.exe',
+    }))
+    const [version, signal, url] = harness.downloadAndOpen.mock.calls[0] as [string, AbortSignal, string]
+    expect(version).toBe('2.1.0')
+    expect(signal).toBeInstanceOf(AbortSignal)
+    expect(url).toBe('https://example.test/win.exe')
+    await expect(readFile(harness.statePath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
+
+    await harness.dispose()
   })
 
   it('prompts once for a background update and persists only state v2 prompt history', async () => {
@@ -164,7 +193,7 @@ describe('desktop update Host plugin', () => {
     const harness = await createHarness({ request })
 
     await vi.advanceTimersByTimeAsync(testConfig.initialDelayMs)
-    await vi.waitFor(() => { expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0') })
+    await vi.waitFor(() => { expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0', expect.objectContaining({ forceUpdate: false })) })
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
     expect(harness.tray.label()).toBe('EZAIGC Desktop 2.1.0 Available')
     await vi.waitFor(async () => {
@@ -243,7 +272,7 @@ describe('desktop update Host plugin', () => {
     await harness.tray.invoke()
 
     expect(request).toHaveBeenCalledTimes(2)
-    expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0')
+    expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0', expect.objectContaining({ forceUpdate: false }))
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
     expect(harness.showManualCheckResult).not.toHaveBeenCalled()
     expect(harness.tray.label()).toBe('EZAIGC Desktop 2.2.0 Available')
@@ -267,10 +296,10 @@ describe('desktop update Host plugin', () => {
 
   it.each([
     ['same version', async () => versionResponse('2.0.0'), {
-      status: 'up-to-date', currentVersion: '2.0.0', latestVersion: '2.0.0',
+      status: 'up-to-date', currentVersion: '2.0.0', latestVersion: '2.0.0', forceUpdate: false, urls: undefined,
     }],
     ['older version', async () => versionResponse('1.9.9'), {
-      status: 'up-to-date', currentVersion: '2.0.0', latestVersion: '1.9.9',
+      status: 'up-to-date', currentVersion: '2.0.0', latestVersion: '1.9.9', forceUpdate: false, urls: undefined,
     }],
     ['invalid version', async () => versionResponse('v2.1.0'), null],
     ['service unavailable', async () => new Response('unavailable', { status: 503 }), null],
@@ -307,7 +336,7 @@ describe('desktop update Host plugin', () => {
 
     expect(harness.tray.label()).toBe('Check for Updates…')
     await vi.advanceTimersByTimeAsync(testConfig.initialDelayMs)
-    await vi.waitFor(() => { expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0') })
+    await vi.waitFor(() => { expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0', expect.objectContaining({ forceUpdate: false })) })
     await vi.waitFor(async () => {
       expect(JSON.parse(await readFile(harness.statePath, 'utf8'))).toEqual({
         version: 2,
@@ -331,6 +360,8 @@ describe('desktop update Host plugin', () => {
       status: 'update-available',
       currentVersion: '2.0.0',
       latestVersion: '2.1.0',
+      forceUpdate: false,
+      urls: undefined,
     })
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
     expect(harness.notifications).toEqual([])

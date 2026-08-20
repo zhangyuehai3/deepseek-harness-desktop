@@ -127,9 +127,9 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       get currentVersion() { return PRODUCT_VERSION },
       get statePath() { return join(app.getPath('userData'), 'updates', 'state.json') },
       request: (url, init) => net.fetch(url, init),
-      confirmDownload: version => this.confirmUpdateDownload(version),
+      confirmDownload: (version, details) => this.confirmUpdateDownload(version, details),
       showManualCheckResult: result => this.showManualUpdateCheckResult(result),
-      downloadAndOpen: (version, signal) => this.downloadAndOpenUpdate(version, signal),
+      downloadAndOpen: (version, signal, url) => this.downloadAndOpenUpdate(version, signal, url),
       notify: notification => { this.showNotification(notification) },
     }
   }
@@ -530,8 +530,33 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
     nativeNotification.show()
   }
 
-  /** Ask before making the fixed download endpoint's counted request. */
-  private async confirmUpdateDownload(version: string): Promise<boolean> {
+  /** Ask before making the version service's counted request, or require an update when forced. */
+  private async confirmUpdateDownload(
+    version: string,
+    details?: { readonly forceUpdate?: boolean; readonly downloadUrl?: string },
+  ): Promise<boolean> {
+    const forceUpdate = details?.forceUpdate === true
+    const zh = this.currentLocale === 'zh'
+    if (forceUpdate) {
+      const result = await dialog.showMessageBox({
+        type: 'warning',
+        title: zh ? 'EZAIGC Desktop 需要更新' : 'EZAIGC Desktop Update Required',
+        message: zh
+          ? `请更新到 EZAIGC Desktop ${version}。`
+          : `EZAIGC Desktop ${version} is required.`,
+        detail: zh
+          ? '当前版本已停止使用，必须更新后才能继续使用。'
+          : 'This version is no longer supported. You must update to continue.',
+        buttons: zh ? ['立即更新', '退出'] : ['Update Now', 'Quit'],
+        defaultId: 0,
+        cancelId: 1,
+        noLink: true,
+      })
+      if (result.response === 0) return true
+      this.quitForUpdate()
+      return false
+    }
+
     const result = await dialog.showMessageBox({
       type: 'info',
       title: 'EZAIGC Desktop Update Available',
@@ -543,6 +568,17 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       noLink: true,
     })
     return result.response === 0
+  }
+
+  /** Exit the application when a forced update is declined. */
+  private quitForUpdate(): void {
+    this.quitting = true
+    const spec = this.scheduled
+    if (spec !== undefined) {
+      spec.requestQuit(0)
+    } else {
+      app.quit()
+    }
   }
 
   /** Report one user-triggered check without exposing network or response details. */
@@ -585,7 +621,7 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
   }
 
   /** Download a confirmed installer and hand it to the native installation flow. */
-  private async downloadAndOpenUpdate(version: string, signal: AbortSignal): Promise<void> {
+  private async downloadAndOpenUpdate(version: string, signal: AbortSignal, url?: string): Promise<void> {
     const platform = this.platformStrategy.updateDownloadPlatform
     if (platform === undefined) {
       throw new Error(`dsh-plugin-desktop: updates are unavailable on ${this.platform}`)
@@ -597,6 +633,7 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       platform,
       version,
       destinationPath,
+      ...(url === undefined ? {} : { url }),
       request: (url, init) => net.fetch(url, init),
       signal,
     })

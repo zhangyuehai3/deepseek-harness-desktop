@@ -4,11 +4,13 @@ import { open } from 'node:fs/promises'
 import type { Context } from '@deepseek-ai/cordis'
 import { writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
 import z from '@deepseek-ai/schemastery'
+import type { DesktopPlatform } from './runtime.ts'
 import type {} from './runtime.ts'
 import { desktopTrayLabel } from './tray-locale.ts'
 import {
   checkForStableUpdate,
   parseSemVer,
+  type DesktopUpdateUrls,
   type UpdateCheckResult,
 } from './update-checker.ts'
 
@@ -59,6 +61,8 @@ export function apply(ctx: Context, config: Config): void {
     let disposed = false
     let checking = false
     let availableVersion: string | undefined
+    let availableForceUpdate = false
+    let availableUrl: string | undefined
     let downloadingVersion: string | undefined
     let state: UpdateStateV2 = EMPTY_STATE
     let pollTimer: ReturnType<typeof setTimeout> | undefined
@@ -130,9 +134,10 @@ export function apply(ctx: Context, config: Config): void {
 
     const observeResult = (result: UpdateCheckResult | null): string | undefined => {
       if (disposed || result === null) return undefined
-      availableVersion = result.status === 'update-available' && adapter.canDownload
-        ? result.latestVersion
-        : undefined
+      const newer = result.status === 'update-available'
+      availableForceUpdate = newer && result.forceUpdate
+      availableUrl = newer ? downloadUrlForPlatform(result.urls, ctx.desktopRuntime.platform) : undefined
+      availableVersion = newer && adapter.canDownload ? result.latestVersion : undefined
       refreshTray()
       return availableVersion
     }
@@ -142,7 +147,10 @@ export function apply(ctx: Context, config: Config): void {
       const task = (async () => {
         let confirmed: boolean
         try {
-          confirmed = await adapter.confirmDownload(version)
+          confirmed = await adapter.confirmDownload(version, {
+            forceUpdate: availableForceUpdate,
+            ...(availableUrl === undefined ? {} : { downloadUrl: availableUrl }),
+          })
         } catch {
           return
         }
@@ -156,7 +164,7 @@ export function apply(ctx: Context, config: Config): void {
         downloadingVersion = version
         refreshTray()
         try {
-          await adapter.downloadAndOpen(version, controller.signal)
+          await adapter.downloadAndOpen(version, controller.signal, availableUrl)
         } catch {
           // Network, filesystem, and installer-opening failures are deliberately silent.
         } finally {
@@ -174,8 +182,8 @@ export function apply(ctx: Context, config: Config): void {
     const offerDownload = async (version: string, automatic: boolean): Promise<void> => {
       if (disposed || !adapter.canDownload) return
       await stateReady
-      if (disposed || (automatic && state.lastPromptedVersion === version)) return
-      await rememberPrompt(version)
+      if (disposed || (automatic && !availableForceUpdate && state.lastPromptedVersion === version)) return
+      if (!availableForceUpdate) await rememberPrompt(version)
       if (!disposed) await startDownload(version)
     }
 
@@ -243,6 +251,16 @@ export function apply(ctx: Context, config: Config): void {
       await Promise.allSettled(pending)
     }
   }, 'dsh-plugin-desktop: update polling, confirmation, and installer handoff')
+}
+
+function downloadUrlForPlatform(
+  urls: DesktopUpdateUrls | undefined,
+  platform: DesktopPlatform,
+): string | undefined {
+  if (urls === undefined) return undefined
+  if (platform === 'darwin') return urls.mac
+  if (platform === 'win32') return urls.windows
+  return undefined
 }
 
 function parseState(text: string): UpdateStateV2 {

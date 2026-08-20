@@ -98,11 +98,11 @@ export interface DesktopUpdateAdapter {
   /** Request adapter backed by Electron's native network session. */
   readonly request: UpdateRequest
   /** Ask whether one strictly newer version may be downloaded. */
-  confirmDownload(version: string): Promise<boolean>
+  confirmDownload(version: string, details?: { readonly forceUpdate?: boolean; readonly downloadUrl?: string }): Promise<boolean>
   /** Present the outcome of a user-triggered version check. */
   showManualCheckResult(result: UpdateCheckResult | null): Promise<void>
   /** Download and hand one confirmed update to the platform installer. */
-  downloadAndOpen(version: string, signal: AbortSignal): Promise<void>
+  downloadAndOpen(version: string, signal: AbortSignal, url?: string): Promise<void>
   /** Present a native status notification without blocking the Host tree. */
   notify(notification: DesktopNotification): void
 }

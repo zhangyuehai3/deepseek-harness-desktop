@@ -39,6 +39,8 @@ export interface DownloadDesktopUpdateOptions {
   readonly version: string
   /** Absolute installer path selected by the user. */
   readonly destinationPath: string
+  /** Optional direct installer URL from the version service; falls back to the fixed endpoint. */
+  readonly url?: string
   /** Request implementation, normally backed by Electron `net.fetch`. */
   readonly request: UpdateArtifactRequest
   /** Optional cancellation signal owned by the update coordinator. */
@@ -106,11 +108,12 @@ export async function downloadDesktopUpdate(options: DownloadDesktopUpdateOption
   validatedVersion(options.version)
   const destinationPath = validatedArtifactPath(options.destinationPath, platform)
   const paths = await prepareDownloadPaths(destinationPath)
+  const url = options.url ?? DESKTOP_DOWNLOAD_URLS[platform]
   throwIfAborted(options.signal)
 
   let response: Response
   try {
-    response = await options.request(DESKTOP_DOWNLOAD_URLS[platform], {
+    response = await options.request(url, {
       method: 'GET',
       cache: 'no-store',
       redirect: 'follow',

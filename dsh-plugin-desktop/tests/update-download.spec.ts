@@ -101,6 +101,31 @@ describe('desktop update installer download', () => {
     await expectNoPartialFiles(directory)
   })
 
+  it('streams a macOS DMG from an explicit URL when one is supplied', async () => {
+    const directory = await temporaryDirectory()
+    const artifact = dmgArtifact()
+    const calls: Array<{ url: string; init: RequestInit }> = []
+    const request: UpdateArtifactRequest = async (url, init) => {
+      calls.push({ url, init })
+      return chunkedResponse([artifact.subarray(0, 333), artifact.subarray(333)])
+    }
+
+    const result = await downloadDesktopUpdate({
+      platform: 'darwin',
+      version: '2.1.0',
+      url: 'https://example.test/EZAIGC-Desktop-2.1.0-mac.dmg',
+      destinationPath: destinationPath(directory, 'darwin', '2.1.0'),
+      request,
+    })
+
+    expect(result).toBe(join(directory, 'EZAIGC-Desktop-2.1.0-mac.dmg'))
+    expect(await readFile(result)).toEqual(Buffer.from(artifact))
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.url).toBe('https://example.test/EZAIGC-Desktop-2.1.0-mac.dmg')
+    expect(calls[0]?.init).toMatchObject({ method: 'GET', cache: 'no-store', redirect: 'follow' })
+    await expectNoPartialFiles(directory)
+  })
+
   it('accepts a Windows executable only when it has both MZ and PE signatures', async () => {
     const directory = await temporaryDirectory()
     const artifact = windowsArtifact()

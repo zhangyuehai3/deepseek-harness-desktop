@@ -1242,6 +1242,8 @@ describe('Electron desktop runtime', () => {
       status: 'up-to-date',
       currentVersion: '2.0.0',
       latestVersion: '2.0.0',
+      forceUpdate: false,
+      urls: undefined,
     })
     expect(electron.dialog.showMessageBox).toHaveBeenLastCalledWith(expect.objectContaining({
       title: 'EZAIGC Desktop Is Up to Date',
@@ -1275,6 +1277,7 @@ describe('Electron desktop runtime', () => {
       platform: 'darwin',
       version: '2.1.0',
       destinationPath: '/tmp/Downloads/EZAIGC-Desktop-2.1.0-mac.dmg',
+      url: undefined,
       request: expect.any(Function),
       signal: controller.signal,
     })
@@ -1300,6 +1303,28 @@ describe('Electron desktop runtime', () => {
     })
     expect(notification?.show).toHaveBeenCalledOnce()
     expect(notification?.once).not.toHaveBeenCalled()
+  })
+
+  it('requires an update or quit when the service marks the release as forced', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin')
+    const requestQuit = vi.fn()
+    const { ElectronDesktopRuntime } = await import('../src/electron-runtime.ts')
+    const runtime = new ElectronDesktopRuntime(async () => {})
+    runtime.schedule({ ...spec, requestQuit })
+
+    electron.dialog.showMessageBox.mockResolvedValueOnce({ response: 1, checkboxChecked: false })
+    await expect(runtime.updates.confirmDownload('2.1.0', { forceUpdate: true })).resolves.toBe(false)
+    expect(electron.dialog.showMessageBox).toHaveBeenLastCalledWith(expect.objectContaining({
+      type: 'warning',
+      title: 'EZAIGC Desktop Update Required',
+      buttons: ['Update Now', 'Quit'],
+      defaultId: 0,
+      cancelId: 1,
+    }))
+    expect(requestQuit).toHaveBeenCalledWith(0)
+
+    electron.dialog.showMessageBox.mockResolvedValueOnce({ response: 0, checkboxChecked: false })
+    await expect(runtime.updates.confirmDownload('2.1.0', { forceUpdate: true })).resolves.toBe(true)
   })
 
   it('starts the downloaded Windows installer before requesting orderly exit', async () => {

@@ -8,8 +8,12 @@ import {
   type UpdateRequest,
 } from '../src/update-checker.ts'
 
-function versionResponse(version: unknown, init: ResponseInit = {}): Response {
-  return Response.json({ version }, init)
+function versionResponse(
+  version: unknown,
+  extra: Partial<{ forceUpdate: boolean; mac: string; windows: string }> = {},
+  init: ResponseInit = {},
+): Response {
+  return Response.json({ version, ...extra }, init)
 }
 
 describe('strict SemVer parsing', () => {
@@ -68,6 +72,8 @@ describe('public Desktop version check', () => {
       status: 'update-available',
       currentVersion: '2.9.9',
       latestVersion: '2.10.0',
+      forceUpdate: false,
+      urls: undefined,
     })
 
     expect(calls).toHaveLength(1)
@@ -97,6 +103,8 @@ describe('public Desktop version check', () => {
       status: 'up-to-date',
       currentVersion,
       latestVersion,
+      forceUpdate: false,
+      urls: undefined,
     })
   })
 
@@ -105,6 +113,39 @@ describe('public Desktop version check', () => {
       currentVersion: '9007199254740992.0.0',
       request: async () => versionResponse('10000000000000000.0.0'),
     })).resolves.toMatchObject({ status: 'update-available' })
+  })
+
+  it('parses forceUpdate and platform download URLs when the service provides them', async () => {
+    await expect(checkForStableUpdate({
+      currentVersion: '2.0.0',
+      request: async () => versionResponse('2.1.0', {
+        forceUpdate: true,
+        mac: 'https://example.test/mac.dmg',
+        windows: 'https://example.test/windows.exe',
+      }),
+    })).resolves.toEqual({
+      status: 'update-available',
+      currentVersion: '2.0.0',
+      latestVersion: '2.1.0',
+      forceUpdate: true,
+      urls: {
+        mac: 'https://example.test/mac.dmg',
+        windows: 'https://example.test/windows.exe',
+      },
+    })
+  })
+
+  it('reports no update even when forceUpdate is true but the version is not newer', async () => {
+    await expect(checkForStableUpdate({
+      currentVersion: '2.1.0',
+      request: async () => versionResponse('2.1.0', { forceUpdate: true }),
+    })).resolves.toEqual({
+      status: 'up-to-date',
+      currentVersion: '2.1.0',
+      latestVersion: '2.1.0',
+      forceUpdate: true,
+      urls: undefined,
+    })
   })
 
   it.each([

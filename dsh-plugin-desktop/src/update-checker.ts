@@ -1,7 +1,7 @@
 /** Headless version checks against the public EZAIGC Desktop release service. */
 
-/** Public endpoint returning the latest stable EZAIGC Desktop version. */
-export const DESKTOP_VERSION_ENDPOINT = 'https://www.dshdesktop.cn/api/desktop/version'
+/** Public endpoint returning the latest stable EZAIGC Desktop version and installer URLs. */
+export const DESKTOP_VERSION_ENDPOINT = 'https://ezai.ezsvs.com/version.json'
 
 /** Maximum response body bytes accepted from the version service. */
 export const MAX_VERSION_RESPONSE_BYTES = 4 * 1024
@@ -35,6 +35,14 @@ export interface UpdateCheckOptions {
   readonly request?: UpdateRequest
 }
 
+/** Platform download URLs returned by the stable version service. */
+export interface DesktopUpdateUrls {
+  /** Direct installer URL for macOS. */
+  readonly mac: string
+  /** Direct installer URL for Windows. */
+  readonly windows: string
+}
+
 /** Successful comparison returned by the stable version service. */
 export type UpdateCheckResult = {
   /** Whether the service reports a version newer than the installed application. */
@@ -43,6 +51,10 @@ export type UpdateCheckResult = {
   readonly currentVersion: string
   /** Canonical latest stable version returned by the service. */
   readonly latestVersion: string
+  /** Whether the service requires this update before the application can continue. */
+  readonly forceUpdate: boolean
+  /** Platform download URLs for the latest version, when the service supplies them. */
+  readonly urls: DesktopUpdateUrls | undefined
 }
 
 const SEMVER_PATTERN =
@@ -119,12 +131,14 @@ export async function checkForStableUpdate(
     return null
   }
 
-  const latest = parseVersionResponse(body)
-  if (latest === null) return null
+  const parsed = parseVersionResponse(body)
+  if (parsed === null) return null
   return {
-    status: compareParsedSemVer(latest, current) > 0 ? 'update-available' : 'up-to-date',
+    status: compareParsedSemVer(parsed.version, current) > 0 ? 'update-available' : 'up-to-date',
     currentVersion: current.version,
-    latestVersion: latest.version,
+    latestVersion: parsed.version.version,
+    forceUpdate: parsed.forceUpdate,
+    urls: parsed.urls,
   }
 }
 
@@ -162,7 +176,7 @@ async function readLimitedBody(response: Response): Promise<string> {
   }
 }
 
-function parseVersionResponse(body: string): ParsedSemVer | null {
+function parseVersionResponse(body: string): { version: ParsedSemVer; forceUpdate: boolean; urls: DesktopUpdateUrls | undefined } | null {
   let value: unknown
   try {
     value = JSON.parse(body)
@@ -170,7 +184,18 @@ function parseVersionResponse(body: string): ParsedSemVer | null {
     return null
   }
   if (!isRecord(value) || typeof value.version !== 'string') return null
-  return parseCanonicalStableVersion(value.version)
+  const version = parseCanonicalStableVersion(value.version)
+  if (version === null) return null
+  return {
+    version,
+    forceUpdate: value.forceUpdate === true,
+    urls: parseUpdateUrls(value),
+  }
+}
+
+function parseUpdateUrls(value: Record<string, unknown>): DesktopUpdateUrls | undefined {
+  if (typeof value.mac !== 'string' || typeof value.windows !== 'string') return undefined
+  return { mac: value.mac, windows: value.windows }
 }
 
 function parseCanonicalStableVersion(input: string): ParsedSemVer | null {
