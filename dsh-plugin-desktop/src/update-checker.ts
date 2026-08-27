@@ -1,5 +1,11 @@
 /** Headless version checks against the public EZAIGC Desktop release service. */
 
+import {
+  assertDesktopInstallationId,
+  DESKTOP_INSTALLATION_ID_HEADER,
+  type DesktopInstallationId,
+} from './desktop-installation-id.ts'
+
 /** Public endpoint returning the latest stable EZAIGC Desktop version and installer URLs. */
 export const DESKTOP_VERSION_ENDPOINT = 'https://ezai.ezsvs.com/version.json'
 
@@ -25,6 +31,14 @@ export interface ParsedSemVer {
 /** Fetch-compatible request function used by the headless checker. */
 export type UpdateRequest = (url: string, init: RequestInit) => Promise<Response>
 
+/** Platform download URLs returned by the stable version service. */
+export interface DesktopUpdateUrls {
+  /** Direct installer URL for macOS. */
+  readonly mac: string
+  /** Direct installer URL for Windows. */
+  readonly windows: string
+}
+
 /** Inputs for one stable version check. */
 export interface UpdateCheckOptions {
   /** Installed application version, expressed as canonical stable SemVer. */
@@ -33,14 +47,8 @@ export interface UpdateCheckOptions {
   readonly signal?: AbortSignal
   /** Optional fetch implementation for a host adapter or test. */
   readonly request?: UpdateRequest
-}
-
-/** Platform download URLs returned by the stable version service. */
-export interface DesktopUpdateUrls {
-  /** Direct installer URL for macOS. */
-  readonly mac: string
-  /** Direct installer URL for Windows. */
-  readonly windows: string
+  /** Installation UUID attached only to the fixed version-check endpoint. */
+  readonly installationId?: DesktopInstallationId
 }
 
 /** Successful comparison returned by the stable version service. */
@@ -107,9 +115,16 @@ export async function checkForStableUpdate(
   const current = parseCanonicalStableVersion(options.currentVersion)
   if (current === null) return null
 
+  let headers: HeadersInit
+  try {
+    headers = desktopVersionRequestHeaders(options.installationId)
+  } catch {
+    return null
+  }
+
   const init: RequestInit = {
     method: 'GET',
-    headers: { Accept: 'application/json' },
+    headers,
     cache: 'no-store',
     redirect: 'error',
     ...(options.signal === undefined ? {} : { signal: options.signal }),
@@ -140,6 +155,18 @@ export async function checkForStableUpdate(
     forceUpdate: parsed.forceUpdate,
     urls: parsed.urls,
   }
+}
+
+/** Build the complete header set for the fixed version-check request only. */
+export function desktopVersionRequestHeaders(
+  installationId?: string,
+): Readonly<Record<string, string>> {
+  return installationId === undefined
+    ? { Accept: 'application/json' }
+    : {
+        Accept: 'application/json',
+        [DESKTOP_INSTALLATION_ID_HEADER]: assertDesktopInstallationId(installationId),
+      }
 }
 
 async function defaultRequest(url: string, init: RequestInit): Promise<Response> {

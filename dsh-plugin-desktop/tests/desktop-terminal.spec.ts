@@ -50,15 +50,14 @@ function spawnHarness(): SpawnHarness {
 function macOptions(stateDir: string, spawn: DesktopTerminalSpawn): DesktopTerminalOptions {
   return {
     platform: 'darwin',
-    appExecutable: "/Applications/EZAIGC O'Brien.app/Contents/MacOS/EZAIGC Desktop",
-    dshBootstrapPath: "/Applications/EZAIGC O'Brien.app/Contents/Resources/app.asar/lib/dsh-terminal-bootstrap.js",
-    pnpmBinPath: "/Applications/EZAIGC O'Brien.app/Contents/Resources/app.asar/node_modules/pnpm/bin/pnpm.mjs",
+    appExecutable: "/Applications/DSH O'Brien.app/Contents/MacOS/DSH Desktop",
+    dshBootstrapPath: "/Applications/DSH O'Brien.app/Contents/Resources/app.asar/lib/dsh-terminal-bootstrap.js",
+    pnpmBinPath: "/Applications/DSH O'Brien.app/Contents/Resources/app.asar/node_modules/pnpm/bin/pnpm.mjs",
     electronVersion: '43.4.0',
     profileName: 'desktop',
     productVersion: '2.0.0',
-    profileDir: "/Users/example/Library/Application Support/EZAIGC O'Brien/profiles/desktop",
-    homeDir: "/Users/example/Library/Application Support/EZAIGC O'Brien",
-    installRecoveryStatePath: "/Users/example/Library/Application Support/EZAIGC O'Brien Desktop/plugin-install-recovery/state.json",
+    profileDir: "/Users/example/Library/Application Support/DSH O'Brien/profiles/desktop",
+    homeDir: "/Users/example/Library/Application Support/DSH O'Brien",
     stateDir,
     spawn,
     environment: {
@@ -73,15 +72,14 @@ function macOptions(stateDir: string, spawn: DesktopTerminalSpawn): DesktopTermi
 function windowsOptions(stateDir: string, spawn: DesktopTerminalSpawn): DesktopTerminalOptions {
   return {
     platform: 'win32',
-    appExecutable: 'C:\\Program Files\\EZAIGC 100% Desktop\\EZAIGC Desktop.exe',
-    dshBootstrapPath: 'C:\\Program Files\\EZAIGC Desktop\\resources\\app.asar\\lib\\dsh-terminal-bootstrap.js',
-    pnpmBinPath: 'C:\\Program Files\\EZAIGC Desktop\\resources\\app.asar\\node_modules\\pnpm\\bin\\pnpm.mjs',
+    appExecutable: 'C:\\Program Files\\DSH 100% Desktop\\DSH Desktop.exe',
+    dshBootstrapPath: 'C:\\Program Files\\DSH Desktop\\resources\\app.asar\\lib\\dsh-terminal-bootstrap.js',
+    pnpmBinPath: 'C:\\Program Files\\DSH Desktop\\resources\\app.asar\\node_modules\\pnpm\\bin\\pnpm.mjs',
     electronVersion: '43.4.0',
     profileName: 'desktop',
     productVersion: '2.0.0',
-    profileDir: "C:\\Users\\Example\\EZAIGC O'Brien\\profiles\\desktop",
-    homeDir: "C:\\Users\\Example\\EZAIGC O'Brien",
-    installRecoveryStatePath: "C:\\Users\\Example\\AppData\\Roaming\\EZAIGC Desktop\\plugin-install-recovery\\state.json",
+    profileDir: "C:\\Users\\Example\\DSH O'Brien\\profiles\\desktop",
+    homeDir: "C:\\Users\\Example\\DSH O'Brien",
     stateDir,
     spawn,
     environment: {
@@ -141,18 +139,20 @@ describe('desktop terminal environment', () => {
     const dshShim = readFileSync(launch.dshShimPath, 'utf8')
     expect(dshShim).toContain("DSH_DESKTOP_DEFAULT_PROFILE='desktop' ELECTRON_RUN_AS_NODE=1 exec")
     expect(dshShim).toContain('--expose-internals')
-    expect(dshShim).toContain("'/Applications/EZAIGC O'\"'\"'Brien.app/Contents/MacOS/EZAIGC Desktop'")
-    expect(dshShim).toContain("'/Applications/EZAIGC O'\"'\"'Brien.app/Contents/Resources/app.asar/lib/dsh-terminal-bootstrap.js'")
+    expect(dshShim).toContain("'/Applications/DSH O'\"'\"'Brien.app/Contents/MacOS/DSH Desktop'")
+    expect(dshShim).toContain("'/Applications/DSH O'\"'\"'Brien.app/Contents/Resources/app.asar/lib/dsh-terminal-bootstrap.js'")
     expect(dshShim).toContain('"$@"')
     expect(dshShim).not.toContain('npm_config_')
     const pnpmShim = readFileSync(launch.pnpmShimPath, 'utf8')
     expect(pnpmShim).toContain('ELECTRON_RUN_AS_NODE=1 npm_config_runtime=electron')
     expect(pnpmShim).toContain("npm_config_target='43.4.0'")
     expect(pnpmShim).toContain("npm_config_disturl='https://electronjs.org/headers'")
+    expect(pnpmShim.match(/--config\.minimumReleaseAge=0/gu)).toHaveLength(1)
+    expect(pnpmShim).toContain('--config.minimumReleaseAge=0 "$@"')
     const nodeShim = readFileSync(launch.nodeShimPath, 'utf8')
     expect(nodeShim).toBe([
       '#!/bin/sh',
-      `ELECTRON_RUN_AS_NODE=1 exec '/Applications/EZAIGC O'"'"'Brien.app/Contents/MacOS/EZAIGC Desktop' "$@"`,
+      `ELECTRON_RUN_AS_NODE=1 exec '/Applications/DSH O'"'"'Brien.app/Contents/MacOS/DSH Desktop' "$@"`,
       '',
     ].join('\n'))
     expect(nodeShim).not.toContain('npm_config_')
@@ -170,7 +170,7 @@ describe('desktop terminal environment', () => {
     expect(welcome).toContain('dsh plugin update')
     expect(welcome).toContain('Restart EZAIGC Desktop after plugin changes.')
     expect(welcome).not.toContain(' -l')
-    expect(welcome).toContain("EZAIGC O'\"'\"'Brien")
+    expect(welcome).toContain("DSH O'\"'\"'Brien")
     expect(welcome).toContain('exec "${SHELL}" --noprofile --rcfile')
     expect(welcome).toContain('exec "${SHELL}" -i')
 
@@ -203,7 +203,6 @@ describe('desktop terminal environment', () => {
           KEEP: 'value',
           PATH: `${launch.shimDir}:/usr/local/bin:/usr/bin:/bin`,
           DSH_HOME: options.homeDir,
-          DSH_DESKTOP_INSTALL_RECOVERY_STATE_PATH: options.installRecoveryStatePath,
         },
         shell: false,
         stdio: 'ignore',
@@ -236,6 +235,8 @@ describe('desktop terminal environment', () => {
     expect(pnpmShim).toContain('set "npm_config_runtime=electron"')
     expect(pnpmShim).toContain('set "npm_config_target=%DSH_DESKTOP_ELECTRON_VERSION%"')
     expect(pnpmShim).toContain('set "npm_config_disturl=https://electronjs.org/headers"')
+    expect(pnpmShim.match(/--config\.minimumReleaseAge=0/gu)).toHaveLength(1)
+    expect(pnpmShim).toContain('--config.minimumReleaseAge=0 %*')
     expect(readFileSync(launch.nodeShimPath, 'utf8')).toContain(
       '"%DSH_DESKTOP_APP_EXECUTABLE%" %*',
     )
@@ -274,7 +275,6 @@ describe('desktop terminal environment', () => {
           DSH_DESKTOP_DEFAULT_PROFILE: options.profileName,
           DSH_DESKTOP_APP_EXECUTABLE: options.appExecutable,
           DSH_DESKTOP_DSH_BOOTSTRAP: options.dshBootstrapPath,
-          DSH_DESKTOP_INSTALL_RECOVERY_STATE_PATH: options.installRecoveryStatePath,
           DSH_DESKTOP_ELECTRON_VERSION: options.electronVersion,
           DSH_DESKTOP_PNPM_ENTRY: options.pnpmBinPath,
           DSH_DESKTOP_PROFILE_DIRECTORY: options.profileDir,
@@ -296,10 +296,20 @@ describe('desktop terminal environment', () => {
     const stateDir = join(temporaryDirectory(), 'terminal-state')
     const harness = spawnHarness()
     const options = windowsOptions(stateDir, harness.spawn)
-    options.windowsExecutableResolver = (command) => {
-      if (command === 'pwsh.exe') return 'C:\\Program Files\\PowerShell\\7\\pwsh.exe'
-      if (command === 'wt.exe') return 'C:\\Users\\Example\\AppData\\Local\\Microsoft\\WindowsApps\\wt.exe'
-      return undefined
+    options.windowsExecutableResolver = command => command === 'pwsh.exe'
+      ? 'C:\\Program Files\\PowerShell\\7\\pwsh.exe'
+      : undefined
+    options.windowsTerminal = {
+      executable: 'C:\\Users\\Example\\AppData\\Local\\Microsoft\\WindowsApps\\wt.exe',
+      arguments: [
+        '--window',
+        'new',
+        'new-tab',
+        '--title',
+        'EZAIGC Desktop',
+        '--startingDirectory',
+        options.profileDir,
+      ],
     }
 
     const launch = openDesktopTerminal(options)
@@ -330,8 +340,8 @@ describe('desktop terminal environment', () => {
     const stateDir = join(temporaryDirectory(), 'terminal-state')
     const harness = spawnHarness()
     const options = windowsOptions(stateDir, harness.spawn)
-    options.profileDir = 'C:\\Users\\Example\\EZAIGC & Tools\\profiles\\desktop'
-    options.homeDir = 'C:\\Users\\Example\\EZAIGC & Tools'
+    options.profileDir = 'C:\\Users\\Example\\DSH & Tools\\profiles\\desktop'
+    options.homeDir = 'C:\\Users\\Example\\DSH & Tools'
     options.windowsExecutableResolver = command => command === 'cmd.exe'
       ? 'C:\\Windows\\System32\\cmd.exe'
       : undefined
@@ -374,7 +384,7 @@ describe('desktop terminal environment', () => {
     const cause = new Error('launcher unavailable')
     expect(() => { harness.emitError(cause) }).not.toThrow()
 
-    expect(commands).toEqual(['pwsh.exe', 'wt.exe', 'cmd.exe'])
+    expect(commands).toEqual(['pwsh.exe', 'cmd.exe'])
     expect(harness.calls[0]?.command).toBe('C:\\Windows\\System32\\cmd.exe')
     expect(onLaunchError).toHaveBeenCalledWith(cause)
 
@@ -395,7 +405,7 @@ describe('desktop terminal environment', () => {
     expect(exitReporter).toHaveBeenCalledOnce()
   })
 
-  it('discovers the Windows Terminal app execution alias through LocalAppData', () => {
+  it('does not trust the Windows Terminal app execution alias without an explicit adapter', () => {
     const stateDir = join(temporaryDirectory(), 'terminal-state')
     const harness = spawnHarness()
     const probes: string[] = []
@@ -408,15 +418,16 @@ describe('desktop terminal environment', () => {
     options.windowsExecutableExists = (filename) => {
       probes.push(filename)
       return filename === 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe'
+        || filename === 'C:\\Windows\\System32\\cmd.exe'
         || filename === 'C:\\Users\\Example\\AppData\\Local\\Microsoft\\WindowsApps\\wt.exe'
     }
 
     openDesktopTerminal(options)
 
     expect(probes).toContain('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe')
-    expect(probes).toContain('C:\\Users\\Example\\AppData\\Local\\Microsoft\\WindowsApps\\wt.exe')
+    expect(probes).not.toContain('C:\\Users\\Example\\AppData\\Local\\Microsoft\\WindowsApps\\wt.exe')
     expect(harness.calls[0]?.command).toBe(
-      'C:\\Users\\Example\\AppData\\Local\\Microsoft\\WindowsApps\\wt.exe',
+      'C:\\Windows\\System32\\cmd.exe',
     )
     expect(harness.calls[0]?.options.shell).toBe(false)
   })
@@ -428,7 +439,7 @@ describe('desktop terminal environment', () => {
     options.profileName = '工作 profile'
     options.profileDir = 'C:\\用户\\工作 profile'
     options.homeDir = 'C:\\用户'
-    options.appExecutable = 'C:\\程序\\EZAIGC Desktop.exe'
+    options.appExecutable = 'C:\\程序\\DSH Desktop.exe'
     options.dshBootstrapPath = 'C:\\程序\\resources\\app.asar\\lib\\desktop-cli.js'
     options.pnpmBinPath = 'C:\\程序\\resources\\app.asar.unpacked\\node_modules\\pnpm\\bin\\pnpm.mjs'
 
@@ -450,7 +461,7 @@ describe('desktop terminal environment', () => {
     expect(harness.calls[0]?.options.env).toEqual(expect.objectContaining({
       DSH_HOME: 'C:\\用户',
       DSH_DESKTOP_DEFAULT_PROFILE: '工作 profile',
-      DSH_DESKTOP_APP_EXECUTABLE: 'C:\\程序\\EZAIGC Desktop.exe',
+      DSH_DESKTOP_APP_EXECUTABLE: 'C:\\程序\\DSH Desktop.exe',
       DSH_DESKTOP_DSH_BOOTSTRAP: 'C:\\程序\\resources\\app.asar\\lib\\desktop-cli.js',
       DSH_DESKTOP_ELECTRON_VERSION: '43.4.0',
       DSH_DESKTOP_PNPM_ENTRY: 'C:\\程序\\resources\\app.asar.unpacked\\node_modules\\pnpm\\bin\\pnpm.mjs',
@@ -470,7 +481,7 @@ describe('desktop terminal environment', () => {
 
     const unsafe = macOptions(join(root, 'unsafe'), harness.spawn)
     unsafe.profileName = '../desktop'
-    expect(() => openDesktopTerminal(unsafe)).toThrow('invalid profile name')
+    expect(() => openDesktopTerminal(unsafe)).toThrow('invalid desktop profile name')
     expect(() => lstatSync(unsafe.stateDir)).toThrow()
 
     const localized = macOptions(join(root, 'localized'), harness.spawn)
