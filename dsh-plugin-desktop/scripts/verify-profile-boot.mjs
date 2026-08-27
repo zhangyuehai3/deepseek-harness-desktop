@@ -226,10 +226,9 @@ try {
   if (!trayItems.some(item => item.label() === 'Check for Updates…')) {
     throw new Error('assembled desktop profile is missing the update tray command')
   }
-  if (process.platform !== 'linux'
-    && !trayItems.some(item => item.label() === 'Open DSH Terminal')) {
-    throw new Error('assembled desktop profile is missing the terminal tray command')
-  }
+  // The terminal tray command is intentionally hidden in this desktop build
+  // (see dsh-plugin-desktop/src/terminal.ts); the packaged terminal remains
+  // reachable through plugin recovery and the active profile.
   const profileMenu = trayItems.find(item => item.label() === 'Profile: desktop')
   if (profileMenu?.submenu?.()[0]?.label() !== 'desktop') {
     throw new Error('assembled desktop profile is missing the active profile tray submenu')
