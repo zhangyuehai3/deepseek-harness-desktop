@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/zhangyuehai3/deepseek-harness.git",
   "commit": "940e1698892d8267b9209031c8b30d9148bb791f",
-  "sourceVersion": "0.1.0-rc.5",
-  "runtimePackageVersion": "0.1.0-rc.7"
+  "sourceVersion": "0.1.1-rc.2",
+  "runtimePackageVersion": "0.1.1-rc.2"
 }
