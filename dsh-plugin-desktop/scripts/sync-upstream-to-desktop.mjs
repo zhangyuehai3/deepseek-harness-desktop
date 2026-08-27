@@ -7,8 +7,8 @@
  * The script preserves each installed package's npm `package.json` so Yarn and
  * Electron Builder continue to see the published semver versions.
  */
+import { spawn } from 'node:child_process'
 import { cp, readdir, readFile, rm, stat } from 'node:fs/promises'
-import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -32,21 +32,66 @@ const BUILT_DIRS = {
 }
 
 /**
- * Read the root package.json and collect package names whose installed copies
- * are replaced by Yarn patch: resolutions. Syncing would overwrite the patch,
- * so these are skipped.
+ * Read the root package.json and build a map from package name to the set of
+ * Yarn patch files that must be reapplied after syncing upstream artifacts.
+ * Resolutions entries like:
+ *   "@deepseek-ai/dsh@npm:^0.1.1-rc.2": "patch:...#./patches/dsh@0.1.1-rc.2.patch"
+ * become an entry `@deepseek-ai/dsh` -> `/repo/patches/dsh@0.1.1-rc.2.patch`.
  */
-async function loadPatchedPackageNames() {
+async function loadPatchMap() {
   const rootPkg = JSON.parse(await readFile(join(REPO_ROOT, 'package.json'), 'utf-8'))
-  const patched = new Set()
-  for (const key of Object.keys(rootPkg.resolutions ?? {})) {
-    const value = rootPkg.resolutions[key]
-    if (typeof value === 'string' && value.startsWith('patch:')) {
-      const match = key.match(/^(@[^/]+\/[^@]+)/)
-      if (match) patched.add(match[1])
+  const patchMap = new Map()
+  for (const [key, value] of Object.entries(rootPkg.resolutions ?? {})) {
+    if (typeof value !== 'string' || !value.startsWith('patch:')) continue
+    const match = key.match(/^(@[^/]+\/[^@]+)/)
+    if (!match) continue
+    const patchPath = value.split('#')[1]
+    if (!patchPath) continue
+    const absolutePath = resolve(REPO_ROOT, patchPath)
+    const set = patchMap.get(match[1]) ?? new Set()
+    set.add(absolutePath)
+    patchMap.set(match[1], set)
+  }
+  return patchMap
+}
+
+/**
+ * Apply a unified diff to the installed package directory. The patch files are
+ * produced by Yarn and name paths like `a/lib/client.js`, so `-p1` strips the
+ * `a/` prefix and resolves against the package root.
+ */
+async function applyPatch(installedDir, patchPath) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(
+      'patch',
+      ['-p1', '--no-backup-if-mismatch', '--input', patchPath],
+      { cwd: installedDir, stdio: ['ignore', 'pipe', 'pipe'] },
+    )
+    let stdout = ''
+    let stderr = ''
+    child.stdout.on('data', chunk => { stdout += chunk })
+    child.stderr.on('data', chunk => { stderr += chunk })
+    child.on('close', code => {
+      if (code !== 0) {
+        reject(new Error(`patch failed for ${installedDir} with ${patchPath}\n${stderr || stdout}`))
+      } else {
+        resolve()
+      }
+    })
+  })
+}
+
+/** Remove `.orig` files that some patches create as a side effect. */
+async function removeOrigFiles(dir) {
+  const entries = await readdir(dir, { withFileTypes: true }).catch(() => [])
+  for (const entry of entries) {
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      await removeOrigFiles(path)
+    } else if (entry.name.endsWith('.orig')) {
+      await rm(path, { force: true })
     }
   }
-  return patched
 }
 
 /**
@@ -98,29 +143,62 @@ async function registerPackage(map, pkgDir) {
   }
 }
 
-async function syncPackage(name, installedDir, upstreamDir) {
+const BACKUP_SUFFIX = '.upstream-sync-backup'
+
+async function syncPackage(name, installedDir, upstreamDir, patches) {
   const dirs = BUILT_DIRS[name] ?? BUILT_DIRS.default
-  for (const dir of dirs) {
-    const sourceDir = join(upstreamDir, dir)
-    const targetDir = join(installedDir, dir)
-    try {
-      await stat(sourceDir)
-    } catch {
-      throw new Error(`upstream build output missing for ${name}: ${sourceDir}`)
+  const backups = []
+  try {
+    for (const dir of dirs) {
+      const sourceDir = join(upstreamDir, dir)
+      const targetDir = join(installedDir, dir)
+      try {
+        await stat(sourceDir)
+      } catch {
+        throw new Error(`upstream build output missing for ${name}: ${sourceDir}`)
+      }
+      if (patches) {
+        const backupDir = `${targetDir}${BACKUP_SUFFIX}`
+        try {
+          await stat(targetDir)
+          await rm(backupDir, { recursive: true, force: true })
+          await cp(targetDir, backupDir, { recursive: true, preserveTimestamps: true })
+          backups.push({ targetDir, backupDir })
+        } catch {
+          // target did not exist; nothing to restore
+        }
+      }
+      await rm(targetDir, { recursive: true, force: true })
+      await cp(sourceDir, targetDir, { recursive: true, preserveTimestamps: true })
     }
-    await rm(targetDir, { recursive: true, force: true })
-    await cp(sourceDir, targetDir, { recursive: true, preserveTimestamps: true })
+    if (patches) {
+      for (const patchPath of patches) {
+        await applyPatch(installedDir, patchPath)
+      }
+      await removeOrigFiles(installedDir)
+    }
+  } catch (error) {
+    for (const { targetDir, backupDir } of backups) {
+      await rm(targetDir, { recursive: true, force: true }).catch(() => {})
+      await cp(backupDir, targetDir, { recursive: true, preserveTimestamps: true }).catch(() => {})
+      await rm(backupDir, { recursive: true, force: true }).catch(() => {})
+    }
+    throw error
+  }
+  for (const { backupDir } of backups) {
+    await rm(backupDir, { recursive: true, force: true }).catch(() => {})
   }
 }
 
 async function main() {
   const upstreamMap = await buildUpstreamMap()
-  const patchedNames = await loadPatchedPackageNames()
+  const patchMap = await loadPatchMap()
   const installedEntries = await readdir(DESKTOP_MODULES, { withFileTypes: true })
   const installedNames = installedEntries.filter(e => e.isDirectory()).map(e => e.name)
   const synced = []
+  const patched = []
   const skipped = []
-  const skippedPatches = []
+  const patchFailures = []
   for (const dirName of installedNames) {
     const installedDir = join(DESKTOP_MODULES, dirName)
     const pkgJsonPath = join(installedDir, 'package.json')
@@ -131,25 +209,34 @@ async function main() {
       continue
     }
     const name = pkgJson.name
-    if (patchedNames.has(name)) {
-      skippedPatches.push(name)
-      continue
-    }
     const upstreamDir = upstreamMap.get(name)
     if (upstreamDir === undefined) {
       skipped.push(name)
       continue
     }
-    await syncPackage(name, installedDir, upstreamDir)
-    synced.push(name)
+    const patches = patchMap.get(name)
+    try {
+      await syncPackage(name, installedDir, upstreamDir, patches)
+      synced.push(name)
+      if (patches) patched.push(name)
+    } catch (error) {
+      console.error(`warning: ${error.message}`)
+      patchFailures.push(name)
+    }
   }
 
   console.log(`synced ${synced.length} upstream package(s) into ${DESKTOP_MODULES}`)
-  if (skippedPatches.length > 0) {
-    console.log(`skipped ${skippedPatches.length} patched package(s): ${skippedPatches.join(', ')}`)
+  if (patched.length > 0) {
+    console.log(`reapplied patches to ${patched.length} package(s): ${patched.join(', ')}`)
+  }
+  if (patchFailures.length > 0) {
+    console.log(`patch reapplication failed for ${patchFailures.length} package(s); npm originals preserved: ${patchFailures.join(', ')}`)
   }
   if (skipped.length > 0) {
     console.log(`skipped ${skipped.length} package(s) with no upstream source: ${skipped.join(', ')}`)
+  }
+  if (patchFailures.length > 0) {
+    process.exitCode = 1
   }
 }
 
