@@ -7,6 +7,27 @@
         mode: compatibility
     - id: community-market
       name: dsh-community-market
+    - id: file-upload
+      name: dsh-file-upload
+      config:
+        uploadMaxBytes: 26214400
+        allowedExtensions: []
+        uploadTtlMs: 604800000
+        sweepIntervalMs: 3600000
+        maxConcurrentUploads: 4
+        maxFileBytes: 26214400
+        readLimit: 2000
+        sheetRowLimit: 200
+        maxSheets: 5
+        cacheEntries: 16
+        cacheMaxBytes: 67108864
+        inlineTextLimit: 8192
+        previewTextLimit: 2048
+        markitdownBin: ''
+        visionEndpoint: ''
+        visionModel: ''
+        visionApiKeyEnv: OPENAI_API_KEY
+        visionMaxBytes: 10485760
     # The tray terminal command is hidden while the terminal remains available
     # through plugin recovery and the active profile.
     # - id: desktop-terminal

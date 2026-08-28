@@ -21,12 +21,14 @@ const upstreamPackage = readJson('deepseek-harness/package.json')
 if (workspace.packageManager !== 'yarn@4.18.0') {
   fail('the product workspace must pin yarn@4.18.0')
 }
-if (JSON.stringify(workspace.workspaces) !== JSON.stringify([
+const expectedWorkspaces = [
   'dsh-plugin-desktop',
+  'dsh-plugin-desktop/vendor/dsh-file-upload',
   'dsh-community-fabric',
   'dsh-community-market',
-])) {
-  fail('the root Yarn workspace must contain the desktop, community-fabric, and community-market packages')
+]
+if (JSON.stringify(workspace.workspaces) !== JSON.stringify(expectedWorkspaces)) {
+  fail('the root Yarn workspace must contain the desktop, file-upload vendor, community-fabric, and community-market packages')
 }
 for (const [name, manifest] of [
   ['dsh-plugin-desktop', plugin],
@@ -78,6 +80,9 @@ for (const [owner, manifest] of [
   for (const field of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies', 'resolutions']) {
     for (const [name, range] of Object.entries(manifest[field] ?? {})) {
       if (typeof range !== 'string') continue
+      // The vendored file-upload plugin is part of the desktop product, so it
+      // is allowed to resolve through the Yarn workspace.
+      if (owner === 'desktop' && name === 'dsh-file-upload' && range.startsWith('workspace:')) continue
       if (/^(?:workspace|portal|link):/u.test(range)
         || (range.startsWith('file:') && range.includes('deepseek-harness'))) {
         fail(`${owner} ${field}.${name} bypasses the published DSH package boundary`)

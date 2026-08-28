@@ -8,7 +8,6 @@ import type {
 } from '@deepseek-ai/dsh-client-ui-slots'
 import type { DesktopSettingsApi } from './desktop-settings-api.ts'
 import type { DesktopClientEnvironment, DesktopClientMode } from './environment.ts'
-import { DesktopNativeActions } from './DesktopNativeActions.tsx'
 import { Button } from '../native-ui/components/ui/button.tsx'
 import type { DesktopSettingsLocaleKey } from './desktop-settings-locales.ts'
 import {
@@ -178,7 +177,7 @@ export function DesktopFrameTitlebar({ api, environment, setMode, t }: DesktopFr
       data-material={environment.material}
     >
       <div className="dshDesktopFrameIdentity">
-        <span className="dshDesktopFrameProduct">DSH Desktop</span>
+        <span className="dshDesktopFrameProduct">EZAI Desktop</span>
         <DesktopVersionControl version={environment.version} checkForUpdates={api.checkForUpdates} t={t} />
         <DesktopModeControl
           mode={environment.mode}
@@ -187,9 +186,9 @@ export function DesktopFrameTitlebar({ api, environment, setMode, t }: DesktopFr
           t={t}
         />
       </div>
-      <div className="dshDesktopFrameActions">
+      {/* <div className="dshDesktopFrameActions">
         <DesktopNativeActions api={api} t={t} placement="titlebar" />
-      </div>
+      </div> */}
     </header>
   ), document.body)
 }

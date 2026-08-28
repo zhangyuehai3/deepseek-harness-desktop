@@ -6,14 +6,9 @@ import {
 import type { SettingsScope } from '@deepseek-ai/dsh-client-runtime/client'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
-  DesktopMarketProvider, DesktopProfileView, DesktopSettingsApi, DesktopSettingsView,
+  DesktopProfileView, DesktopSettingsApi, DesktopSettingsView,
 } from './desktop-settings-api.ts'
-import type { DesktopSettingsLocaleKey } from './desktop-settings-locales.ts'
 import type { DesktopClientPlatform } from './environment.ts'
-import {
-  desktopBrowserAccessAvailable,
-  desktopBrowserAccessEnabled,
-} from '../desktop-network.ts'
 
 /** Browser view of the Host `dsh-desktop` settings namespace. */
 export interface DesktopShellSettings {
@@ -134,20 +129,6 @@ function Choice({
   )
 }
 
-function RepositoryLink({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <a
-      className="dshDesktopSettingsChoiceLink"
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={event => { event.stopPropagation() }}
-    >
-      {children}
-    </a>
-  )
-}
-
 function ToggleRow({
   label,
   badge,
@@ -188,39 +169,6 @@ function profileState(profile: DesktopProfileView, t: Translate): string {
   return t('profileReady')
 }
 
-const MARKET_OPTIONS: readonly {
-  id: DesktopMarketProvider
-  title: DesktopSettingsLocaleKey
-  body: DesktopSettingsLocaleKey
-}[] = [
-  { id: 'disabled', title: 'marketDisabled', body: 'marketDisabledBody' },
-  { id: 'community-market', title: 'communityMarket', body: 'communityMarketBody' },
-  { id: 'dsh-market', title: 'dshMarket', body: 'dshMarketBody' },
-]
-
-const COMMUNITY_MARKET_URL = 'https://github.com/anywhere-labs/deepseek-harness-desktop/tree/master/dsh-community-market'
-const DSH_MARKET_URL = 'https://github.com/dsh-market/dsh-market'
-const AWESOME_DSH_PLUGIN_URL = 'https://github.com/awesome-dsh-plugin/awesome-dsh-plugin'
-
-function marketTitle(option: (typeof MARKET_OPTIONS)[number], t: Translate): ReactNode {
-  if (option.id === 'community-market') {
-    return <RepositoryLink href={COMMUNITY_MARKET_URL}>{t(option.title)}</RepositoryLink>
-  }
-  if (option.id === 'dsh-market') {
-    return <RepositoryLink href={DSH_MARKET_URL}>{t(option.title)}</RepositoryLink>
-  }
-  return t(option.title)
-}
-
-function marketBody(option: (typeof MARKET_OPTIONS)[number], t: Translate): ReactNode {
-  if (option.id !== 'dsh-market') return t(option.body)
-  return (
-    <>
-      {t(option.body)}{' '}
-      <RepositoryLink href={AWESOME_DSH_PLUGIN_URL}>awesome-dsh-plugin</RepositoryLink>
-    </>
-  )
-}
 
 /** Render the Desktop settings page. */
 export function DesktopSettingsSection({
@@ -279,15 +227,7 @@ export function DesktopSettingsSection({
   const requestRestart = (): void => { setRestart('restarting') }
   const settingsWritable = desktop.status === 'ready' && desktop.writable
   const notificationsWritable = notifications.status === 'ready' && notifications.writable
-  const storedMode = desktop.value?.mode ?? initialMode
-  const configuredNetworkExposure = desktop.value?.networkExposure ?? 'loopback'
-  const browserAccess = desktopBrowserAccessEnabled(
-    storedMode,
-    desktop.value?.openBrowser ?? false,
-    configuredNetworkExposure,
-  )
-  const mode = storedMode
-  const networkExposure = browserAccess ? configuredNetworkExposure : 'loopback'
+  const mode = desktop.value?.mode ?? initialMode
   const notificationValue = notifications.value ?? {
     enabled: true,
     notifyOnTurnCompletion: true,
@@ -320,17 +260,6 @@ export function DesktopSettingsSection({
     })
   }
 
-  const selectMarket = (provider: DesktopMarketProvider): void => {
-    void run('select-market', async () => {
-      const response = await api.selectMarket(provider)
-      setView(current => current === undefined ? current : {
-        ...current,
-        market: { requested: provider, effective: current.market.effective, legacyDefaulted: false },
-      })
-      if (response.restartRequired) requestRestart()
-    })
-  }
-
   const setMode = (next: DesktopShellSettings['mode']): void => {
     void run('mode', async () => {
       await persistMode(next)
@@ -357,24 +286,6 @@ export function DesktopSettingsSection({
 
   const setNotification = (field: keyof DesktopNotificationSettings, checked: boolean): void => {
     void run('notification', async () => { await notificationSettings.set(field, checked) })
-  }
-
-  const setBrowserAccess = (checked: boolean): void => {
-    void run('web', async () => {
-      if (checked) {
-        if (!desktopBrowserAccessAvailable(mode)) return
-        await desktopSettings.set('openBrowser', true)
-        requestRestart()
-        return
-      }
-      // LAN keeps legacy browser access effective until the listener is safely
-      // returned to loopback, so the queued writes cannot expose a hidden gate.
-      await desktopSettings.set('openBrowser', false)
-      if (configuredNetworkExposure === 'lan') {
-        await desktopSettings.set('networkExposure', 'loopback')
-      }
-      if (browserAccess) requestRestart()
-    })
   }
 
   const setNetworkExposure = (exposure: DesktopShellSettings['networkExposure']): void => {
@@ -490,7 +401,7 @@ export function DesktopSettingsSection({
         )}
       </section>
 
-      <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-market-title">
+      {/* <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-market-title">
         <div>
           <h3 id="dsh-desktop-market-title">{t('marketTitle')}</h3>
           <p className="dshDesktopSettingsGroupIntro">{t('marketIntro')}</p>
@@ -518,7 +429,7 @@ export function DesktopSettingsSection({
             ))}
           </div>
         )}
-      </section>
+      </section> */}
 
       <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-presentation-title">
         <div>
@@ -582,7 +493,7 @@ export function DesktopSettingsSection({
         )}
       </section>
 
-      <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-web-title">
+      {/* <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-web-title">
         <div>
           <h3 id="dsh-desktop-web-title">{t('webTitle')}</h3>
           <p className="dshDesktopSettingsGroupIntro">{t('webIntro')}</p>
@@ -614,7 +525,7 @@ export function DesktopSettingsSection({
             )}
           </div>
         )}
-      </section>
+      </section> */}
 
       <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-notifications-title">
         <div>
