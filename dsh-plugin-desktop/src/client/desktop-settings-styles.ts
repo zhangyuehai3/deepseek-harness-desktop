@@ -342,6 +342,66 @@ const CSS = `
   .dshDesktopSettingsToggleRow { align-items: flex-start; }
   .dshDesktopSettingsForm { align-items: stretch; flex-direction: column; }
 }
+.dshDesktopPluginsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 760px;
+  color: var(--dsw-alias-label-primary);
+}
+.dshDesktopPluginsSectionHeading {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.dshDesktopPluginsSectionIntro {
+  margin: 0;
+  font-size: 13px;
+  color: var(--dsw-alias-label-tertiary);
+}
+.dshDesktopPluginsTabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 22px;
+  margin-top: 2px;
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+}
+.dshDesktopPluginsTab {
+  position: relative;
+  padding: 7px 1px 9px;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+}
+.dshDesktopPluginsTab:hover,
+.dshDesktopPluginsTab[data-active='true'] { color: var(--dsw-alias-label-primary); }
+.dshDesktopPluginsTab[data-active='true']::after,
+.dshDesktopPluginsTab:focus-visible::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--dsw-alias-label-primary);
+  content: '';
+}
+.dshDesktopPluginsTab:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+  color: var(--dsw-alias-label-primary);
+}
+.dshDesktopPluginsPanel { min-width: 0; padding-top: 2px; }
+.dshDesktopPluginsEmpty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--dsw-alias-label-tertiary);
+}
 `
 
 /** Install one scoped stylesheet; tolerate headless Client boot. */

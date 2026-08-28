@@ -6,9 +6,8 @@ import {
 import type { SettingsScope } from '@deepseek-ai/dsh-client-runtime/client'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
-  DesktopMarketProvider, DesktopProfileView, DesktopSettingsApi, DesktopSettingsView,
+  DesktopProfileView, DesktopSettingsApi, DesktopSettingsView,
 } from './desktop-settings-api.ts'
-import type { DesktopSettingsLocaleKey } from './desktop-settings-locales.ts'
 import type { DesktopClientPlatform } from './environment.ts'
 
 /** Browser view of the Host `dsh-desktop` settings namespace. */
@@ -49,7 +48,7 @@ export type DesktopSettingsSectionProps =
   & InjectFace<DesktopSettingsSectionInjected>
 
 type Translate = DesktopSettingsSectionProps['t']
-type BusyOperation = 'load' | 'create-profile' | 'select-profile' | 'delete-profile' | 'select-market' | 'mode' | 'material' | 'web' | 'notification'
+type BusyOperation = 'load' | 'create-profile' | 'select-profile' | 'delete-profile' | 'mode' | 'material' | 'web' | 'notification'
 type RestartState = 'none' | 'restarting' | 'required'
 
 /** URLs are advertised only after the user explicitly enables browser access. */
@@ -170,55 +169,6 @@ function profileState(profile: DesktopProfileView, t: Translate): string {
   return t('profileReady')
 }
 
-function RepositoryLink({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <a
-      className="dshDesktopSettingsChoiceLink"
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={event => { event.stopPropagation() }}
-    >
-      {children}
-    </a>
-  )
-}
-
-const MARKET_OPTIONS: readonly {
-  id: DesktopMarketProvider
-  title: DesktopSettingsLocaleKey
-  body: DesktopSettingsLocaleKey
-}[] = [
-  { id: 'disabled', title: 'marketDisabled', body: 'marketDisabledBody' },
-  { id: 'community-market', title: 'communityMarket', body: 'communityMarketBody' },
-  { id: 'dsh-market', title: 'EZAIMarket', body: 'EZAIMarketBody' },
-]
-
-const COMMUNITY_MARKET_URL = 'https://github.com/anywhere-labs/deepseek-harness-desktop/tree/master/dsh-community-market'
-const DSH_MARKET_URL = 'https://github.com/dsh-market/dsh-market'
-const AWESOME_DSH_PLUGIN_URL = 'https://github.com/awesome-dsh-plugin/awesome-dsh-plugin'
-
-function marketTitle(option: (typeof MARKET_OPTIONS)[number], t: Translate): ReactNode {
-  if (option.id === 'community-market') {
-    return <RepositoryLink href={COMMUNITY_MARKET_URL}>{t(option.title)}</RepositoryLink>
-  }
-  if (option.id === 'dsh-market') {
-    return <RepositoryLink href={DSH_MARKET_URL}>{t(option.title)}</RepositoryLink>
-  }
-  return t(option.title)
-}
-
-function marketBody(option: (typeof MARKET_OPTIONS)[number], t: Translate): ReactNode {
-  if (option.id !== 'dsh-market') return t(option.body)
-  return (
-    <>
-      {t(option.body)}{' '}
-      <RepositoryLink href={AWESOME_DSH_PLUGIN_URL}>awesome-dsh-plugin</RepositoryLink>
-    </>
-  )
-}
-
-
 /** Render the Desktop settings page. */
 export function DesktopSettingsSection({
   t,
@@ -306,17 +256,6 @@ export function DesktopSettingsSection({
     void run('delete-profile', async () => {
       setView(await api.deleteProfile(name))
       setPendingProfileDelete(undefined)
-    })
-  }
-
-  const selectMarket = (provider: DesktopMarketProvider): void => {
-    void run('select-market', async () => {
-      const response = await api.selectMarket(provider)
-      setView(current => current === undefined ? current : {
-        ...current,
-        market: { requested: provider, effective: current.market.effective, legacyDefaulted: false },
-      })
-      if (response.restartRequired) requestRestart()
     })
   }
 
@@ -458,36 +397,6 @@ export function DesktopSettingsSection({
               </button>
             </form>
           </>
-        )}
-      </section>
-
-      <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-market-title">
-        <div>
-          <h3 id="dsh-desktop-market-title">{t('marketTitle')}</h3>
-          <p className="dshDesktopSettingsGroupIntro">{t('marketIntro')}</p>
-        </div>
-        {view?.market.legacyDefaulted === true && <p className="dshDesktopSettingsNotice">{t('legacyMarketNotice')}</p>}
-        {view !== undefined && view.market.requested !== view.market.effective && restart === 'none' && (
-          <p className="dshDesktopSettingsNotice" role="status">{t('marketLoadFailed')}</p>
-        )}
-        {view !== undefined && (
-          <div className="dshDesktopSettingsList" role="radiogroup" aria-labelledby="dsh-desktop-market-title">
-            {MARKET_OPTIONS.map(option => (
-              <Choice
-                key={option.id}
-                title={marketTitle(option, t)}
-                badge={option.id === 'community-market' ? t('beta') : undefined}
-                body={marketBody(option, t)}
-                selected={view.market.requested === option.id}
-                reselectable={view.market.requested === option.id && view.market.requested !== view.market.effective}
-                disabled={busy !== undefined || restart !== 'none'}
-                action={() => { selectMarket(option.id) }}
-                status={view.market.requested === option.id && view.market.requested !== view.market.effective
-                    ? t('retryMarket')
-                    : view.market.requested === option.id ? t('selected') : undefined}
-              />
-            ))}
-          </div>
         )}
       </section>
 
