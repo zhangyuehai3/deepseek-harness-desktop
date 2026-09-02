@@ -7,27 +7,31 @@
         mode: compatibility
     - id: community-market
       name: dsh-community-market
-    - id: file-upload
-      name: dsh-file-upload
+    - id: files-toolkit
+      name: dsh-files
       config:
-        uploadMaxBytes: 26214400
-        allowedExtensions: []
-        uploadTtlMs: 604800000
-        sweepIntervalMs: 3600000
-        maxConcurrentUploads: 4
-        maxFileBytes: 26214400
+        maxFileBytes: 25165824
         readLimit: 2000
         sheetRowLimit: 200
         maxSheets: 5
         cacheEntries: 16
         cacheMaxBytes: 67108864
-        inlineTextLimit: 8192
-        previewTextLimit: 2048
-        markitdownBin: ''
-        visionEndpoint: ''
-        visionModel: ''
-        visionApiKeyEnv: OPENAI_API_KEY
-        visionMaxBytes: 10485760
+        maxOutputChars: 24000
+        readTimeoutMs: 120000
+        uploadMaxBytes: 25165824
+        allowedExtensions: []
+        uploadTtlMs: 604800000
+        sweepIntervalMs: 3600000
+        maxConcurrentUploads: 4
+        maxUploadBytesPerSession: 0
+        trustedHosts: []
+    - id: ezai-auth
+      name: dsh-ezai-auth
+      config:
+        baseURL: 'https://www.ezsvsbox.com'
+        loginPath: '/login'
+        captchaPath: '/captcha/box'
+        tokenQuota: 200000000
     # The tray terminal command is hidden while the terminal remains available
     # through plugin recovery and the active profile.
     # - id: desktop-terminal

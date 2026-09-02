@@ -31,7 +31,7 @@ function context(
     appOutDir,
     electronPlatformName,
     ...(arch === undefined ? {} : { arch }),
-    packager: { appInfo: { productFilename: 'EZAIGC Desktop' } },
+    packager: { appInfo: { productFilename: 'EZAI Desktop' } },
   }
 }
 
@@ -116,7 +116,7 @@ describe('packaged desktop runtime verification', () => {
   it.each([
     [
       'darwin',
-      join('/build', 'EZAIGC Desktop.app', 'Contents', 'Resources', 'app.asar'),
+      join('/build', 'EZAI Desktop.app', 'Contents', 'Resources', 'app.asar'),
     ],
     [
       'win32',

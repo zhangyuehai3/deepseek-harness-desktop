@@ -90,9 +90,9 @@ export function verifyWindowsInstaller(
   const distDir = join(options.desktopRoot, 'dist')
   const installerPath = join(
     distDir,
-    `EZAIGC-Desktop-${options.version}-x64-Setup.exe`,
+    `EZAI-Desktop-${options.version}-x64-Setup.exe`,
   )
-  const applicationPath = join(distDir, 'win-unpacked', 'EZAIGC Desktop.exe')
+  const applicationPath = join(distDir, 'win-unpacked', 'EZAI Desktop.exe')
 
   assertPortableExecutable(installerPath, 'Windows NSIS installer')
   assertPortableExecutable(applicationPath, 'unpacked Windows application')

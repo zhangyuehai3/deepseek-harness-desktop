@@ -38,7 +38,7 @@ const STATE_FILE_MODE = 0o600
 const MAX_PROFILE_NAME_BYTES = 255
 const INTERNAL_PROFILE_STAGING_PATTERN = /^\..+\.(?:creating|deleting|incomplete)-\d+-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
 
-/** One discovered or lazily available EZAIGC profile. */
+/** One discovered or lazily available EZAI profile. */
 export interface DesktopProfileSummary {
   /** Profile name passed to `dsh --profile`. */
   readonly name: string

@@ -1,4 +1,4 @@
-/** EZAIGC Desktop executable: minimal Electron bootstrap around the Host Cordis root. */
+/** EZAI Desktop executable: minimal Electron bootstrap around the Host Cordis root. */
 
 import { app, crashReporter, shell } from 'electron'
 import { randomUUID } from 'node:crypto'
@@ -137,7 +137,7 @@ import {
 import { windowsSupportsMica } from './window-material.ts'
 
 const BIN_NAME = 'dsh-plugin-desktop'
-const PRODUCT_NAME = 'EZAIGC Desktop'
+const PRODUCT_NAME = 'EZAI Desktop'
 
 class RendererStartupFailure extends Error {
   constructor(
@@ -201,7 +201,7 @@ function notifyWindowsVolumeConcerns(
   const label = runtime.locale === 'zh'
     ? concernLabel === 'application install' ? '应用安装目录'
       : concernLabel === 'desktop user data' ? '桌面用户数据'
-        : concernLabel === 'EZAIGC home' ? 'EZAIGC 主目录'
+        : concernLabel === 'EZAI home' ? 'EZAI 主目录'
           : '某个配置路径'
     : concernLabel ?? 'A configured path'
   try {
@@ -452,7 +452,7 @@ async function start(): Promise<void> {
     const windowsVolumeConcerns = diagnoseWindowsVolumes(process.platform, [
       { label: 'application install', path: process.execPath },
       { label: 'desktop user data', path: app.getPath('userData') },
-      { label: 'EZAIGC home', path: homeDir },
+      { label: 'EZAI home', path: homeDir },
     ])
     warnWindowsVolumeConcerns(electronLogger, windowsVolumeConcerns)
 

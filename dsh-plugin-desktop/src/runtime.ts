@@ -10,7 +10,7 @@ import type {
   WindowsWindowMaterial,
 } from './window-material.ts'
 
-/** Electron platforms supported by the EZAIGC Desktop native adapter. */
+/** Electron platforms supported by the EZAI Desktop native adapter. */
 export type DesktopPlatform = 'darwin' | 'win32' | 'linux'
 
 /** Native presentation modes selected by the desktop-shell Cordis row. */
@@ -123,7 +123,7 @@ export interface DesktopUpdateAdapter {
 
 /** Profile identity needed to open the packaged DSH command environment. */
 export interface DesktopTerminalSpec {
-  /** EZAIGC profile selected by the desktop launcher. */
+  /** EZAI profile selected by the desktop launcher. */
   profileName: string
   /** Absolute directory containing the profile manifest and dependencies. */
   profileDir: string
@@ -137,7 +137,7 @@ export interface DesktopShellSpec extends DesktopWindowConfig {
   material: DesktopWindowMaterial
   /** Windows build used for material capability reporting, when applicable. */
   windowsBuild?: number
-  /** Unmodified Web root served by the active EZAIGC profile. */
+  /** Unmodified Web root served by the active EZAI profile. */
   url: string
   /** Ephemeral capability attached by Electron to this renderer generation's requests. */
   rendererAccessHeader: DesktopRendererAccessHeader
@@ -243,7 +243,7 @@ export interface DesktopRuntime {
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
-    /** Electron adapter provided by the EZAIGC Desktop launcher. */
+    /** Electron adapter provided by the EZAI Desktop launcher. */
     desktopRuntime: DesktopRuntime
   }
 }

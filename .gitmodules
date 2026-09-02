@@ -1,6 +1,6 @@
 [submodule "deepseek-harness"]
 	path = deepseek-harness
 	url = https://github.com/zhangyuehai3/deepseek-harness.git
-[submodule "dsh-plugin-desktop/vendor/dsh-file-upload"]
-	path = dsh-plugin-desktop/vendor/dsh-file-upload
-	url = https://github.com/HongMing-Huang/dsh-file-upload.git
+[submodule "dsh-plugin-desktop/vendor/dsh-files"]
+	path = dsh-plugin-desktop/vendor/dsh-files
+	url = https://github.com/taxueseek/dsh-files.git

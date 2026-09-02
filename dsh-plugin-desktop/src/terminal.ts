@@ -1,4 +1,4 @@
-/** Cordis Host plugin contributing the packaged EZAIGC terminal to the native tray. */
+/** Cordis Host plugin contributing the packaged EZAI terminal to the native tray. */
 
 // import type { Context } from '@deepseek-ai/cordis'
 // import type {} from './runtime.ts'

@@ -1,0 +1,1189 @@
+window.__ModuleLoader__.load({ id: "dsh-ezai-auth", factory: (require) => { var module = { exports: {} }; var exports = module.exports;
+"use strict";
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// src/client/index.tsx
+var index_exports = {};
+__export(index_exports, {
+  apply: () => apply,
+  inject: () => inject
+});
+module.exports = __toCommonJS(index_exports);
+
+// src/client/EzaiAccountTab.tsx
+var import_react = require("react");
+var import_jsx_runtime = require("react/jsx-runtime");
+function formatNumber(value) {
+  return value.toLocaleString("zh-CN");
+}
+function parseBackendError(text) {
+  try {
+    const parsed = JSON.parse(text);
+    const msg = parsed.message ?? parsed.error ?? parsed.msg;
+    if (typeof msg === "string" && msg.trim() !== "") return msg;
+  } catch {
+  }
+  return void 0;
+}
+function maskPhone(phone) {
+  if (!phone) return "\u2014";
+  const clean = phone.trim();
+  if (clean.length === 11) {
+    return `${clean.slice(0, 3)} **** ${clean.slice(7)}`;
+  }
+  if (clean.length > 7) {
+    return `${clean.slice(0, 3)} **** ${clean.slice(-4)}`;
+  }
+  return clean;
+}
+function EzaiAccountTab({ t, onLogin, hideHeader = false }) {
+  const [captcha, setCaptcha] = (0, import_react.useState)(void 0);
+  const [captchaLoading, setCaptchaLoading] = (0, import_react.useState)(false);
+  const [form, setForm] = (0, import_react.useState)({ username: "", password: "", captcha: "" });
+  const [account, setAccount] = (0, import_react.useState)(void 0);
+  const [checkingSession, setCheckingSession] = (0, import_react.useState)(true);
+  const [loading, setLoading] = (0, import_react.useState)(false);
+  const [error, setError] = (0, import_react.useState)(void 0);
+  const [captchaError, setCaptchaError] = (0, import_react.useState)(void 0);
+  const fetchAccount = (0, import_react.useCallback)(async () => {
+    try {
+      const response = await fetch("/api/ezai-auth/account", { headers: { accept: "application/json" } });
+      if (response.status === 401) {
+        setAccount(void 0);
+        return;
+      }
+      if (!response.ok) {
+        const text = await response.text();
+        const backend = parseBackendError(text);
+        throw new Error(backend ?? `account request failed (${response.status})`);
+      }
+      const payload = await response.json();
+      setAccount(payload);
+    } catch {
+      setAccount(void 0);
+    }
+  }, []);
+  const fetchCaptcha = (0, import_react.useCallback)(async () => {
+    setCaptchaLoading(true);
+    try {
+      const response = await fetch("/api/ezai-auth/captcha", { headers: { accept: "application/json" } });
+      if (!response.ok) {
+        const text = await response.text();
+        const backend = parseBackendError(text);
+        throw new Error(backend ?? `captcha request failed (${response.status})`);
+      }
+      const payload = await response.json();
+      setCaptcha(payload);
+      setCaptchaError(void 0);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || t("networkError"));
+      setCaptcha(void 0);
+    } finally {
+      setCaptchaLoading(false);
+    }
+  }, [t]);
+  (0, import_react.useEffect)(() => {
+    let active = true;
+    async function init() {
+      try {
+        const response = await fetch("/api/ezai-auth/account", { headers: { accept: "application/json" } });
+        if (response.status === 401) {
+          if (active) {
+            setAccount(void 0);
+            void fetchCaptcha();
+          }
+          return;
+        }
+        if (response.ok) {
+          const payload = await response.json();
+          if (active) setAccount(payload);
+        } else {
+          if (active) {
+            setAccount(void 0);
+            void fetchCaptcha();
+          }
+        }
+      } catch {
+        if (active) {
+          setAccount(void 0);
+          void fetchCaptcha();
+        }
+      } finally {
+        if (active) {
+          setCheckingSession(false);
+        }
+      }
+    }
+    void init();
+    return () => {
+      active = false;
+    };
+  }, [fetchCaptcha]);
+  const handleLogin = async (event) => {
+    event.preventDefault();
+    if (captcha === void 0) return;
+    setLoading(true);
+    setError(void 0);
+    setCaptchaError(void 0);
+    try {
+      const response = await fetch("/api/ezai-auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({
+          username: form.username,
+          password: form.password,
+          captcha: form.captcha,
+          cookies: captcha.cookies
+        })
+      });
+      const payload = await response.json();
+      if (!response.ok || payload.status_code !== 200 || payload.user === void 0) {
+        throw new Error(payload.message ?? payload.error ?? t("networkError"));
+      }
+      await fetchAccount();
+      setForm({ username: "", password: "", captcha: "" });
+      onLogin?.(payload.user);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (/验证码/.test(message)) {
+        setCaptchaError(message);
+      } else {
+        setError(t("loginFailed").replace("{{message}}", message));
+      }
+      setForm((previous) => ({ ...previous, captcha: "" }));
+      void fetchCaptcha();
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/ezai-auth/logout", { method: "POST" });
+      setAccount(void 0);
+      void fetchCaptcha();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || t("networkError"));
+    }
+  };
+  const updateField = (field) => (event) => {
+    if (error !== void 0) setError(void 0);
+    if (captchaError !== void 0) setCaptchaError(void 0);
+    setForm((previous) => ({ ...previous, [field]: event.target.value }));
+  };
+  const [copiedKey, setCopiedKey] = (0, import_react.useState)(void 0);
+  const copyToClipboard = (text, key) => {
+    if (!text) return;
+    try {
+      void navigator.clipboard?.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(void 0), 1500);
+    } catch {
+    }
+  };
+  if (checkingSession) {
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiAuthLoadingState", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshEzaiAuthSpinner", style: { width: "24px", height: "24px", borderWidth: "2.5px" } }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: { fontSize: "13px", color: "var(--dsw-alias-label-secondary, #587372)" }, children: t("checkingSession") })
+    ] });
+  }
+  if (account !== void 0) {
+    const quota = account.tokenUsage.quota;
+    const used = account.tokenUsage.used;
+    const percent = quota > 0 ? Math.min(100, Math.round(used / quota * 100)) : 0;
+    const user = account.user;
+    const avatarInitial = user.surname_lable || (user.name ? user.name.slice(-2) : user.login_name.charAt(0).toUpperCase());
+    const displayName = user.name || user.surname_lable || user.login_name;
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiAuthAccountCard", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiProfileHero", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiProfileUser", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiAvatarWrap", children: [
+            user.avatar ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", { className: "dshEzaiAvatarImg", src: user.avatar, alt: displayName }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshEzaiAvatarFallback", children: avatarInitial }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshEzaiStatusDot", title: "Active" })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiProfileMeta", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiNameRow", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "dshEzaiUserName", children: displayName }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "dshEzaiVerifiedChip", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", { width: "11", height: "11", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("polyline", { points: "20 6 9 17 4 12" }) }),
+                t("verifiedUser")
+              ] })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiLoginAccount", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "13", height: "13", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", style: { color: "#7a9493" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("polyline", { points: "22,6 12,13 2,6" })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: user.login_name })
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", { type: "button", className: "dshEzaiLogoutActionBtn", onClick: handleLogout, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "13", height: "13", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("polyline", { points: "16 17 21 12 16 7" }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", { x1: "21", y1: "12", x2: "9", y2: "12" })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: t("logout") })
+        ] })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiInfoGrid", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiInfoTile", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiTileHeader", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiTileLabelWithIcon", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "13", height: "13", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", style: { color: "#265C5A" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("polyline", { points: "22,6 12,13 2,6" })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: t("email") })
+            ] }),
+            user.email && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "dshEzaiCopyMiniBtn",
+                title: "Copy",
+                onClick: () => copyToClipboard(user.email, "email"),
+                children: copiedKey === "email" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", { width: "12", height: "12", viewBox: "0 0 24 24", fill: "none", stroke: "#265C5A", strokeWidth: "2.5", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("polyline", { points: "20 6 9 17 4 12" }) }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "12", height: "12", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", { x: "9", y: "9", width: "13", height: "13", rx: "2", ry: "2" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" })
+                ] })
+              }
+            )
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshEzaiTileValue", title: user.email || user.login_name, children: user.email || user.login_name || "\u2014" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiInfoTile", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshEzaiTileHeader", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiTileLabelWithIcon", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", { width: "13", height: "13", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", style: { color: "#265C5A" }, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: t("phone") })
+          ] }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshEzaiTileValue", children: maskPhone(user.user_phone) })
+        ] })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiTokenCard", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiTokenHead", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiTokenLabel", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", { width: "15", height: "15", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", style: { color: "#265C5A" }, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("polygon", { points: "13 2 3 14 12 14 11 22 21 10 12 10 13 2" }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: t("tokenUsage") })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "dshEzaiTokenVal", children: [
+            percent,
+            "%"
+          ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshEzaiProgressBar", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshEzaiProgressFill", style: { width: `${percent}%` } }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiTokenFoot", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+            t("tokenUsed"),
+            ": ",
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: formatNumber(used) })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+            t("tokenQuota"),
+            ": ",
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: formatNumber(quota) }),
+            " ",
+            t("tokenUnit")
+          ] })
+        ] })
+      ] }),
+      account.warning && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { fontSize: "12px", color: "#7a9493", display: "flex", alignItems: "center", gap: "6px" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", style: { flexShrink: 0 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", { cx: "12", cy: "12", r: "10" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", { x1: "12", y1: "8", x2: "12", y2: "12" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", { x1: "12", y1: "16", x2: "12.01", y2: "16" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: account.warning })
+      ] })
+    ] });
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", { className: "dshEzaiAuthForm", onSubmit: handleLogin, children: [
+    !hideHeader && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { marginBottom: "8px" }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", { className: "dshEzaiAuthTitle", style: { fontSize: "17px" }, children: t("title") }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "dshEzaiAuthSubtitle", children: t("intro") })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "dshEzaiAuthField", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "dshEzaiAuthLabel", children: t("username") }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiAuthInputWrap", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "dshEzaiAuthInputIcon", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "15", height: "15", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", { cx: "12", cy: "7", r: "4" })
+        ] }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          "input",
+          {
+            className: "dshEzaiAuthInput",
+            type: "text",
+            value: form.username,
+            onChange: updateField("username"),
+            placeholder: t("usernamePlaceholder"),
+            autoComplete: "username",
+            disabled: loading,
+            required: true
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "dshEzaiAuthField", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "dshEzaiAuthLabel", children: t("password") }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiAuthInputWrap", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "dshEzaiAuthInputIcon", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "15", height: "15", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", { x: "3", y: "11", width: "18", height: "11", rx: "2", ry: "2" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M7 11V7a5 5 0 0 1 10 0v4" })
+        ] }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          "input",
+          {
+            className: "dshEzaiAuthInput",
+            type: "password",
+            value: form.password,
+            onChange: updateField("password"),
+            placeholder: t("passwordPlaceholder"),
+            autoComplete: "current-password",
+            disabled: loading,
+            required: true
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "dshEzaiAuthField", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "dshEzaiAuthLabel", children: t("captcha") }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiAuthCaptchaRow", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiAuthInputWrap dshEzaiAuthCaptchaWrap", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "dshEzaiAuthInputIcon", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", { width: "15", height: "15", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" }) }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+            "input",
+            {
+              className: "dshEzaiAuthInput",
+              type: "text",
+              value: form.captcha,
+              onChange: updateField("captcha"),
+              placeholder: t("captchaPlaceholder"),
+              disabled: loading,
+              required: true
+            }
+          )
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          "div",
+          {
+            className: "dshEzaiAuthCaptchaBox",
+            onClick: fetchCaptcha,
+            title: t("refreshHint"),
+            role: "button",
+            tabIndex: 0,
+            children: captchaLoading ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "dshEzaiAuthCaptchaLoading", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dshEzaiAuthSpinner", style: { width: "12px", height: "12px", borderColor: "rgba(38,92,90,0.25)", borderTopColor: "#98C455" } }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: t("refreshCaptcha") })
+            ] }) : captcha !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+              "img",
+              {
+                className: "dshEzaiAuthCaptchaImg",
+                src: captcha.imageBase64,
+                alt: t("captcha")
+              }
+            ) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "dshEzaiAuthCaptchaLoading", children: t("refreshCaptcha") })
+          }
+        )
+      ] }),
+      captchaError !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiAuthCaptchaError", role: "alert", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", style: { flexShrink: 0 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", { cx: "12", cy: "12", r: "10" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", { x1: "12", y1: "8", x2: "12", y2: "12" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", { x1: "12", y1: "16", x2: "12.01", y2: "16" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: captchaError })
+      ] })
+    ] }),
+    error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dshEzaiAuthErrorBanner", role: "alert", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", style: { flexShrink: 0 }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", { cx: "12", cy: "12", r: "10" }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", { x1: "12", y1: "8", x2: "12", y2: "12" }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("line", { x1: "12", y1: "16", x2: "12.01", y2: "16" })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: error })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
+      "button",
+      {
+        type: "submit",
+        className: "dshEzaiAuthSubmit",
+        disabled: loading || captcha === void 0,
+        children: [
+          loading && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "dshEzaiAuthSpinner" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: loading ? t("loggingIn") : t("login") })
+        ]
+      }
+    )
+  ] });
+}
+
+// src/client/EzaiLoginModal.tsx
+var import_react2 = require("react");
+var import_client = require("react-dom/client");
+
+// src/client/styles.ts
+var STYLE_TAG = "dsh-ezai-auth/style.css";
+function injectCss() {
+  if (typeof document === "undefined") return;
+  if (document.querySelector(`style[data-plugin-css=${JSON.stringify(STYLE_TAG)}]`) !== null) return;
+  const tag = document.createElement("style");
+  tag.dataset.plugin = "dsh-ezai-auth";
+  tag.dataset.pluginCss = STYLE_TAG;
+  tag.textContent = `
+/* Modal Backdrop & Animation */
+.dshEzaiAuthModalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(18, 30, 29, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 16px;
+  box-sizing: border-box;
+  opacity: 0;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dshEzaiAuthModalBackdrop[data-visible="true"] {
+  opacity: 1;
+}
+
+/* Modal Card */
+.dshEzaiAuthModal {
+  position: relative;
+  width: min(420px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: var(--dsw-alias-bg-layer-1, #ffffff);
+  color: var(--dsw-alias-label-primary, #112625);
+  border-radius: 18px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(38, 92, 90, 0.15));
+  box-shadow: 0 24px 50px -12px rgba(18, 48, 46, 0.32), 0 0 0 1px rgba(152, 196, 85, 0.12);
+  padding: 30px 28px 26px;
+  box-sizing: border-box;
+  transform: translateY(12px) scale(0.97);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dshEzaiAuthModalBackdrop[data-visible="true"] .dshEzaiAuthModal {
+  transform: translateY(0) scale(1);
+}
+
+/* Close Button */
+.dshEzaiAuthCloseBtn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary, #7a9493);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.dshEzaiAuthCloseBtn:hover {
+  background-color: rgba(38, 92, 90, 0.08);
+  color: #265C5A;
+}
+
+/* Modal Header & Branding */
+.dshEzaiAuthHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 24px;
+}
+.dshEzaiAuthLogo {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #265C5A 0%, #19403e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #98C455;
+  box-shadow: 0 8px 18px -4px rgba(38, 92, 90, 0.4), 0 0 0 1px rgba(152, 196, 85, 0.35);
+  margin-bottom: 14px;
+}
+.dshEzaiAuthTitle {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--dsw-alias-label-primary, #153332);
+}
+.dshEzaiAuthSubtitle {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--dsw-alias-label-secondary, #587372);
+}
+
+/* Form Styles */
+.dshEzaiAuthForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dshEzaiAuthField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dshEzaiAuthLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary, #234746);
+}
+
+/* Input Container with Leading Icon */
+.dshEzaiAuthInputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.dshEzaiAuthInputIcon {
+  position: absolute;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  color: #729190;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dshEzaiAuthInput {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px 0 36px;
+  border-radius: 9px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(38, 92, 90, 0.18));
+  background-color: var(--dsw-alias-bg-layer-2, rgba(38, 92, 90, 0.03));
+  color: var(--dsw-alias-label-primary, inherit);
+  font-size: 14px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.dshEzaiAuthInput:hover:not(:disabled) {
+  border-color: rgba(38, 92, 90, 0.35);
+}
+.dshEzaiAuthInput:focus {
+  background-color: var(--dsw-alias-bg-layer-1, #ffffff);
+  border-color: #265C5A;
+  box-shadow: 0 0 0 3px rgba(38, 92, 90, 0.14), 0 0 0 1px rgba(152, 196, 85, 0.3);
+}
+.dshEzaiAuthInput::placeholder {
+  color: var(--dsw-alias-label-tertiary, #8fa7a6);
+}
+.dshEzaiAuthInput:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Captcha Layout */
+.dshEzaiAuthCaptchaRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dshEzaiAuthCaptchaWrap {
+  flex: 1;
+}
+.dshEzaiAuthCaptchaBox {
+  position: relative;
+  height: 40px;
+  min-width: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(38, 92, 90, 0.18));
+  background-color: var(--dsw-alias-bg-layer-2, rgba(38, 92, 90, 0.03));
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.dshEzaiAuthCaptchaBox:hover {
+  border-color: #265C5A;
+  box-shadow: 0 2px 10px rgba(38, 92, 90, 0.12);
+}
+.dshEzaiAuthCaptchaImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.dshEzaiAuthCaptchaLoading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #587372;
+}
+
+/* Captcha-specific error shown under the captcha row */
+.dshEzaiAuthCaptchaError {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--dsw-alias-state-error-primary, #ef4444);
+  animation: dshEzaiShake 0.3s ease-in-out;
+}
+
+/* Error Banner */
+.dshEzaiAuthErrorBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background-color: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: var(--dsw-alias-state-error-primary, #ef4444);
+  font-size: 13px;
+  line-height: 1.4;
+  animation: dshEzaiShake 0.3s ease-in-out;
+}
+@keyframes dshEzaiShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* Submit Button (#265C5A + #98C455) */
+.dshEzaiAuthSubmit {
+  height: 42px;
+  width: 100%;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #265C5A 0%, #1c4543 100%);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px -2px rgba(38, 92, 90, 0.42);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease, background 0.15s ease;
+  margin-top: 4px;
+}
+.dshEzaiAuthSubmit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2d6b68 0%, #20504e 100%);
+  box-shadow: 0 6px 20px -2px rgba(38, 92, 90, 0.52);
+  transform: translateY(-1px);
+}
+.dshEzaiAuthSubmit:active:not(:disabled) {
+  transform: translateY(0);
+}
+.dshEzaiAuthSubmit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Spinner */
+.dshEzaiAuthSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(152, 196, 85, 0.3);
+  border-top-color: #98C455;
+  border-radius: 50%;
+  animation: dshEzaiSpin 0.7s linear infinite;
+}
+@keyframes dshEzaiSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Loading State Card */
+.dshEzaiAuthLoadingState {
+  min-height: 160px;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 36px 20px;
+  border-radius: 16px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(38, 92, 90, 0.12));
+  background: var(--dsw-alias-bg-layer-2, rgba(38, 92, 90, 0.02));
+  box-sizing: border-box;
+}
+
+/* Account Info Tab (Settings Page) */
+.dshEzaiAuthAccountCard {
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 24px;
+  border-radius: 16px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(38, 92, 90, 0.16));
+  background: var(--dsw-alias-bg-layer-2, rgba(38, 92, 90, 0.025));
+  box-shadow: 0 4px 20px -4px rgba(38, 92, 90, 0.08);
+}
+
+/* User Hero Banner */
+.dshEzaiProfileHero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.dshEzaiProfileUser {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.dshEzaiAvatarWrap {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+}
+.dshEzaiAvatarImg {
+  width: 100%;
+  height: 100%;
+  border-radius: 15px;
+  object-fit: cover;
+  border: 2px solid #98C455;
+  box-shadow: 0 4px 12px rgba(38, 92, 90, 0.2);
+}
+.dshEzaiAvatarFallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #265C5A 0%, #173836 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #98C455;
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.5px;
+  box-shadow: 0 6px 14px -2px rgba(38, 92, 90, 0.35), 0 0 0 1px rgba(152, 196, 85, 0.3);
+}
+.dshEzaiStatusDot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #98C455;
+  border: 2px solid var(--dsw-alias-bg-layer-1, #ffffff);
+  box-shadow: 0 0 8px rgba(152, 196, 85, 0.8);
+}
+
+.dshEzaiProfileMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dshEzaiNameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dshEzaiUserName {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--dsw-alias-label-primary, #153332);
+  letter-spacing: -0.01em;
+}
+.dshEzaiVerifiedChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #265C5A;
+  background: rgba(152, 196, 85, 0.22);
+  border: 1px solid rgba(152, 196, 85, 0.45);
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+.dshEzaiLoginAccount {
+  font-size: 12.5px;
+  color: var(--dsw-alias-label-secondary, #587372);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Info Grid */
+.dshEzaiInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.dshEzaiInfoTile {
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-1, #ffffff);
+  border: 1px solid var(--dsw-alias-border-l1, rgba(38, 92, 90, 0.1));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.dshEzaiInfoTile:hover {
+  border-color: rgba(38, 92, 90, 0.25);
+  transform: translateY(-1px);
+}
+.dshEzaiTileHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--dsw-alias-label-tertiary, #7a9493);
+}
+.dshEzaiTileLabelWithIcon {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.dshEzaiTileValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary, #1c3d3c);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+.dshEzaiCopyMiniBtn {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  color: var(--dsw-alias-label-tertiary, #8fa7a6);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.dshEzaiCopyMiniBtn:hover {
+  color: #265C5A;
+  background: rgba(38, 92, 90, 0.08);
+}
+
+/* Token Card */
+.dshEzaiTokenCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 15px 16px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, var(--dsw-alias-bg-layer-1, #ffffff) 0%, rgba(38, 92, 90, 0.025) 100%);
+  border: 1px solid var(--dsw-alias-border-l1, rgba(38, 92, 90, 0.14));
+  box-shadow: 0 2px 8px rgba(38, 92, 90, 0.04);
+}
+.dshEzaiTokenHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dshEzaiTokenLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary, #234746);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dshEzaiTokenVal {
+  font-size: 13px;
+  font-weight: 700;
+  color: #265C5A;
+  background: rgba(38, 92, 90, 0.08);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+.dshEzaiProgressBar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--dsw-alias-bg-layer-3, rgba(38, 92, 90, 0.08));
+  overflow: hidden;
+}
+.dshEzaiProgressFill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #265C5A 0%, #98C455 100%);
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 8px rgba(152, 196, 85, 0.5);
+}
+.dshEzaiTokenFoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  color: var(--dsw-alias-label-secondary, #587372);
+}
+
+/* Logout Button */
+.dshEzaiLogoutActionBtn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(239, 68, 68, 0.25));
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #587372);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+.dshEzaiLogoutActionBtn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+`;
+  document.head.appendChild(tag);
+}
+
+// src/client/locales.ts
+var NS = "ezai-auth";
+var zh = {
+  "tabTitle": "EZAI \u8D26\u6237",
+  "title": "EZAI \u8D26\u6237",
+  "loginTitle": "EZAI \u5E73\u53F0\u767B\u5F55",
+  "intro": "\u767B\u5F55 EZAI \u5E73\u53F0\u4EE5\u67E5\u770B\u8D26\u6237\u4FE1\u606F\u548C Token \u7528\u91CF\u3002",
+  "loginSubtitle": "\u767B\u5F55\u4EE5\u540C\u6B65\u60A8\u7684\u8D26\u6237\u4FE1\u606F\u53CA Token \u989D\u5EA6",
+  "username": "\u90AE\u7BB1 / \u8D26\u53F7",
+  "usernamePlaceholder": "\u8BF7\u8F93\u5165\u90AE\u7BB1\u6216\u7528\u6237\u540D",
+  "password": "\u5BC6\u7801",
+  "passwordPlaceholder": "\u8BF7\u8F93\u5165\u5BC6\u7801",
+  "captcha": "\u9A8C\u8BC1\u7801",
+  "captchaPlaceholder": "\u8BF7\u8F93\u5165\u9A8C\u8BC1\u7801",
+  "refreshCaptcha": "\u5237\u65B0\u9A8C\u8BC1\u7801",
+  "refreshHint": "\u70B9\u51FB\u6362\u4E00\u5F20",
+  "login": "\u7ACB\u5373\u767B\u5F55",
+  "loggingIn": "\u767B\u5F55\u4E2D\u2026",
+  "logout": "\u9000\u51FA\u767B\u5F55",
+  "loginFailed": "\u767B\u5F55\u5931\u8D25\uFF1A{{message}}",
+  "networkError": "\u7F51\u7EDC\u8FDE\u63A5\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u540E\u91CD\u8BD5",
+  "notLoggedIn": "\u672A\u767B\u5F55",
+  "tokenUsage": "Token \u989D\u5EA6\u7528\u91CF",
+  "tokenUsed": "\u5DF2\u6D88\u8017",
+  "tokenQuota": "\u603B\u989D\u5EA6",
+  "tokenUnit": "Tokens",
+  "close": "\u5173\u95ED",
+  "name": "\u7528\u6237\u59D3\u540D",
+  "loginAccount": "\u767B\u5F55\u8D26\u53F7",
+  "email": "\u8054\u7CFB\u90AE\u7BB1",
+  "phone": "\u8054\u7CFB\u624B\u673A",
+  "department": "\u90E8\u95E8\u7F16\u53F7",
+  "userId": "\u7528\u6237\u7F16\u53F7",
+  "verifiedUser": "EZAI \u8BA4\u8BC1\u6210\u5458",
+  "copied": "\u5DF2\u590D\u5236\u5230\u526A\u8D34\u677F",
+  "checkingSession": "\u6B63\u5728\u52A0\u8F7D\u8D26\u6237\u4FE1\u606F\u2026"
+};
+var en = {
+  "tabTitle": "EZAI Account",
+  "title": "EZAI Account",
+  "loginTitle": "EZAI Login",
+  "intro": "Sign in to the EZAI platform to view account info and token usage.",
+  "loginSubtitle": "Sign in to access your account and token quota",
+  "username": "Email / Account",
+  "usernamePlaceholder": "Enter email or username",
+  "password": "Password",
+  "passwordPlaceholder": "Enter password",
+  "captcha": "Captcha",
+  "captchaPlaceholder": "Enter captcha",
+  "refreshCaptcha": "Refresh captcha",
+  "refreshHint": "Click to refresh",
+  "login": "Sign In",
+  "loggingIn": "Signing in\u2026",
+  "logout": "Sign Out",
+  "loginFailed": "Login failed: {{message}}",
+  "networkError": "Network error, please retry",
+  "notLoggedIn": "Not signed in",
+  "tokenUsage": "Token Quota Usage",
+  "tokenUsed": "Used",
+  "tokenQuota": "Quota",
+  "tokenUnit": "Tokens",
+  "close": "Close",
+  "name": "Full Name",
+  "loginAccount": "Login Account",
+  "email": "Email",
+  "phone": "Phone",
+  "department": "Department ID",
+  "userId": "User ID",
+  "verifiedUser": "EZAI Verified",
+  "copied": "Copied to clipboard",
+  "checkingSession": "Loading account information\u2026"
+};
+
+// src/client/EzaiLoginModal.tsx
+var import_jsx_runtime2 = require("react/jsx-runtime");
+var MODAL_MOUNT_ID = "dsh-ezai-auth-login-modal";
+function EzaiLoginModal({ locale, onClose }) {
+  const [visible, setVisible] = (0, import_react2.useState)(false);
+  (0, import_react2.useEffect)(() => {
+    injectCss();
+    const timer = setTimeout(() => setVisible(true), 16);
+    return () => clearTimeout(timer);
+  }, []);
+  const handleClose = (0, import_react2.useCallback)(() => {
+    setVisible(false);
+    setTimeout(() => onClose(), 220);
+  }, [onClose]);
+  const handleLogin = (0, import_react2.useCallback)(() => {
+    handleClose();
+  }, [handleClose]);
+  (0, import_react2.useEffect)(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        handleClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleClose]);
+  const dictionary = locale === "zh" ? zh : en;
+  const t = (key) => dictionary[key];
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+    "div",
+    {
+      className: "dshEzaiAuthModalBackdrop",
+      "data-visible": visible ? "true" : "false",
+      onClick: handleClose,
+      children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+        "div",
+        {
+          className: "dshEzaiAuthModal",
+          onClick: (event) => event.stopPropagation(),
+          role: "dialog",
+          "aria-modal": "true",
+          "aria-labelledby": "dsh-ezai-auth-login-title",
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "dshEzaiAuthCloseBtn",
+                onClick: handleClose,
+                "aria-label": t("close"),
+                title: t("close"),
+                children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("line", { x1: "18", y1: "6", x2: "6", y2: "18" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("line", { x1: "6", y1: "6", x2: "18", y2: "18" })
+                ] })
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dshEzaiAuthHeader", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dshEzaiAuthLogo", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M12 2L2 7l10 5 10-5-10-5z" }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M2 17l10 5 10-5" }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M2 12l10 5 10-5" })
+              ] }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h2", { id: "dsh-ezai-auth-login-title", className: "dshEzaiAuthTitle", children: t("loginTitle") }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("p", { className: "dshEzaiAuthSubtitle", children: t("loginSubtitle") })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(EzaiAccountTab, { t, onLogin: handleLogin, hideHeader: true })
+          ]
+        }
+      )
+    }
+  );
+}
+function showEzaiLoginModal(locale) {
+  let root;
+  let container;
+  const dispose = () => {
+    if (root !== void 0) {
+      root.unmount();
+      root = void 0;
+    }
+    if (container !== void 0 && container.parentNode !== null) {
+      container.parentNode.removeChild(container);
+      container = void 0;
+    }
+  };
+  container = document.createElement("div");
+  container.id = MODAL_MOUNT_ID;
+  document.body.appendChild(container);
+  root = (0, import_client.createRoot)(container);
+  root.render(/* @__PURE__ */ (0, import_jsx_runtime2.jsx)(EzaiLoginModal, { locale, onClose: dispose }));
+  return dispose;
+}
+
+// src/client/index.tsx
+var inject = ["slots", "locale"];
+function getActiveLocale(ctx) {
+  const snapshot = ctx.locale.getSnapshot?.();
+  const active = typeof snapshot?.active === "string" ? snapshot.active : "en";
+  return active === "zh" ? "zh" : "en";
+}
+function apply(ctx) {
+  injectCss();
+  ctx.effect(() => ctx.locale.register(NS, { zh, en }), "ezai-auth: dictionaries");
+  ctx.slots.inject(
+    "settings.section",
+    () => ctx.slots.register({
+      name: "settings.section",
+      id: "ezai-account",
+      order: 110,
+      label: () => {
+        const t = ctx.locale.bind(NS);
+        return t("tabTitle");
+      },
+      locale: NS,
+      inject: () => ({})
+    }, EzaiAccountTab)
+  );
+  void (async () => {
+    try {
+      const response = await fetch("/api/ezai-auth/account", { headers: { accept: "application/json" } });
+      if (response.status === 401) {
+        showEzaiLoginModal(getActiveLocale(ctx));
+      }
+    } catch {
+    }
+  })();
+}
+return module.exports; } });
+//# sourceMappingURL=client.js.map

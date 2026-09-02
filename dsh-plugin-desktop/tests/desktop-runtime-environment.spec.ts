@@ -35,11 +35,11 @@ function options(
   return {
     platform,
     appExecutable: platform === 'win32'
-      ? 'C:\\Program Files\\EZAIGC 100% Desktop\\EZAIGC Desktop.exe'
-      : "/Applications/EZAIGC O'Brien.app/Contents/MacOS/EZAIGC Desktop",
+      ? 'C:\\Program Files\\EZAI 100% Desktop\\EZAI Desktop.exe'
+      : "/Applications/EZAI O'Brien.app/Contents/MacOS/EZAI Desktop",
     pnpmBinPath: platform === 'win32'
-      ? 'C:\\Program Files\\EZAIGC Desktop\\resources\\app.asar.unpacked\\node_modules\\pnpm\\bin\\pnpm.mjs'
-      : "/Applications/EZAIGC O'Brien.app/Contents/Resources/app.asar.unpacked/node_modules/pnpm/bin/pnpm.mjs",
+      ? 'C:\\Program Files\\EZAI Desktop\\resources\\app.asar.unpacked\\node_modules\\pnpm\\bin\\pnpm.mjs'
+      : "/Applications/EZAI O'Brien.app/Contents/Resources/app.asar.unpacked/node_modules/pnpm/bin/pnpm.mjs",
     electronVersion: '43.4.0',
     stateDir,
     environment,

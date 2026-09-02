@@ -27,8 +27,8 @@ describe('Desktop product copy', () => {
   it('ships localized native update and failure dialogs', () => {
     const copy = desktopNativeCopy('zh')
     expect(copy.updateCheckFailedTitle).toBe('无法检查更新')
-    expect(copy.terminalErrorTitle).toBe('无法打开 EZAIGC 终端')
+    expect(copy.terminalErrorTitle).toBe('无法打开 EZAI 终端')
     expect(copy.diagnosticsErrorTitle).toBe('无法导出诊断信息')
-    expect(copy.updateAvailableMessage('2.1.0')).toBe('EZAIGC Desktop 2.1.0 已可用。')
+    expect(copy.updateAvailableMessage('2.1.0')).toBe('EZAI Desktop 2.1.0 已可用。')
   })
 })

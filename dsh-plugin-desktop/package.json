@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-desktop",
   "version": "2.0.2",
-  "description": "EZAIGC Desktop: an Electron shell composed as an EZAIGC Harness Cordis plugin",
+  "description": "EZAI Desktop: an Electron shell composed as an EZAI Harness Cordis plugin",
   "license": "MIT",
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
@@ -125,8 +125,8 @@
     "verify:operations": "node --test scripts/operation-reliability.spec.mjs && node scripts/verify-operation-reliability.mjs",
     "verify:notices": "node scripts/verify-licenses.mjs --notices THIRD_PARTY_NOTICES.md",
     "check": "yarn run build && yarn run typecheck && yarn run test && yarn run verify:closure && yarn run verify:cli && yarn run verify:loader && yarn run verify:profile && yarn run verify:licenses && yarn run verify:operations",
-    "check:win-package": "yarn workspace dsh-community-market build && yarn run build && yarn run typecheck && vitest run tests/package.spec.ts tests/package-win.spec.ts tests/desktop-installer-quit.spec.ts tests/installer-nsh.spec.ts tests/update-checker.spec.ts tests/update-download.spec.ts tests/verify-win-installer.spec.ts tests/verify-win-portable.spec.ts tests/verify-packaged-runtime.spec.ts tests/windows-pwsh-sandbox.spec.ts tests/windows-subprocess.spec.ts tests/windows-volume-diagnostics.spec.ts tests/window-options.spec.ts && yarn run verify:win-minimal-pty && yarn run verify:closure",
-    "check:mac-package": "yarn workspace dsh-community-market build && yarn run build && yarn run typecheck && vitest run tests/package.spec.ts tests/package-mac.spec.ts tests/verify-mac-smoke.spec.ts tests/verify-packaged-runtime.spec.ts tests/mac-universal.spec.ts && yarn run verify:closure",
+    "check:win-package": "yarn workspace dsh-files build && yarn workspace dsh-ezai-auth build && yarn workspace dsh-community-market build && yarn run build && yarn run typecheck && vitest run tests/package.spec.ts tests/package-win.spec.ts tests/desktop-installer-quit.spec.ts tests/installer-nsh.spec.ts tests/update-checker.spec.ts tests/update-download.spec.ts tests/verify-win-installer.spec.ts tests/verify-win-portable.spec.ts tests/verify-packaged-runtime.spec.ts tests/windows-pwsh-sandbox.spec.ts tests/windows-subprocess.spec.ts tests/windows-volume-diagnostics.spec.ts tests/window-options.spec.ts && yarn run verify:win-minimal-pty && yarn run verify:closure",
+    "check:mac-package": "yarn workspace dsh-files build && yarn workspace dsh-ezai-auth build && yarn workspace dsh-community-market build && yarn run build && yarn run typecheck && vitest run tests/package.spec.ts tests/package-mac.spec.ts tests/verify-mac-smoke.spec.ts tests/verify-packaged-runtime.spec.ts tests/mac-universal.spec.ts && yarn run verify:closure",
     "start": "node lib/bin.js",
     "dev": "yarn run build && node lib/bin.js",
     "package:dir": "yarn run build && node scripts/package-dir.mjs",
@@ -250,7 +250,8 @@
     "@deepseek-ai/schemastery": "^3.18.1",
     "adm-zip": "^0.6.0",
     "dsh-community-market": "0.1.0-dev.0",
-    "dsh-file-upload": "workspace:^",
+    "dsh-ezai-auth": "workspace:^",
+    "dsh-files": "workspace:^",
     "dshmarket": "1.17.1",
     "koffi": "3.1.5",
     "node-addon-require-builtin": "^0.1.4",
@@ -292,7 +293,7 @@
   },
   "build": {
     "appId": "ai.deepseek.dsh.desktop",
-    "productName": "EZAIGC Desktop",
+    "productName": "EZAI Desktop",
     "asar": true,
     "asarUnpack": [
       "package.json",
@@ -341,7 +342,7 @@
       "signIgnore": [
         "\\.(?:pak|dat|wasm)$"
       ],
-      "x64ArchFiles": "**/node_modules/{node-pty/prebuilds/darwin-*/**,node-addon-require-builtin-darwin-*/**,@vscode/ripgrep-darwin-*/**,@img/sharp-darwin-*/**,@img/sharp-libvips-darwin-*/**,@koromix/koffi-darwin-*/**}"
+      "x64ArchFiles": "**/node_modules/{node-pty/prebuilds/darwin-*/**,node-addon-require-builtin-darwin-*/**,@vscode/ripgrep-darwin-*/**,@img/sharp-darwin-*/**,@img/sharp-libvips-darwin-*/**,@koromix/koffi-darwin-*/**,@napi-rs/canvas-darwin-*/**}"
     },
     "win": {
       "target": [
@@ -352,7 +353,7 @@
           ]
         }
       ],
-      "artifactName": "EZAIGC-Desktop-${version}-${arch}-Portable.${ext}",
+      "artifactName": "EZAI-Desktop-${version}-${arch}-Portable.${ext}",
       "icon": "build/app-icon.png"
     },
     "nsis": {
@@ -365,9 +366,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "differentialPackage": false,
-      "shortcutName": "EZAIGC Desktop",
+      "shortcutName": "EZAI Desktop",
       "useZip": true,
-      "artifactName": "EZAIGC-Desktop-${version}-${arch}-Setup.${ext}"
+      "artifactName": "EZAI-Desktop-${version}-${arch}-Setup.${ext}"
     },
     "linux": {
       "target": [

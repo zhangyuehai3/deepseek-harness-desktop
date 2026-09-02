@@ -1,8 +1,8 @@
 <p align="center">
-  <a href="https://dshdesktop.cn"><img src="assets/desktop-hero-zh.png" alt="EZAIGC Desktop：基于 DeepSeek Harness 构建的开源桌面客户端" width="100%"></a>
+  <a href="https://dshdesktop.cn"><img src="assets/desktop-hero-zh.png" alt="EZAI Desktop：基于 DeepSeek Harness 构建的开源桌面客户端" width="100%"></a>
 </p>
 
-<h1 align="center">EZAIGC Desktop</h1>
+<h1 align="center">EZAI Desktop</h1>
 
 <p align="center">
   <strong>基于 DeepSeek Harness 构建的 Windows 和 macOS 开源桌面客户端。</strong>
@@ -17,7 +17,7 @@
 <p align="center"><sub>独立的社区开源项目，与深度求索不存在隶属、合作、授权或背书关系。<br>本仓库目前无深度求索员工或 DeepSeek Harness 上游官方团队成员参与；GitHub Contributors 中显示的上游贡献者来自 fork 继承和同步的提交历史。<br>中文 · <a href="README.en.md">English</a></sub></p>
 
 <p align="center">
-  <img src="assets/desktop-chat-zh.png" alt="EZAIGC Desktop 中文对话界面" width="100%">
+  <img src="assets/desktop-chat-zh.png" alt="EZAI Desktop 中文对话界面" width="100%">
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@
   <img src="https://img.shields.io/badge/macOS%20%7C%20Windows-4493F8?style=flat-square" alt="Supported platforms: macOS and Windows">
 </p>
 
-EZAIGC Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的本地 Web UI、Host 服务和插件系统集成到原生桌面应用中。项目固定并原样运行特定上游版本；EZAIGC Desktop 提供窗口、托盘、终端、更新和工作配置，并通过 DeepSeek Harness 提供的插件机制与上游能力组合。
+EZAI Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的本地 Web UI、Host 服务和插件系统集成到原生桌面应用中。项目固定并原样运行特定上游版本；EZAI Desktop 提供窗口、托盘、终端、更新和工作配置，并通过 DeepSeek Harness 提供的插件机制与上游能力组合。
 
 <a id="run"></a>
 
@@ -40,11 +40,11 @@ EZAIGC Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-ha
 | 平台 | 下载 | 安装方式 |
 | --- | --- | --- |
 | Windows x64 | [下载安装程序](https://www.dshdesktop.cn/api/downloads/windows) | 运行 NSIS 安装程序并按提示完成安装 |
-| macOS Universal | [下载 DMG](https://www.dshdesktop.cn/api/downloads/mac) | 打开 DMG，将 EZAIGC Desktop 拖入 Applications |
+| macOS Universal | [下载 DMG](https://www.dshdesktop.cn/api/downloads/mac) | 打开 DMG，将 EZAI Desktop 拖入 Applications |
 
 详细步骤、插件命令和故障排查见[用户指南](docs/user-guide.md)与[常见问题](docs/faq.md)。
 
-我们希望和所有插件作者一起，构建一个开放、可组合、可持续的 EZAIGC 插件生态，让每个插件都能与其他插件共同进步：[EZAIGC 插件生态倡议书](docs/plugin-ecosystem.md)。
+我们希望和所有插件作者一起，构建一个开放、可组合、可持续的 EZAI 插件生态，让每个插件都能与其他插件共同进步：[EZAI 插件生态倡议书](docs/plugin-ecosystem.md)。
 
 <details open>
 <summary>❤️ 赞助商</summary>
@@ -58,7 +58,7 @@ EZAIGC Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-ha
 
 | Logo | 简介 |
 | --- | --- |
-| <a href="https://88api.ai/sign-up?aff=VnEb"><img src="assets/sponsors/88api-logo.png" alt="88API" width="120"></a> | 88API 是一站式多模型 API 聚合平台，平台由海外企业运营，稳定高效支持开票。平台提供 DeepSeek 官转和开源渠道，价格低至 5 折，完美适配 EZAIGC Desktop 项目。一个 API Key 即可统一接入海内外多种模型，覆盖文本对话、图片、音频、音乐和视频生成接口，适用于 AI 编程、Agent 自动化、内容创作及应用开发。现在点击这里注册，即可体验便捷、统一的 AI 模型调用服务！[官网地址](https://88api.ai/sign-up?aff=VnEb) |
+| <a href="https://88api.ai/sign-up?aff=VnEb"><img src="assets/sponsors/88api-logo.png" alt="88API" width="120"></a> | 88API 是一站式多模型 API 聚合平台，平台由海外企业运营，稳定高效支持开票。平台提供 DeepSeek 官转和开源渠道，价格低至 5 折，完美适配 EZAI Desktop 项目。一个 API Key 即可统一接入海内外多种模型，覆盖文本对话、图片、音频、音乐和视频生成接口，适用于 AI 编程、Agent 自动化、内容创作及应用开发。现在点击这里注册，即可体验便捷、统一的 AI 模型调用服务！[官网地址](https://88api.ai/sign-up?aff=VnEb) |
 
 </details>
 
@@ -75,7 +75,7 @@ EZAIGC Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-ha
 | 安装和日常使用 | [用户指南](docs/user-guide.md) |
 | 快速确认平台、环境和使用边界 | [常见问题](docs/faq.md) |
 | 了解数据处理与隐私选择 | [隐私政策](PRIVACY.zh.md) |
-| 了解项目为什么存在 | [为什么做 EZAIGC Desktop](docs/why-desktop.md) |
+| 了解项目为什么存在 | [为什么做 EZAI Desktop](docs/why-desktop.md) |
 | 查看全部文档与 README 分工 | [文档索引](docs/README.md) |
 
 ### 开发者与维护者文档
@@ -84,9 +84,9 @@ EZAIGC Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-ha
 | --- | --- |
 | 阅读插件生态倡议书 | [插件生态倡议书](docs/plugin-ecosystem.md) |
 | 编写普通或 Desktop 插件 | [插件开发](docs/plugin-development.md) |
-| 参与统一插件 contract 讨论 | [EZAIGC Community Fabric Draft](dsh-community-fabric/README.zh.md) |
+| 参与统一插件 contract 讨论 | [EZAI Community Fabric Draft](dsh-community-fabric/README.zh.md) |
 | 了解统一插件框架为什么这样设计 | [成熟框架与真实插件调研](dsh-community-fabric/docs/research/mature-plugin-frameworks.zh.md) |
-| 查看插件市场的产品与安全设计 | [EZAIGC Community Market](dsh-community-market/README.zh.md) |
+| 查看插件市场的产品与安全设计 | [EZAI Community Market](dsh-community-market/README.zh.md) |
 | 了解桌面插件可以使用的能力 | [桌面插件接口说明](dsh-plugin-desktop/docs/plugin-services.zh.md) |
 | 了解桌面应用如何工作 | [架构说明](docs/architecture.md) |
 | 查阅包级构建与发布细节 | [`dsh-plugin-desktop/README.md`](dsh-plugin-desktop/README.md) |
@@ -107,44 +107,44 @@ EZAIGC Desktop 将 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-ha
   <tr>
     <td width="50%" valign="top">
       <h3><a href="dsh-community-market/README.zh.md">插件市场</a> <img src="https://img.shields.io/badge/%E5%B7%B2%E5%86%85%E7%BD%AE-2EA44F?style=flat-square" alt="已内置"></h3>
-      <p>EZAIGC Community Market 已完成并内置，提供插件发现、详情、安装与管理。市场以开放方式连接各种插件数据源：任何人都可以提供、接入和使用符合公开 Schema 的来源，已有 API 也可以通过受审 adapter 加入合作数据源。</p>
+      <p>EZAI Community Market 已完成并内置，提供插件发现、详情、安装与管理。市场以开放方式连接各种插件数据源：任何人都可以提供、接入和使用符合公开 Schema 的来源，已有 API 也可以通过受审 adapter 加入合作数据源。</p>
     </td>
     <td width="50%" valign="top">
       <h3>共建插件生态</h3>
-      <p>EZAIGC 的插件生态由社区共同建设。上游插件、EZAIGC Desktop 插件和其他社区插件遵循统一的约定，可以通过相同的组合机制共同工作；欢迎加入共建，详见 <a href="docs/plugin-ecosystem.md">EZAIGC 插件生态倡议书</a>。</p>
+      <p>EZAI 的插件生态由社区共同建设。上游插件、EZAI Desktop 插件和其他社区插件遵循统一的约定，可以通过相同的组合机制共同工作；欢迎加入共建，详见 <a href="docs/plugin-ecosystem.md">EZAI 插件生态倡议书</a>。</p>
     </td>
   </tr>
 </table>
 
 ### 首次设置、浏览器与局域网访问
 
-每个尚未初始化的 profile 正常首次启动时，会先显示由 Desktop 自己提供的原生 Setup Wizard。它可以设置窗口模式与系统材质、插件市场、通知、是否用系统默认浏览器自动打开，以及 Web 访问范围；也可以直接跳过。向导完成或跳过以前，Host 和主 EZAIGC 窗口都不会启动。完成或跳过状态按 profile 分别记录；显式恢复启动仍优先进入恢复助手。
+每个尚未初始化的 profile 正常首次启动时，会先显示由 Desktop 自己提供的原生 Setup Wizard。它可以设置窗口模式与系统材质、插件市场、通知、是否用系统默认浏览器自动打开，以及 Web 访问范围；也可以直接跳过。向导完成或跳过以前，Host 和主 EZAI 窗口都不会启动。完成或跳过状态按 profile 分别记录；显式恢复启动仍优先进入恢复助手。
 
 Web 服务默认仅监听本机回环地址。开启“用浏览器打开”后，Desktop 会在 Web 服务实际就绪时交给系统默认浏览器打开；这个选项不会改变网络暴露范围。“桌面设置”会在选项下显示实际的本机 URL。局域网访问是一个独立的可选设置，开启后还会显示当前可用的局域网 URL。
 
-> **危险：** 向局域网开放不提供鉴权；所有与你处于同一局域网的人都能直接打开 EZAIGC 并操作你的电脑。请只在完全信任的网络中谨慎开启。
+> **危险：** 向局域网开放不提供鉴权；所有与你处于同一局域网的人都能直接打开 EZAI 并操作你的电脑。请只在完全信任的网络中谨慎开启。
 
 自动更新的固定版本检查请求会在 `X-DSH-Desktop-Installation-Id` header 中携带一个由本机生成并持久保存的随机 UUID；它不是从硬件信息推导出的标识。安装包下载请求及其下载重定向不会携带这个 header。
 
 ## 插件生态
 
-插件是给 EZAIGC 添加能力的扩展包——模型、工具、界面、工作流都可以做成插件，像搭积木一样自由组合。
+插件是给 EZAI 添加能力的扩展包——模型、工具、界面、工作流都可以做成插件，像搭积木一样自由组合。
 
-EZAIGC Desktop 没有修改上游源码，也不是一个固定写死的外壳。固定版本的上游 DeepSeek Harness 原样运行；桌面壳本身——窗口、托盘、终端、更新、工作配置——作为 EZAIGC 插件接入，并通过 DeepSeek Harness 提供的插件机制与上游能力组合进同一个运行时。从核心 agent 到桌面外壳，整个产品遵守同一条"一切皆插件"的规则：与所固定上游版本兼容的插件可以使用，桌面能力也按插件的方式组合、替换和演进。
+EZAI Desktop 没有修改上游源码，也不是一个固定写死的外壳。固定版本的上游 DeepSeek Harness 原样运行；桌面壳本身——窗口、托盘、终端、更新、工作配置——作为 EZAI 插件接入，并通过 DeepSeek Harness 提供的插件机制与上游能力组合进同一个运行时。从核心 agent 到桌面外壳，整个产品遵守同一条"一切皆插件"的规则：与所固定上游版本兼容的插件可以使用，桌面能力也按插件的方式组合、替换和演进。
 
 我们希望插件生态像手机应用一样：每个插件按同一套规则开发，装在一起也能一起工作、互不干扰。
 
 ### 给开发者
 
-与许多其他项目不同，这个项目本身就是一个 EZAIGC [插件](docs/plugin-development.md)：桌面壳与第三方插件使用相同的插件组合机制。Desktop 的插件能力已经可以使用。我们提供了 Desktop 服务，让插件开发者能够把插件与桌面能力集成起来：例如查看和切换工作配置，或在当前配置中安装、更新和移除插件。完整用法见[桌面插件接口说明](dsh-plugin-desktop/docs/plugin-services.zh.md)。为什么选择这样的边界、哪些能力不会暴露给第三方插件，见[为什么做 EZAIGC Desktop](docs/why-desktop.md)和[插件开发指南](docs/plugin-development.md)。
+与许多其他项目不同，这个项目本身就是一个 EZAI [插件](docs/plugin-development.md)：桌面壳与第三方插件使用相同的插件组合机制。Desktop 的插件能力已经可以使用。我们提供了 Desktop 服务，让插件开发者能够把插件与桌面能力集成起来：例如查看和切换工作配置，或在当前配置中安装、更新和移除插件。完整用法见[桌面插件接口说明](dsh-plugin-desktop/docs/plugin-services.zh.md)。为什么选择这样的边界、哪些能力不会暴露给第三方插件，见[为什么做 EZAI Desktop](docs/why-desktop.md)和[插件开发指南](docs/plugin-development.md)。
 
 ## 与 DeepSeek Harness 的关系
 
-EZAIGC Desktop 是基于 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 和 Cordis 插件思想构建的独立社区项目，旨在提供开放、可组合的 EZAIGC 桌面体验。
+EZAI Desktop 是基于 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 和 Cordis 插件思想构建的独立社区项目，旨在提供开放、可组合的 EZAI 桌面体验。
 
 本仓库由社区独立维护，目前不存在深度求索员工或 DeepSeek Harness 上游官方团队成员参与本项目开发、维护或治理的情形。GitHub Contributors 页面中可能出现的上游贡献者，来自本仓库 fork 时继承及后续同步的上游提交历史；该署名仅反映提交来源，不代表相关人员参与本仓库，也不构成任何隶属、合作、授权或背书关系。
 
-上游项目提供核心的智能体能力、插件系统和 Web UI；EZAIGC Desktop 主要负责：
+上游项目提供核心的智能体能力、插件系统和 Web UI；EZAI Desktop 主要负责：
 
 - 桌面应用封装
 - 本地服务的启动、停止与恢复
@@ -156,9 +156,9 @@ EZAIGC Desktop 是基于 [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 ## 特别感谢
 
-特别感谢 [DeepSeek Harness 原始仓库](https://github.com/deepseek-ai/deepseek-harness) 和 DeepSeek AI 团队。EZAIGC Desktop 基于固定版本的上游源码构建，核心的智能体、模型、工具、会话、Web UI 和插件生态都来自这个项目。
+特别感谢 [DeepSeek Harness 原始仓库](https://github.com/deepseek-ai/deepseek-harness) 和 DeepSeek AI 团队。EZAI Desktop 基于固定版本的上游源码构建，核心的智能体、模型、工具、会话、Web UI 和插件生态都来自这个项目。
 
-同时感谢 [Cordis](https://github.com/cordiverse/cordis) 项目提供的插件化基础。没有这些开源项目，就不会有 EZAIGC Desktop。
+同时感谢 [Cordis](https://github.com/cordiverse/cordis) 项目提供的插件化基础。没有这些开源项目，就不会有 EZAI Desktop。
 
 也感谢 [Koishi.js](https://koishi.chat/) 项目和社区长期积累的插件化实践、工具与经验，以及所有参与讨论、测试、反馈和插件开发的社区成员。
 
@@ -191,13 +191,13 @@ headless 检查使用 `corepack yarn check`；完整的构建、测试和发布�
   </thead>
   <tbody>
     <tr>
-      <td align="center"><img src="assets/community-wechat-group.png" alt="EZAIGC Desktop 企业微信二维码" title="扫码添加企业微信" width="180" height="180"></td>
-      <td align="center"><img src="assets/community-qq-group.jpg" alt="EZAIGC Desktop QQ群二维码" width="180" height="180"></td>
+      <td align="center"><img src="assets/community-wechat-group.png" alt="EZAI Desktop 企业微信二维码" title="扫码添加企业微信" width="180" height="180"></td>
+      <td align="center"><img src="assets/community-qq-group.jpg" alt="EZAI Desktop QQ群二维码" width="180" height="180"></td>
     </tr>
   </tbody>
 </table>
 
-Discord：[加入 EZAIGC Desktop 社区](https://discord.gg/TJeGqKRNM)
+Discord：[加入 EZAI Desktop 社区](https://discord.gg/TJeGqKRNM)
 
 如果您希望加入我们的技术团队，也欢迎通过 [t4wefan@qq.com](mailto:t4wefan@qq.com) 联系我们。
 
@@ -234,7 +234,7 @@ Discord：[加入 EZAIGC Desktop 社区](https://discord.gg/TJeGqKRNM)
 
 > 本项目完全开源免费。如果有人向您以任何形式出售此软件，请拒绝交易。
 
-> EZAIGC Desktop 是独立的社区项目，与深度求索不存在隶属、合作、授权或背书关系。
+> EZAI Desktop 是独立的社区项目，与深度求索不存在隶属、合作、授权或背书关系。
 
 ## Star History
 

@@ -86,7 +86,7 @@ export interface DesktopInstallRecoveryFileRecord {
   readonly after?: DesktopInstallRecoveryFileImage
 }
 
-/** Safe transaction metadata persisted outside the EZAIGC profile. */
+/** Safe transaction metadata persisted outside the EZAI profile. */
 export interface DesktopInstallRecoveryTransaction {
   readonly version: 1
   readonly transactionId: string

@@ -1,4 +1,4 @@
-/** Private RunAsNode bootstrap for the packaged EZAIGC Harness CLI. */
+/** Private RunAsNode bootstrap for the packaged EZAI Harness CLI. */
 
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { packagedDependencyPath } from './packaged-runtime-path.ts'
@@ -43,7 +43,7 @@ function takeDefaultProfile(environment: NodeJS.ProcessEnv): string | undefined 
 }
 
 /**
- * Enter the packaged EZAIGC CLI without any plugin-install transaction wrapper.
+ * Enter the packaged EZAI CLI without any plugin-install transaction wrapper.
  * Manual plugin commands and Market operations rely on unified checkpoints.
  */
 export async function runDesktopDshCli(

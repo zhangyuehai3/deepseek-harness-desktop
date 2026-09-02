@@ -1,4 +1,4 @@
-/** Cordis Host plugin for scheduled and interactive EZAIGC Desktop updates. */
+/** Cordis Host plugin for scheduled and interactive EZAI Desktop updates. */
 
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'

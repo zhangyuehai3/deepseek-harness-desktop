@@ -1,4 +1,4 @@
-/** EZAIGC Desktop Host plugin: owns the selected native shell generation. */
+/** EZAI Desktop Host plugin: owns the selected native shell generation. */
 
 import { fileURLToPath } from 'node:url'
 import type { Context } from '@deepseek-ai/cordis'
@@ -194,9 +194,9 @@ export function apply(ctx: Context, config: Config): void {
   const runtime = ctx.get('desktopRuntime')
   if (runtime === undefined) {
     process.stderr.write(
-      'dsh-plugin-desktop: this profile is composed with the EZAIGC Desktop shell, which requires the desktop launcher (desktopRuntime).\n'
-      + 'Start it with `dsh-desktop`, or select this profile inside the packaged EZAIGC Desktop application.\n'
-      + 'The desktop terminal, profile, and update rows stay inactive in an ordinary EZAIGC boot.\n',
+      'dsh-plugin-desktop: this profile is composed with the EZAI Desktop shell, which requires the desktop launcher (desktopRuntime).\n'
+      + 'Start it with `dsh-desktop`, or select this profile inside the packaged EZAI Desktop application.\n'
+      + 'The desktop terminal, profile, and update rows stay inactive in an ordinary EZAI boot.\n',
     )
     return
   }
@@ -391,7 +391,7 @@ export function apply(ctx: Context, config: Config): void {
           runtime.windowsBuild,
         ),
         rendererAccessHeader: browserAccess.rendererHeader,
-        productName: 'EZAIGC Desktop',
+        productName: 'EZAI Desktop',
         windowTitle: '金石易服',
         iconPath,
         trayIcons,
