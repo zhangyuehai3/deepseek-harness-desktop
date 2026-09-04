@@ -5,6 +5,8 @@ import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { AccountResponse, CaptchaResponse } from '../types.ts'
 
+import { showDepartmentNoticeModal } from './DepartmentNoticeModal.tsx'
+
 export interface EzaiAccountTabProps extends PropsLocale<'ezai-auth'> {
   /** Optional callback fired once after a successful login. */
   onLogin?: (user: AccountResponse['user']) => void
@@ -58,7 +60,7 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
   const fetchAccount = useCallback(async () => {
     try {
       const response = await fetch('/api/ezai-auth/account', { headers: { accept: 'application/json' } })
-      if (response.status === 401) {
+      if (response.status === 401 || response.status === 403) {
         setAccount(undefined)
         return
       }
@@ -100,6 +102,17 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
     async function init() {
       try {
         const response = await fetch('/api/ezai-auth/account', { headers: { accept: 'application/json' } })
+        if (response.status === 403) {
+          const payload = (await response.json().catch(() => ({}))) as any
+          if (payload.departmentDisallowed) {
+            if (active) {
+              setAccount(undefined)
+              showDepartmentNoticeModal(payload.message)
+              void fetchCaptcha()
+            }
+            return
+          }
+        }
         if (response.status === 401) {
           if (active) {
             setAccount(undefined)
@@ -150,7 +163,21 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
           cookies: captcha.cookies,
         }),
       })
-      const payload = (await response.json()) as { status_code?: number; message?: string; error?: string; user?: AccountResponse['user'] }
+      const payload = (await response.json()) as {
+        status_code?: number
+        message?: string
+        error?: string
+        departmentDisallowed?: boolean
+        user?: AccountResponse['user']
+      }
+
+      if (response.status === 403 || payload.departmentDisallowed) {
+        showDepartmentNoticeModal(payload.message)
+        setForm((previous) => ({ ...previous, password: '', captcha: '' }))
+        void fetchCaptcha()
+        return
+      }
+
       if (!response.ok || payload.status_code !== 200 || payload.user === undefined) {
         throw new Error(payload.message ?? payload.error ?? t('networkError'))
       }
@@ -221,9 +248,11 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
     const used = account.tokenUsage.used
     const percent = quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0
     const user = account.user
+    const personalInfo = account.personalInfo
 
-    const avatarInitial = user.surname_lable || (user.name ? user.name.slice(-2) : user.login_name.charAt(0).toUpperCase())
-    const displayName = user.name || user.surname_lable || user.login_name
+    const displayName = personalInfo?.name || user.name || user.surname_lable || user.login_name
+    const avatarInitial = (personalInfo?.name ? personalInfo.name.slice(-2) : undefined) || user.surname_lable || (user.name ? user.name.slice(-2) : user.login_name.charAt(0).toUpperCase())
+    const avatarUrl = personalInfo?.avatar || user.avatar
 
     return (
       <div className="dshEzaiAuthAccountCard">
@@ -231,8 +260,8 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
         <div className="dshEzaiProfileHero">
           <div className="dshEzaiProfileUser">
             <div className="dshEzaiAvatarWrap">
-              {user.avatar ? (
-                <img className="dshEzaiAvatarImg" src={user.avatar} alt={displayName} />
+              {avatarUrl ? (
+                <img className="dshEzaiAvatarImg" src={avatarUrl} alt={displayName} />
               ) : (
                 <div className="dshEzaiAvatarFallback">{avatarInitial}</div>
               )}
@@ -267,49 +296,71 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
           </button>
         </div>
 
-        {/* User Info Grid (Email & Phone only) */}
+        {/* User Info Grid: 办公电话、岗位、所属部门、工作地点 这四个 */}
         <div className="dshEzaiInfoGrid">
-          {/* Email */}
-          <div className="dshEzaiInfoTile">
-            <div className="dshEzaiTileHeader">
-              <div className="dshEzaiTileLabelWithIcon">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#265C5A' }}>
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                  <polyline points="22,6 12,13 2,6" />
-                </svg>
-                <span>{t('email')}</span>
-              </div>
-              {user.email && (
-                <button
-                  type="button"
-                  className="dshEzaiCopyMiniBtn"
-                  title="Copy"
-                  onClick={() => copyToClipboard(user.email, 'email')}
-                >
-                  {copiedKey === 'email' ? (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#265C5A" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
-                  ) : (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-                  )}
-                </button>
-              )}
-            </div>
-            <div className="dshEzaiTileValue" title={user.email || user.login_name}>
-              {user.email || user.login_name || '—'}
-            </div>
-          </div>
-
-          {/* Phone (Masked with ****) */}
+          {/* 1. 办公电话 */}
           <div className="dshEzaiInfoTile">
             <div className="dshEzaiTileHeader">
               <div className="dshEzaiTileLabelWithIcon">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#265C5A' }}>
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                 </svg>
-                <span>{t('phone')}</span>
+                <span>{t('workPhone')}</span>
               </div>
             </div>
-            <div className="dshEzaiTileValue">{maskPhone(user.user_phone)}</div>
+            <div className="dshEzaiTileValue" title={personalInfo?.tel_phone || personalInfo?.user_phone || user.user_phone}>
+              {maskPhone(personalInfo?.tel_phone || personalInfo?.user_phone || user.user_phone)}
+            </div>
+          </div>
+
+          {/* 2. 岗位 */}
+          <div className="dshEzaiInfoTile">
+            <div className="dshEzaiTileHeader">
+              <div className="dshEzaiTileLabelWithIcon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#265C5A' }}>
+                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                </svg>
+                <span>{t('post')}</span>
+              </div>
+            </div>
+            <div className="dshEzaiTileValue" title={personalInfo?.post || '—'}>
+              {personalInfo?.post || '—'}
+            </div>
+          </div>
+
+          {/* 3. 所属部门 */}
+          <div className="dshEzaiInfoTile">
+            <div className="dshEzaiTileHeader">
+              <div className="dshEzaiTileLabelWithIcon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#265C5A' }}>
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                <span>{t('department')}</span>
+              </div>
+            </div>
+            <div className="dshEzaiTileValue" title={personalInfo?.department || '—'}>
+              {personalInfo?.department || '—'}
+            </div>
+          </div>
+
+          {/* 4. 工作地点 */}
+          <div className="dshEzaiInfoTile">
+            <div className="dshEzaiTileHeader">
+              <div className="dshEzaiTileLabelWithIcon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#265C5A' }}>
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <span>{t('location')}</span>
+              </div>
+            </div>
+            <div className="dshEzaiTileValue" title={personalInfo?.location || '—'}>
+              {personalInfo?.location || '—'}
+            </div>
           </div>
         </div>
 
@@ -321,6 +372,7 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
               </svg>
               <span>{t('tokenUsage')}</span>
+              <span className="dshEzaiWeeklyTag">{t('weeklyResetHint')}</span>
             </div>
             <span className="dshEzaiTokenVal">{percent}%</span>
           </div>

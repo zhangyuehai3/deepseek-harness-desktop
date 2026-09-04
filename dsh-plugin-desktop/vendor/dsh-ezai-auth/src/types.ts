@@ -32,16 +32,45 @@ export interface LoginResponse {
   data?: EzaiUser
 }
 
+/** Weekly token usage record per account. */
+export interface AccountWeeklyUsage {
+  week: string
+  used: number
+}
+
 /** Session snapshot persisted to disk. */
 export interface SessionSnapshot {
   cookies: string
   user: EzaiUser
+  personalInfo?: EzaiPersonalInfo
   /** ISO timestamp of the last successful login. */
   loggedInAt: string
-  /** Cumulative tokens consumed under this account. */
+  /** Cumulative tokens consumed under this account in the current week. */
   tokenUsed?: number
-  /** Token usage mapping across all accounts on this machine: userId -> tokenUsed */
-  accountTokens?: Record<string, number>
+  /** The weekly cycle identifier (Monday YYYY-MM-DD) for tokenUsed. */
+  weekKey?: string
+  /** Token usage mapping across all accounts on this machine: userId -> AccountWeeklyUsage | number */
+  accountTokens?: Record<string, AccountWeeklyUsage | number>
+}
+
+/** Enriched personal info parsed from /personalDetails. */
+export interface EzaiPersonalInfo {
+  name: string
+  login_name: string
+  avatar?: string
+  gender?: string
+  birthday?: string
+  department?: string
+  post?: string
+  email?: string
+  user_phone?: string
+  tel_phone?: string
+  hiredate?: string
+  code?: string
+  location?: string
+  leader?: string
+  org_uid?: string
+  surname_lable?: string
 }
 
 /** Account + token usage surfaced to the client. */
@@ -51,6 +80,7 @@ export interface AccountResponse {
     used: number
     quota: number
   }
+  personalInfo?: EzaiPersonalInfo
   warning?: string
 }
 

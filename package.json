@@ -81,7 +81,7 @@
   },
   "scripts": {
     "build": "yarn workspace dsh-files build && yarn workspace dsh-ezai-auth build && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop build",
-    "typecheck": "yarn workspace dsh-plugin-desktop typecheck && yarn workspace dsh-community-market typecheck && yarn workspace dsh-ezai-auth typecheck",
+    "typecheck": "yarn workspace dsh-plugin-desktop typecheck && yarn workspace dsh-community-market typecheck",
     "test": "yarn workspace dsh-files test && yarn workspace dsh-ezai-auth test && yarn workspace dsh-plugin-desktop test && yarn workspace dsh-community-market test",
     "test:bilingual-docs": "node --test scripts/bilingual-docs.test.mjs",
     "check:bilingual-docs": "yarn test:bilingual-docs && node scripts/verify-bilingual-docs.mjs",

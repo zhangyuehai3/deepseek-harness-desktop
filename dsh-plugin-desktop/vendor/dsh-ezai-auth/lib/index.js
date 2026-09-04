@@ -91,70 +91,390 @@ function assertLoginRequest(body) {
         throw new Error('captcha cookies required');
     return { username: username.trim(), password, captcha: captcha.trim(), cookies };
 }
-const KIMI_DEFAULT_API_KEY = 'sk-kimi-myQXufULKyEUEjQeRI9RiBePpV0E4SRX3tdeyHoEqOkWz7ZtpXxLsxkdsij4b8Va';
-const KIMI_DEFAULT_BASE_URL = 'https://api.kimi.com/coding/v1';
+// Ensure domestic AI API traffic bypasses local HTTP proxies (Shadowrocket / Clash / Charles)
+const BYPASS_HOSTS = [
+    'api.deepseek.com',
+    '*.deepseek.com',
+    'api.kimi.com',
+    '*.kimi.com',
+    'moonshot.cn',
+    '*.moonshot.cn',
+    'www.ezsvsbox.com',
+    '*.ezsvsbox.com',
+    'localhost',
+    '127.0.0.1',
+];
+const existingNoProxy = process.env.NO_PROXY || process.env.no_proxy || '';
+const mergedNoProxy = existingNoProxy
+    ? `${existingNoProxy},${BYPASS_HOSTS.join(',')}`
+    : BYPASS_HOSTS.join(',');
+process.env.NO_PROXY = mergedNoProxy;
+process.env.no_proxy = mergedNoProxy;
+import { getBootstrapApiKey, resolveApiKey, scrubDiskPlaintextCredentials } from "./vault.js";
+const DEEPSEEK_OPENAI_BASE_URL = 'https://api.deepseek.com';
+const DEEPSEEK_ANTHROPIC_BASE_URL = 'https://api.deepseek.com/anthropic';
+// Initialize in-memory DEEPSEEK_API_KEY if not already provided
+if (!process.env.DEEPSEEK_API_KEY) {
+    process.env.DEEPSEEK_API_KEY = getBootstrapApiKey();
+}
+// Asynchronously hydrate from safeStorage vault and scrub plaintext credentials from disk
+void (async () => {
+    try {
+        process.env.DEEPSEEK_API_KEY = await resolveApiKey();
+        await scrubDiskPlaintextCredentials();
+    }
+    catch { }
+})();
+const DEEPSEEK_MODELS = [
+    {
+        id: 'deepseek-v4-flash',
+        name: 'DeepSeek V4 Flash',
+        contextWindow: 1000000,
+        maxTokens: 256000,
+    },
+    {
+        id: 'deepseek-chat',
+        name: 'DeepSeek Chat',
+        contextWindow: 65536,
+        maxTokens: 8192,
+    },
+    {
+        id: 'deepseek-reasoner',
+        name: 'DeepSeek Reasoner',
+        contextWindow: 65536,
+        maxTokens: 8192,
+    },
+];
+export function patchCredentialsService(credentials) {
+    if (!credentials || credentials.__ezaiCredentialPatched)
+        return;
+    credentials.__ezaiCredentialPatched = true;
+    const origResolve = credentials.resolve?.bind(credentials);
+    if (origResolve) {
+        credentials.resolve = async (ref) => {
+            if (ref === 'DEEPSEEK_API_KEY') {
+                if (!process.env.DEEPSEEK_API_KEY)
+                    return undefined;
+                const apiKey = await resolveApiKey();
+                if (apiKey)
+                    return { value: apiKey, source: 'env' };
+            }
+            return origResolve(ref);
+        };
+    }
+    const origDescribe = credentials.describe?.bind(credentials);
+    if (origDescribe) {
+        credentials.describe = async (ref) => {
+            if (ref === 'DEEPSEEK_API_KEY') {
+                if (!process.env.DEEPSEEK_API_KEY) {
+                    return { configured: false, writable: true };
+                }
+                return { configured: true, source: 'env', writable: false };
+            }
+            return origDescribe(ref);
+        };
+    }
+}
+export function patchLaunchEnvironment(env) {
+    if (!env || env.__ezaiEnvPatched)
+        return;
+    env.__ezaiEnvPatched = true;
+    const origGet = env.get?.bind(env);
+    if (origGet) {
+        env.get = (name) => {
+            if (name === 'DEEPSEEK_API_KEY') {
+                if (!process.env.DEEPSEEK_API_KEY)
+                    return undefined;
+                const key = process.env.DEEPSEEK_API_KEY || getBootstrapApiKey();
+                return { value: key, source: 'process' };
+            }
+            return origGet(name);
+        };
+    }
+    const origGetFrom = env.getFrom?.bind(env);
+    if (origGetFrom) {
+        env.getFrom = (name, sources) => {
+            if (name === 'DEEPSEEK_API_KEY' && (!sources || sources.includes('process'))) {
+                if (!process.env.DEEPSEEK_API_KEY)
+                    return undefined;
+                const key = process.env.DEEPSEEK_API_KEY || getBootstrapApiKey();
+                return { value: key, source: 'process' };
+            }
+            return origGetFrom(name, sources);
+        };
+    }
+}
 async function ensureDefaultModelConfig(ctx) {
+    const apiKey = await resolveApiKey();
+    process.env.DEEPSEEK_API_KEY = apiKey;
     // 1. Ensure in Cordis credentials
     try {
-        const credentials = ctx.get('credentials');
-        if (credentials?.setReference) {
-            await credentials.setReference('KIMI_CODING_API_KEY', KIMI_DEFAULT_API_KEY);
+        const credentials = ctx.get?.('credentials');
+        if (credentials) {
+            patchCredentialsService(credentials);
         }
     }
-    catch {
-        // ignore
+    catch { }
+    // 2. Ensure in Cordis launchEnvironment
+    try {
+        const env = ctx.get?.('launchEnvironment');
+        if (env) {
+            patchLaunchEnvironment(env);
+        }
     }
-    // 2. Ensure in Cordis settings & agentDefaultModel
+    catch { }
+    // 3. Ensure in Cordis settings & agentDefaultModel
     try {
         const settings = ctx.get('settings');
         if (settings?.replace) {
             const { settingsNamespace } = await import('@deepseek-ai/dsh-settings');
             const piAiNs = settingsNamespace('llm-pi-ai');
             const currentPiAi = (await settings.get?.(piAiNs)) ?? {};
-            const currentProviders = currentPiAi.providers ?? {};
+            const currentProviders = { ...(currentPiAi.providers ?? {}) };
+            delete currentProviders['kimi-coding'];
+            currentProviders['deepseek'] = {
+                displayName: 'DeepSeek',
+                apiKeyEnv: 'DEEPSEEK_API_KEY',
+                api: 'openai-completions',
+                baseURL: DEEPSEEK_OPENAI_BASE_URL,
+                models: DEEPSEEK_MODELS,
+            };
+            currentProviders['deepseek-anthropic'] = {
+                displayName: 'DeepSeek (Anthropic)',
+                apiKeyEnv: 'DEEPSEEK_API_KEY',
+                api: 'anthropic-messages',
+                baseURL: DEEPSEEK_ANTHROPIC_BASE_URL,
+                models: DEEPSEEK_MODELS,
+            };
             await settings.replace(piAiNs, {
                 ...currentPiAi,
-                providers: {
-                    ...currentProviders,
-                    'kimi-coding': {
-                        displayName: 'Kimi',
-                        apiKeyEnv: 'KIMI_CODING_API_KEY',
-                        api: 'openai-completions',
-                        baseURL: KIMI_DEFAULT_BASE_URL,
-                        models: [
-                            {
-                                id: 'kimi-k2.7-code',
-                                name: 'Kimi K2.7 Code',
-                                contextWindow: 262144,
-                                maxTokens: 32768,
-                            },
-                        ],
-                    },
-                },
+                providers: currentProviders,
             });
             const defaultModelNs = settingsNamespace('agent-default-model');
             await settings.replace(defaultModelNs, {
-                provider: 'kimi-coding',
-                model: 'kimi-k2.7-code',
+                provider: 'deepseek',
+                model: 'deepseek-v4-flash',
             });
         }
         const agentDefaultModel = ctx.get('agentDefaultModel');
         if (agentDefaultModel?.saveSelection) {
             await agentDefaultModel.saveSelection({
-                provider: 'kimi-coding',
-                model: 'kimi-k2.7-code',
+                provider: 'deepseek',
+                model: 'deepseek-v4-flash',
             });
         }
     }
     catch {
         // ignore
     }
+    // 3. Ensure disk config in ~/.dsh/settings.yaml, ~/.dsh/profiles/desktop/settings.json, and .credentials.yaml
+    try {
+        const fs = await import('node:fs/promises');
+        const path = await import('node:path');
+        const { homedir } = await import('node:os');
+        const { parse, stringify } = await import('yaml');
+        const dshDir = path.join(homedir(), '.dsh');
+        const settingsPath = path.join(dshDir, 'settings.yaml');
+        const credsPath = path.join(dshDir, '.credentials.yaml');
+        const profileDesktopSettingsPath = path.join(dshDir, 'profiles', 'desktop', 'settings.json');
+        // Root settings.yaml
+        try {
+            let settingsDoc = {};
+            try {
+                const text = await fs.readFile(settingsPath, 'utf8');
+                settingsDoc = parse(text) || {};
+            }
+            catch { }
+            settingsDoc['llm-pi-ai'] = settingsDoc['llm-pi-ai'] || {};
+            settingsDoc['llm-pi-ai'].providers = settingsDoc['llm-pi-ai'].providers || {};
+            delete settingsDoc['llm-pi-ai'].providers['kimi-coding'];
+            settingsDoc['llm-pi-ai'].providers['deepseek'] = {
+                displayName: 'DeepSeek',
+                apiKeyEnv: 'DEEPSEEK_API_KEY',
+                api: 'openai-completions',
+                baseURL: DEEPSEEK_OPENAI_BASE_URL,
+                models: DEEPSEEK_MODELS,
+            };
+            settingsDoc['llm-pi-ai'].providers['deepseek-anthropic'] = {
+                displayName: 'DeepSeek (Anthropic)',
+                apiKeyEnv: 'DEEPSEEK_API_KEY',
+                api: 'anthropic-messages',
+                baseURL: DEEPSEEK_ANTHROPIC_BASE_URL,
+                models: DEEPSEEK_MODELS,
+            };
+            settingsDoc['agent-default-model'] = {
+                provider: 'deepseek',
+                model: 'deepseek-v4-flash',
+            };
+            await fs.writeFile(settingsPath, stringify(settingsDoc), 'utf8');
+        }
+        catch { }
+        // Profile desktop settings.json if exists
+        try {
+            let profileDoc = {};
+            try {
+                const text = await fs.readFile(profileDesktopSettingsPath, 'utf8');
+                profileDoc = JSON.parse(text) || {};
+            }
+            catch { }
+            profileDoc['llm-pi-ai'] = profileDoc['llm-pi-ai'] || {};
+            profileDoc['llm-pi-ai'].providers = profileDoc['llm-pi-ai'].providers || {};
+            delete profileDoc['llm-pi-ai'].providers['kimi-coding'];
+            profileDoc['llm-pi-ai'].providers['deepseek'] = {
+                displayName: 'DeepSeek',
+                apiKeyEnv: 'DEEPSEEK_API_KEY',
+                api: 'openai-completions',
+                baseURL: DEEPSEEK_OPENAI_BASE_URL,
+                models: DEEPSEEK_MODELS,
+            };
+            profileDoc['llm-pi-ai'].providers['deepseek-anthropic'] = {
+                displayName: 'DeepSeek (Anthropic)',
+                apiKeyEnv: 'DEEPSEEK_API_KEY',
+                api: 'anthropic-messages',
+                baseURL: DEEPSEEK_ANTHROPIC_BASE_URL,
+                models: DEEPSEEK_MODELS,
+            };
+            profileDoc['agent-default-model'] = {
+                provider: 'deepseek',
+                model: 'deepseek-v4-flash',
+            };
+            await fs.mkdir(path.dirname(profileDesktopSettingsPath), { recursive: true });
+            await fs.writeFile(profileDesktopSettingsPath, JSON.stringify(profileDoc, null, 2), 'utf8');
+        }
+        catch { }
+        // Root .credentials.yaml: Scrub plain-text keys to ensure zero plaintext credential leak on disk
+        await scrubDiskPlaintextCredentials();
+    }
+    catch { }
 }
+async function removeDefaultModelConfig(ctx) {
+    // Clear in-memory env
+    delete process.env.DEEPSEEK_API_KEY;
+    // 1. Remove credential from Cordis credentials
+    try {
+        const credentials = ctx.get?.('credentials');
+        if (credentials?.unset) {
+            await credentials.unset('DEEPSEEK_API_KEY');
+            await credentials.unset('KIMI_CODING_API_KEY');
+        }
+    }
+    catch {
+        // ignore
+    }
+    // 2. Remove settings for llm-pi-ai and agent-default-model
+    try {
+        const settings = ctx.get('settings');
+        if (settings?.replace) {
+            const { settingsNamespace } = await import('@deepseek-ai/dsh-settings');
+            const piAiNs = settingsNamespace('llm-pi-ai');
+            const currentPiAi = (await settings.get?.(piAiNs)) ?? {};
+            const currentProviders = { ...(currentPiAi.providers ?? {}) };
+            delete currentProviders['deepseek'];
+            delete currentProviders['deepseek-anthropic'];
+            delete currentProviders['kimi-coding'];
+            await settings.replace(piAiNs, {
+                ...currentPiAi,
+                providers: currentProviders,
+            });
+            const defaultModelNs = settingsNamespace('agent-default-model');
+            await settings.replace(defaultModelNs, undefined);
+        }
+    }
+    catch {
+        // ignore
+    }
+    // 3. Fallback: also clean directly from disk files
+    try {
+        const fs = await import('node:fs/promises');
+        const path = await import('node:path');
+        const { homedir } = await import('node:os');
+        const { parse, stringify } = await import('yaml');
+        const dshDir = path.join(homedir(), '.dsh');
+        const settingsPath = path.join(dshDir, 'settings.yaml');
+        const credsPath = path.join(dshDir, '.credentials.yaml');
+        const profileDesktopSettingsPath = path.join(dshDir, 'profiles', 'desktop', 'settings.json');
+        try {
+            const settingsContent = await fs.readFile(settingsPath, 'utf8');
+            const settingsDoc = parse(settingsContent) || {};
+            if (settingsDoc['llm-pi-ai']?.providers) {
+                delete settingsDoc['llm-pi-ai'].providers['deepseek'];
+                delete settingsDoc['llm-pi-ai'].providers['deepseek-anthropic'];
+                delete settingsDoc['llm-pi-ai'].providers['kimi-coding'];
+                if (Object.keys(settingsDoc['llm-pi-ai'].providers).length === 0) {
+                    delete settingsDoc['llm-pi-ai'].providers;
+                }
+            }
+            if (settingsDoc['agent-default-model']?.provider === 'deepseek' || settingsDoc['agent-default-model']?.provider === 'kimi-coding') {
+                delete settingsDoc['agent-default-model'];
+            }
+            await fs.writeFile(settingsPath, stringify(settingsDoc), 'utf8');
+        }
+        catch { }
+        try {
+            const profileText = await fs.readFile(profileDesktopSettingsPath, 'utf8');
+            const profileDoc = JSON.parse(profileText) || {};
+            if (profileDoc['llm-pi-ai']?.providers) {
+                delete profileDoc['llm-pi-ai'].providers['deepseek'];
+                delete profileDoc['llm-pi-ai'].providers['deepseek-anthropic'];
+                delete profileDoc['llm-pi-ai'].providers['kimi-coding'];
+                if (Object.keys(profileDoc['llm-pi-ai'].providers).length === 0) {
+                    delete profileDoc['llm-pi-ai'].providers;
+                }
+            }
+            if (profileDoc['agent-default-model']?.provider === 'deepseek' || profileDoc['agent-default-model']?.provider === 'kimi-coding') {
+                delete profileDoc['agent-default-model'];
+            }
+            await fs.writeFile(profileDesktopSettingsPath, JSON.stringify(profileDoc, null, 2), 'utf8');
+        }
+        catch { }
+        await scrubDiskPlaintextCredentials();
+    }
+    catch { }
+}
+const DISALLOWED_DEPARTMENT_NOTICE = '亲爱的同事，您好：\n\n十分感谢您对 EZAI 桌面智能助手的关注与支持！\n目前本体验版本专为【聚服中心】进行深度业务定制与专项定向内测，暂未面向其他部门开放使用。\n\n研发团队正在紧锣密鼓地推进跨业务线的适配与功能升级，后续更多部门的开放已在紧密排期中，敬请期待！\n\n为保障您的数据安全与系统状态一致，系统已为您安全退出登录并已清除本地配置。感谢您的理解与温暖包容！';
 export function apply(ctx, config) {
     const session = createSessionStore({ sessionFile: config.sessionFile || undefined });
     const client = createEzaiClient(config, session);
-    // Ensure default model is automatically selected on startup
-    void ensureDefaultModelConfig(ctx);
+    // Hook credentials and launchEnvironment safely via ctx.get and ctx.inject
+    try {
+        const currentCredentials = ctx.get?.('credentials');
+        if (currentCredentials)
+            patchCredentialsService(currentCredentials);
+    }
+    catch { }
+    try {
+        const currentEnv = ctx.get?.('launchEnvironment');
+        if (currentEnv)
+            patchLaunchEnvironment(currentEnv);
+    }
+    catch { }
+    try {
+        ctx.inject(['credentials'], (credCtx) => {
+            const creds = credCtx.get?.('credentials');
+            if (creds)
+                patchCredentialsService(creds);
+        });
+    }
+    catch { }
+    // Ensure model config matches active session on boot
+    void (async () => {
+        try {
+            const snapshot = await session.getSnapshot();
+            const department = (snapshot?.personalInfo?.department || '').trim();
+            if (snapshot?.user && snapshot.cookies && (!department || department.includes('聚服中心'))) {
+                await ensureDefaultModelConfig(ctx);
+            }
+            else {
+                if (snapshot?.user && department && !department.includes('聚服中心')) {
+                    await session.clear();
+                }
+                await removeDefaultModelConfig(ctx);
+            }
+        }
+        catch {
+            // ignore
+        }
+    })();
     // The captcha handler seeds cookies by hitting the login page, then returns
     // the captcha image plus the cookies the client must send back with login.
     ctx.effect(() => ctx.webServer.register({
@@ -200,8 +520,33 @@ export function apply(ctx, config) {
                 const { user, cookies: responseCookies } = await client.login(username, password, captcha, cookies);
                 await session.setCookies(responseCookies);
                 await session.setUser(user);
-                void ensureDefaultModelConfig(ctx);
-                finishJson(res, 200, { status_code: 200, message: '登录成功', user });
+                // Fetch enriched personal details from /personalDetails
+                let personalInfo;
+                try {
+                    personalInfo = await client.fetchPersonalInfo(responseCookies);
+                    if (personalInfo) {
+                        await session.setPersonalInfo(personalInfo);
+                    }
+                }
+                catch { }
+                // Department restriction check: currently strictly restricted to '聚服中心'
+                const department = (personalInfo?.department || '').trim();
+                const isJuFu = department.includes('聚服中心');
+                if (!isJuFu) {
+                    // Delete session and remove all model configurations immediately
+                    await session.clear();
+                    await removeDefaultModelConfig(ctx);
+                    finishJson(res, 403, {
+                        status_code: 403,
+                        message: DISALLOWED_DEPARTMENT_NOTICE,
+                        error: DISALLOWED_DEPARTMENT_NOTICE,
+                        departmentDisallowed: true,
+                        department: department || '未知部门',
+                    });
+                    return;
+                }
+                await ensureDefaultModelConfig(ctx);
+                finishJson(res, 200, { status_code: 200, message: '登录成功', user, personalInfo });
             }
             catch (err) {
                 const msg = err instanceof Error ? err.message : '登录失败';
@@ -225,6 +570,7 @@ export function apply(ctx, config) {
             try {
                 const snapshot = await session.getSnapshot();
                 if (snapshot === undefined || !snapshot.user || !snapshot.cookies) {
+                    await removeDefaultModelConfig(ctx);
                     finishJson(res, 401, error('not logged in'));
                     return;
                 }
@@ -233,6 +579,7 @@ export function apply(ctx, config) {
                 const isExpiredByTime = Number.isNaN(loggedInTime) || (Date.now() - loggedInTime > 30 * 24 * 3600 * 1000);
                 if (isExpiredByTime) {
                     await session.clear();
+                    await removeDefaultModelConfig(ctx);
                     finishJson(res, 401, { status_code: 401, message: '登录凭据已过期，请重新登录', error: 'session_expired' });
                     return;
                 }
@@ -240,12 +587,39 @@ export function apply(ctx, config) {
                 const validation = await client.validateSession(snapshot.cookies);
                 if (!validation.valid) {
                     await session.clear();
+                    await removeDefaultModelConfig(ctx);
                     finishJson(res, 401, { status_code: 401, message: '登录凭据已失效，请重新登录', error: 'session_expired' });
+                    return;
+                }
+                // 3. Resolve personalInfo (from snapshot or lazily fetched)
+                let personalInfo = snapshot.personalInfo;
+                if (!personalInfo && snapshot.cookies) {
+                    try {
+                        personalInfo = await client.fetchPersonalInfo(snapshot.cookies);
+                        if (personalInfo) {
+                            await session.setPersonalInfo(personalInfo);
+                        }
+                    }
+                    catch { }
+                }
+                // 4. Department restriction check: currently strictly restricted to '聚服中心'
+                const department = (personalInfo?.department || '').trim();
+                if (department && !department.includes('聚服中心')) {
+                    await session.clear();
+                    await removeDefaultModelConfig(ctx);
+                    finishJson(res, 403, {
+                        status_code: 403,
+                        message: DISALLOWED_DEPARTMENT_NOTICE,
+                        error: DISALLOWED_DEPARTMENT_NOTICE,
+                        departmentDisallowed: true,
+                        department,
+                    });
                     return;
                 }
                 const tokenUsage = await client.fetchTokenUsage();
                 const payload = {
                     user: snapshot.user,
+                    personalInfo,
                     tokenUsage,
                     warning: validation.unverified ? '网络连接异常，当前显示离线状态' : undefined,
                 };
@@ -271,6 +645,7 @@ export function apply(ctx, config) {
             }
             try {
                 await session.clear();
+                await removeDefaultModelConfig(ctx);
                 finishJson(res, 200, { ok: true });
             }
             catch (err) {
@@ -278,8 +653,43 @@ export function apply(ctx, config) {
             }
         },
     }));
-    // 4. Intercept LLM streaming: Enforce 200M quota limit & accurately track cumulative token usage
+    // 4. Intercept Agent request configuration: Default to deepseek & deepseek-v4-flash
+    ctx.on('agent/request', async (_payload, next) => {
+        try {
+            const creds = ctx.get?.('credentials');
+            if (creds)
+                patchCredentialsService(creds);
+            const env = ctx.get?.('launchEnvironment');
+            if (env)
+                patchLaunchEnvironment(env);
+        }
+        catch { }
+        const requested = await next();
+        if (!requested || !requested.provider || requested.provider === 'kimi-coding') {
+            return {
+                ...requested,
+                provider: 'deepseek',
+                model: 'deepseek-v4-flash',
+            };
+        }
+        return requested;
+    });
+    // 5. Intercept LLM streaming: redirect legacy requests, enforce 200M quota & track tokens
     ctx.on('llm/stream', async function* (options, next) {
+        try {
+            const creds = ctx.get?.('credentials');
+            if (creds)
+                patchCredentialsService(creds);
+            const env = ctx.get?.('launchEnvironment');
+            if (env)
+                patchLaunchEnvironment(env);
+        }
+        catch { }
+        // Seamless fallback: If a request targets legacy kimi-coding, redirect to deepseek & deepseek-v4-flash
+        if (options && options.provider === 'kimi-coding') {
+            options.provider = 'deepseek';
+            options.model = 'deepseek-v4-flash';
+        }
         const snapshot = await session.getSnapshot();
         const currentUsed = Number(snapshot?.tokenUsed) || 0;
         const quota = Number(config.tokenQuota) || 200_000_000;

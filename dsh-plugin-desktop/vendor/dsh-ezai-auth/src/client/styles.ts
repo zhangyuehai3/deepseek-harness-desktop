@@ -13,7 +13,7 @@ export function injectCss(): void {
 .dshEzaiAuthModalBackdrop {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 999999;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -490,6 +490,15 @@ export function injectCss(): void {
   align-items: center;
   gap: 6px;
 }
+.dshEzaiWeeklyTag {
+  font-size: 11px;
+  font-weight: 500;
+  color: #265C5A;
+  background: rgba(38, 92, 90, 0.08);
+  border: 1px solid rgba(152, 196, 85, 0.25);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
 .dshEzaiTokenVal {
   font-size: 13px;
   font-weight: 700;
@@ -539,6 +548,31 @@ export function injectCss(): void {
   background: rgba(239, 68, 68, 0.08);
   color: #ef4444;
   border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* ==========================================================
+ * Strict Model Selection & Settings Lock:
+ * Hide Model Picker in Composer & Models Section in Settings
+ * ========================================================== */
+
+/* 1. Hide Model Selection Trigger and Menus in Conversation Composer */
+[class*="ModelSelect_root"],
+[class*="ModelSelect_trigger"],
+[class*="ModelSelect_menu"],
+[class*="ModelSelect_cell"],
+[data-slot="conversation.input.model"] {
+  display: none !important;
+}
+
+/* 2. Hide Models Section from Settings Left Nav Rail */
+button[class*="SettingsRoot_navCell"]:has(svg path[d*="M12.0997 8.54554"]),
+button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
+  display: none !important;
+}
+
+/* Fallback class */
+.dshHideModelsNav {
+  display: none !important;
 }
 `
   document.head.appendChild(tag)

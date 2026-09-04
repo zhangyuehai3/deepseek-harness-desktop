@@ -1,6 +1,17 @@
 /** EZAI Desktop executable: minimal Electron bootstrap around the Host Cordis root. */
 
 import { app, crashReporter, shell } from 'electron'
+
+// Bypass local proxy (Shadowrocket / Clash / Charles) for domestic endpoints to prevent TLS socket disconnection
+try {
+  app.commandLine.appendSwitch('proxy-bypass-list', '<local>;*.deepseek.com;api.deepseek.com;deepseek.com;*.kimi.com;api.kimi.com;*.moonshot.cn;moonshot.cn;*.ezsvsbox.com;ezsvsbox.com')
+} catch {}
+const DOMESTIC_BYPASS = ['api.deepseek.com', '*.deepseek.com', 'deepseek.com', 'api.kimi.com', '*.kimi.com', 'moonshot.cn', '*.moonshot.cn', 'www.ezsvsbox.com', '*.ezsvsbox.com', 'localhost', '127.0.0.1']
+const activeNoProxy = process.env.NO_PROXY || process.env.no_proxy || ''
+const combinedNoProxy = activeNoProxy ? `${activeNoProxy},${DOMESTIC_BYPASS.join(',')}` : DOMESTIC_BYPASS.join(',')
+process.env.NO_PROXY = combinedNoProxy
+process.env.no_proxy = combinedNoProxy
+
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -15,7 +26,7 @@ import {
 import { provideCmdline } from '@deepseek-ai/dsh-cmdline'
 import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import { DSH_LAUNCH_ENVIRONMENT_KEY } from '@deepseek-ai/dsh-launch-environment'
-import type {} from '@deepseek-ai/dsh-web-app'
+import type { } from '@deepseek-ai/dsh-web-app'
 import { isDesktopInstallerQuitRequest } from './desktop-installer-quit.ts'
 import { createDesktopBrowserAccess } from './desktop-browser-access.ts'
 import {
@@ -96,11 +107,11 @@ import {
 } from './setup-wizard-state.ts'
 import {
   migrateDesktopBrowserAccessSettings,
-  readDesktopSetupWizardSettings,
-  updateDesktopSetupWizardSettings,
+  // readDesktopSetupWizardSettings,
+  // updateDesktopSetupWizardSettings,
 } from './setup-wizard-settings.ts'
-import type { DesktopSetupWizardResult } from './setup-wizard-contract.ts'
-import { DesktopSetupWizardWindow } from './setup-wizard-window.ts'
+// import type { DesktopSetupWizardResult } from './setup-wizard-contract.ts'
+// import { DesktopSetupWizardWindow } from './setup-wizard-window.ts'
 import {
   formatProfileMaterializationFailure,
   materializeProfile,
@@ -134,7 +145,7 @@ import {
   recoverOversizedSessionProjectionCache,
   type SessionProjectionCacheRecoveryResult,
 } from './session-projcache-recovery.ts'
-import { windowsSupportsMica } from './window-material.ts'
+// import { windowsSupportsMica } from './window-material.ts'
 
 const BIN_NAME = 'dsh-plugin-desktop'
 const PRODUCT_NAME = 'EZAI Desktop'
@@ -249,7 +260,7 @@ async function start(): Promise<void> {
   let logSink: LogFileSink | undefined
   let startupRecoveryController: DesktopStartupRecoveryController | undefined
   let startupRecoveryWindow: DesktopStartupRecoveryWindow | undefined
-  let setupWizardWindow: DesktopSetupWizardWindow | undefined
+  // let setupWizardWindow: DesktopSetupWizardWindow | undefined
   let startupRecoveryConfigurationPaths: DesktopStartupRecoveryConfigurationPaths | undefined
   let profileCheckpoint: DesktopProfileCheckpoint | undefined
   let startupRecoveryProfileActions: DesktopStartupRecoveryProfileActions | undefined
@@ -408,10 +419,6 @@ async function start(): Promise<void> {
   }
 
   const showPreHostSurface = (): boolean => {
-    if (setupWizardWindow !== undefined) {
-      setupWizardWindow.show()
-      return true
-    }
     if (startupRecoveryWindow !== undefined) {
       startupRecoveryWindow.show()
       return true
@@ -446,7 +453,7 @@ async function start(): Promise<void> {
       sessionProjectionCacheRecovery = projectionCacheRecovery
       electronLogger.error(
         `${BIN_NAME}: quarantined oversized session projection cache (${String(projectionCacheRecovery.sizeBytes)} bytes) at `
-          + `${projectionCacheRecovery.cachePath}; backup saved to ${projectionCacheRecovery.backupPath}`,
+        + `${projectionCacheRecovery.cachePath}; backup saved to ${projectionCacheRecovery.backupPath}`,
       )
     }
     const windowsVolumeConcerns = diagnoseWindowsVolumes(process.platform, [
@@ -667,6 +674,7 @@ async function start(): Promise<void> {
       )
     }
     if (readDesktopSetupWizardState(marketUserDataDir, prepared.profile.dir) === undefined) {
+      /*
       const setupSettings = readDesktopSetupWizardSettings(prepared.settingsDocument)
       setupWizardWindow = new DesktopSetupWizardWindow({
         locale: desktopLocaleFromLanguageTag(app.getLocale()),
@@ -722,6 +730,13 @@ async function start(): Promise<void> {
           'completed',
         )
       }
+      */
+      // 默认直接完成向导，不再弹出初始化向导窗口
+      await completeOrSkipDesktopSetupWizard(
+        marketUserDataDir,
+        prepared.profile.dir,
+        'completed',
+      )
     }
     if (profileCheckpoint === undefined) {
       try {
@@ -743,14 +758,14 @@ async function start(): Promise<void> {
     lifecycleRecorder.transitionStartupStage(startupStage)
     const dshRuntime = process.platform === 'win32'
       ? installDesktopDshRuntime({
-          platform: process.platform,
-          appExecutable: process.execPath,
-          dshBootstrapPath,
-          profileName: activeProfileName,
-          homeDir,
-          stateDir: join(app.getPath('userData'), 'host-commands', activeProfileName),
-          environment: process.env,
-        })
+        platform: process.platform,
+        appExecutable: process.execPath,
+        dshBootstrapPath,
+        profileName: activeProfileName,
+        homeDir,
+        stateDir: join(app.getPath('userData'), 'host-commands', activeProfileName),
+        environment: process.env,
+      })
       : undefined
     const releaseDshRuntime = generation.own(() => { dshRuntime?.dispose() })
     if (prepared.requiresDependencyMigration) {

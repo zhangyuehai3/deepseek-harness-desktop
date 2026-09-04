@@ -13,7 +13,7 @@ export interface EzaiLoginModalProps {
   onClose: () => void
 }
 
-function EzaiLoginModal({ locale, onClose }: EzaiLoginModalProps) {
+export function EzaiLoginModal({ locale, onClose }: EzaiLoginModalProps) {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {

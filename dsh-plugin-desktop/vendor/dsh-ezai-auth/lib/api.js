@@ -228,5 +228,119 @@ export function createEzaiClient(options, session) {
                 return { valid: true, unverified: true, reason: 'network_error' };
             }
         },
+        async fetchPersonalInfo(cookies) {
+            const url = `${baseURL}/personalDetails`;
+            try {
+                const response = await request(url, {
+                    method: 'GET',
+                    headers: {
+                        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                        'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
+                        'cookie': cookies,
+                        'referer': `${baseURL}/`,
+                        'user-agent': buildUserAgent(),
+                    },
+                });
+                if (response.statusCode < 200 || response.statusCode >= 300) {
+                    await ezaiLog(`fetchPersonalInfo: request failed (${response.statusCode})`);
+                    return undefined;
+                }
+                const html = response.body.toString('utf8');
+                const info = parsePersonalDetailsHtml(html, cookies);
+                await ezaiLog(`fetchPersonalInfo: resolved ${info?.name ?? 'none'}, post=${info?.post ?? 'none'}`);
+                return info;
+            }
+            catch (err) {
+                await ezaiLog(`fetchPersonalInfo failed: ${err instanceof Error ? err.message : String(err)}`);
+                return undefined;
+            }
+        },
     };
+}
+function parsePersonalDetailsHtml(html, cookies) {
+    try {
+        const info = {};
+        // Extract key-value pairs from <div class="left control-label">KEY：</div>\s*<div class="left">VALUE</div>
+        const pairRegex = /<div\s+class=["']left\s+control-label["']>\s*([^：<]+?)\s*[：:]\s*<\/div>\s*<div\s+class=["']left["']>([\s\S]*?)<\/div>/g;
+        let match;
+        while ((match = pairRegex.exec(html)) !== null) {
+            const label = match[1].trim();
+            const rawVal = match[2]
+                .replace(/<[^>]+>/g, '')
+                .replace(/&gt;/g, '>')
+                .replace(/&lt;/g, '<')
+                .replace(/&amp;/g, '&')
+                .replace(/&nbsp;/g, ' ')
+                .trim();
+            if (!rawVal)
+                continue;
+            switch (label) {
+                case '姓名':
+                    info.name = rawVal;
+                    break;
+                case '岗位':
+                    info.post = rawVal;
+                    break;
+                case '性别':
+                    info.gender = rawVal;
+                    break;
+                case '生日':
+                    info.birthday = rawVal;
+                    break;
+                case '私人电话':
+                    info.user_phone = rawVal;
+                    break;
+                case '办公电话':
+                    info.tel_phone = rawVal;
+                    break;
+                case '入职日期':
+                    info.hiredate = rawVal;
+                    break;
+                case 'OA登录名':
+                    info.login_name = rawVal;
+                    break;
+                case '人员编码':
+                    info.code = rawVal;
+                    break;
+                case '公司邮箱':
+                    info.email = rawVal;
+                    break;
+                case '所属部门':
+                    info.department = rawVal;
+                    break;
+                case '直属上级':
+                    info.leader = rawVal;
+                    break;
+                case '工作地点':
+                    info.location = rawVal;
+                    break;
+            }
+        }
+        if (cookies) {
+            const avatarMatch = /(?:^|;\s*)avatar=([^;]+)/.exec(cookies);
+            if (avatarMatch) {
+                try {
+                    info.avatar = decodeURIComponent(avatarMatch[1]);
+                }
+                catch {
+                    info.avatar = avatarMatch[1];
+                }
+            }
+            const nickMatch = /(?:^|;\s*)nickName=([^;]+)/.exec(cookies);
+            if (nickMatch && !info.name) {
+                try {
+                    info.name = decodeURIComponent(nickMatch[1]);
+                }
+                catch {
+                    info.name = unescape(nickMatch[1]);
+                }
+            }
+        }
+        if (!info.name && !info.login_name)
+            return undefined;
+        return info;
+    }
+    catch {
+        return undefined;
+    }
 }
