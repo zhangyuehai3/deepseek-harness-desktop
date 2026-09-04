@@ -8,7 +8,7 @@ export const Config = z.object({
     baseURL: z.string().default('https://www.ezsvsbox.com'),
     loginPath: z.string().default('/login'),
     captchaPath: z.string().default('/captcha/box'),
-    tokenQuota: z.number().default(200_000_000),
+    tokenQuota: z.number().default(200_000),
     sessionFile: z.string().default(''),
 });
 const MAX_BODY_BYTES = 4 * 1024;
@@ -674,7 +674,7 @@ export function apply(ctx, config) {
         }
         return requested;
     });
-    // 5. Intercept LLM streaming: redirect legacy requests, enforce 200M quota & track tokens
+    // 5. Intercept LLM streaming: redirect legacy requests, enforce 200k quota & track tokens
     ctx.on('llm/stream', async function* (options, next) {
         try {
             const creds = ctx.get?.('credentials');
@@ -692,7 +692,7 @@ export function apply(ctx, config) {
         }
         const snapshot = await session.getSnapshot();
         const currentUsed = Number(snapshot?.tokenUsed) || 0;
-        const quota = Number(config.tokenQuota) || 200_000_000;
+        const quota = Number(config.tokenQuota) || 200_000;
         // Strict quota check: block model calls if limit is reached
         if (currentUsed >= quota) {
             yield {
