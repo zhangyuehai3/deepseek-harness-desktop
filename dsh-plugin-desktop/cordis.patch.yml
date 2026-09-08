@@ -55,3 +55,7 @@
     printUrl: false
     surfaceContext: true
     trustedHosts: []
+
+# Disable upstream official branding so all platforms (Windows & macOS) consistently display Jinshi Yifu
+- id: ui-brand-official
+  disabled: true

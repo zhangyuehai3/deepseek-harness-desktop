@@ -2594,7 +2594,7 @@ __metadata:
 
 "@deepseek-ai/dsh-host-apiproxy@patch:@deepseek-ai/dsh-host-apiproxy@npm%3A0.1.1-rc.2#./patches/dsh-host-apiproxy-model-modalities@0.1.1-rc.2.patch::locator=deepseek-harness-desktop%40workspace%3A.":
   version: 0.1.1-rc.2
-  resolution: "@deepseek-ai/dsh-host-apiproxy@patch:@deepseek-ai/dsh-host-apiproxy@npm%3A0.1.1-rc.2#./patches/dsh-host-apiproxy-model-modalities@0.1.1-rc.2.patch::version=0.1.1-rc.2&hash=b516cd&locator=deepseek-harness-desktop%40workspace%3A."
+  resolution: "@deepseek-ai/dsh-host-apiproxy@patch:@deepseek-ai/dsh-host-apiproxy@npm%3A0.1.1-rc.2#./patches/dsh-host-apiproxy-model-modalities@0.1.1-rc.2.patch::version=0.1.1-rc.2&hash=31e0f3&locator=deepseek-harness-desktop%40workspace%3A."
   dependencies:
     "@deepseek-ai/dsh-agent": "npm:^0.1.1-rc.2"
     "@deepseek-ai/dsh-agent-default-model": "npm:^0.1.1-rc.2"
@@ -2629,7 +2629,7 @@ __metadata:
     "@deepseek-ai/dsh-agent-presets": ^0.1.1-rc.2
     "@deepseek-ai/dsh-cordis-host-runner": ^0.1.1-rc.2
     "@deepseek-ai/dsh-invariants": ^0.1.1-rc.2
-  checksum: 10c0/345890ef07bf6243cca3124a99affc35076837dd1c234363bc8563493bb11b3f254f72d019b8a05bbdf07bca96ec7fdc664f1651764f3a55474082522e06db22
+  checksum: 10c0/3a97a05317c98a4312bb3059b2a3823da2f6dec912c0d6165f8c48f64574eff980bc94d69f8ad1d51b254ca01ee319e5a7c08890c615cd033447977ce22baf4d
   languageName: node
   linkType: hard
 
@@ -7027,7 +7027,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react-dom@npm:^18":
+"@types/react-dom@npm:^18, @types/react-dom@npm:~18.3.1":
   version: 18.3.7
   resolution: "@types/react-dom@npm:18.3.7"
   peerDependencies:
@@ -8792,6 +8792,7 @@ __metadata:
   dependencies:
     "@types/node": "npm:^22.20.0"
     "@types/react": "npm:~18.3.1"
+    "@types/react-dom": "npm:~18.3.1"
     esbuild: "npm:^0.24.2"
     typescript: "npm:^5.7.2"
   peerDependencies:
@@ -8803,6 +8804,7 @@ __metadata:
     "@deepseek-ai/dsh-home-paths": ^0.1.0-rc.6
     "@deepseek-ai/schemastery": ^3.18.1
     react: ^18.2.0
+    react-dom: ^18.2.0
   languageName: unknown
   linkType: soft
 
