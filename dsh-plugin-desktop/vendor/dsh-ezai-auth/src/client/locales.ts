@@ -40,6 +40,7 @@ export const zh = {
   'copied': '已复制到剪贴板',
   'checkingSession': '正在加载账户信息…',
   'weeklyResetHint': '每周日 24:00 刷新',
+  'loginRequiredHint': '请登录账号后使用',
 } as const
 
 export const en: Record<keyof typeof zh, string> = {
@@ -80,4 +81,5 @@ export const en: Record<keyof typeof zh, string> = {
   'copied': 'Copied to clipboard',
   'checkingSession': 'Loading account information…',
   'weeklyResetHint': 'Resets Sun 24:00',
+  'loginRequiredHint': 'Please log in to your account first',
 }

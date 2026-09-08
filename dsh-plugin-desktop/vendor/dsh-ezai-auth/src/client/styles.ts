@@ -574,6 +574,15 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
 .dshHideModelsNav {
   display: none !important;
 }
+
+/* 3. Logged out composer card & textarea */
+[data-composer-card][data-ezai-logged-out="true"] {
+  cursor: pointer !important;
+}
+[data-composer-card][data-ezai-logged-out="true"] textarea {
+  cursor: pointer !important;
+  pointer-events: none !important;
+}
 `
   document.head.appendChild(tag)
 }

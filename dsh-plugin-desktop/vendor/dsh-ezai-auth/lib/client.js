@@ -607,6 +607,15 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
 .dshHideModelsNav {
   display: none !important;
 }
+
+/* 3. Logged out composer card & textarea */
+[data-composer-card][data-ezai-logged-out="true"] {
+  cursor: pointer !important;
+}
+[data-composer-card][data-ezai-logged-out="true"] textarea {
+  cursor: pointer !important;
+  pointer-events: none !important;
+}
 `;
   document.head.appendChild(tag);
 }
@@ -848,6 +857,9 @@ function EzaiAccountTab({ t, onLogin, hideHeader = false }) {
           if (payload.departmentDisallowed) {
             if (active) {
               setAccount(void 0);
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: false } }));
+              }
               showDepartmentNoticeModal(payload.message);
               void fetchCaptcha();
             }
@@ -857,22 +869,36 @@ function EzaiAccountTab({ t, onLogin, hideHeader = false }) {
         if (response.status === 401) {
           if (active) {
             setAccount(void 0);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: false } }));
+            }
             void fetchCaptcha();
           }
           return;
         }
         if (response.ok) {
           const payload = await response.json();
-          if (active) setAccount(payload);
+          if (active) {
+            setAccount(payload);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: true, user: payload.user } }));
+            }
+          }
         } else {
           if (active) {
             setAccount(void 0);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: false } }));
+            }
             void fetchCaptcha();
           }
         }
       } catch {
         if (active) {
           setAccount(void 0);
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: false } }));
+          }
           void fetchCaptcha();
         }
       } finally {
@@ -915,6 +941,9 @@ function EzaiAccountTab({ t, onLogin, hideHeader = false }) {
       }
       await fetchAccount();
       setForm({ username: "", password: "", captcha: "" });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: true, user: payload.user } }));
+      }
       onLogin?.(payload.user);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -934,6 +963,9 @@ function EzaiAccountTab({ t, onLogin, hideHeader = false }) {
       await fetch("/api/ezai-auth/logout", { method: "POST" });
       setAccount(void 0);
       void fetchCaptcha();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: false } }));
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message || t("networkError"));
@@ -1245,7 +1277,8 @@ var zh = {
   "verifiedUser": "EZAI \u8BA4\u8BC1\u6210\u5458",
   "copied": "\u5DF2\u590D\u5236\u5230\u526A\u8D34\u677F",
   "checkingSession": "\u6B63\u5728\u52A0\u8F7D\u8D26\u6237\u4FE1\u606F\u2026",
-  "weeklyResetHint": "\u6BCF\u5468\u65E5 24:00 \u5237\u65B0"
+  "weeklyResetHint": "\u6BCF\u5468\u65E5 24:00 \u5237\u65B0",
+  "loginRequiredHint": "\u8BF7\u767B\u5F55\u8D26\u53F7\u540E\u4F7F\u7528"
 };
 var en = {
   "tabTitle": "EZAI Account",
@@ -1284,7 +1317,8 @@ var en = {
   "verifiedUser": "EZAI Verified",
   "copied": "Copied to clipboard",
   "checkingSession": "Loading account information\u2026",
-  "weeklyResetHint": "Resets Sun 24:00"
+  "weeklyResetHint": "Resets Sun 24:00",
+  "loginRequiredHint": "Please log in to your account first"
 };
 
 // src/client/EzaiLoginModal.tsx
@@ -1383,14 +1417,17 @@ function showEzaiLoginModal(locale) {
 
 // src/client/index.tsx
 var inject = ["slots", "locale"];
+var isEzaiLoggedIn = false;
 function getActiveLocale(ctx) {
   const snapshot = ctx.locale.getSnapshot?.();
   const active = typeof snapshot?.active === "string" ? snapshot.active : "en";
   return active === "zh" ? "zh" : "en";
 }
-function installModelLockObserver() {
+function installModelLockObserver(ctx) {
   if (typeof document === "undefined") return;
   const cleanUI = () => {
+    const isZh = getActiveLocale(ctx) === "zh";
+    const loginPrompt = isZh ? "\u8BF7\u767B\u5F55\u8D26\u53F7\u540E\u4F7F\u7528" : "Please log in to your account first";
     const navButtons = document.querySelectorAll('button[class*="navCell"], button[class*="SettingsRoot_navCell"]');
     for (const btn of navButtons) {
       const text = btn.textContent?.trim();
@@ -1437,12 +1474,46 @@ function installModelLockObserver() {
       }
     }
     const textareas = document.querySelectorAll("textarea");
-    for (const ta of textareas) {
-      const ph = ta.placeholder || "";
-      if (ta.disabled && (ph.includes("\u6A21\u578B\u4E0D\u53EF\u7528") || ph.includes("\u9009\u62E9\u6A21\u578B") || ph.toLowerCase().includes("model is unavailable"))) {
-        ta.disabled = false;
-        ta.removeAttribute("disabled");
-        ta.placeholder = "\u8F93\u5165\u6D88\u606F\u6216\u4F7F\u7528 / \u8C03\u7528\u547D\u4EE4...";
+    const composerCards = document.querySelectorAll("[data-composer-card]");
+    if (!isEzaiLoggedIn) {
+      for (const ta of textareas) {
+        ta.disabled = true;
+        ta.setAttribute("disabled", "true");
+        ta.placeholder = loginPrompt;
+        ta.dataset.ezaiLoggedOut = "true";
+      }
+      for (const card of composerCards) {
+        card.setAttribute("data-ezai-logged-out", "true");
+        if (!card._ezaiClickAttached) {
+          ;
+          card._ezaiClickAttached = true;
+          card.addEventListener("click", (e) => {
+            if (!isEzaiLoggedIn) {
+              e.preventDefault();
+              e.stopPropagation();
+              showEzaiLoginModal(getActiveLocale(ctx));
+            }
+          }, true);
+        }
+      }
+      const toasts = document.querySelectorAll('div[role="alert"], div[class*="Toast_toast"]');
+      for (const toast of toasts) {
+        const text = toast.textContent || "";
+        if (text.includes("no adapter serves provider") || text.includes("model-unavailable") || text.includes("\u9009\u62E9\u6A21\u578B")) {
+          toast.style.display = "none";
+        }
+      }
+    } else {
+      for (const ta of textareas) {
+        if (ta.dataset.ezaiLoggedOut === "true" || ta.placeholder === "\u8BF7\u767B\u5F55\u8D26\u53F7\u540E\u4F7F\u7528" || ta.placeholder === "Please log in to your account first") {
+          delete ta.dataset.ezaiLoggedOut;
+          ta.disabled = false;
+          ta.removeAttribute("disabled");
+          ta.placeholder = isZh ? "\u8F93\u5165\u6D88\u606F\u6216\u4F7F\u7528 / \u8C03\u7528\u547D\u4EE4..." : "Send a message or type / for commands...";
+        }
+      }
+      for (const card of composerCards) {
+        card.removeAttribute("data-ezai-logged-out");
       }
     }
     const badges = document.querySelectorAll('span[class*="previewBadge"], span[class*="HeroShell_previewBadge"]');
@@ -1453,6 +1524,10 @@ function installModelLockObserver() {
       }
     }
   };
+  window.addEventListener("ezai-auth:state-change", (event) => {
+    isEzaiLoggedIn = Boolean(event.detail?.loggedIn);
+    cleanUI();
+  });
   cleanUI();
   const observer = new MutationObserver(() => {
     cleanUI();
@@ -1461,12 +1536,17 @@ function installModelLockObserver() {
 }
 function apply(ctx) {
   injectCss();
-  installModelLockObserver();
+  installModelLockObserver(ctx);
   ctx.inject(["conversation"], (scope) => {
     const conversation = scope.get("conversation");
     if (conversation && conversation.blocks) {
       const originalSet = conversation.blocks.set.bind(conversation.blocks);
       conversation.blocks.set = (sessionId, block) => {
+        if (!isEzaiLoggedIn) {
+          const isZh = getActiveLocale(ctx) === "zh";
+          originalSet(sessionId, { reason: isZh ? "\u8BF7\u767B\u5F55\u8D26\u53F7\u540E\u4F7F\u7528" : "Please log in to your account first" });
+          return;
+        }
         if (block && typeof block.reason === "string" && (block.reason.includes("\u6A21\u578B") || block.reason.toLowerCase().includes("model"))) {
           originalSet(sessionId, void 0);
           return;
@@ -1493,6 +1573,17 @@ function apply(ctx) {
   void (async () => {
     try {
       const response = await fetch("/api/ezai-auth/account", { headers: { accept: "application/json" } });
+      if (response.status === 200) {
+        isEzaiLoggedIn = true;
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: true } }));
+        }
+        return;
+      }
+      isEzaiLoggedIn = false;
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: false } }));
+      }
       if (response.status === 403) {
         const payload = await response.json().catch(() => ({}));
         if (payload.departmentDisallowed) {

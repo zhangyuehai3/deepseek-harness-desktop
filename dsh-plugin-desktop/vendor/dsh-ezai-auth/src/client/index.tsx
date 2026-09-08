@@ -7,16 +7,21 @@ import { injectCss } from './styles.ts'
 
 export const inject = ['slots', 'locale']
 
+let isEzaiLoggedIn = false
+
 function getActiveLocale(ctx: ClientContext): 'zh' | 'en' {
   const snapshot = (ctx.locale as any).getSnapshot?.()
   const active = typeof snapshot?.active === 'string' ? snapshot.active : 'en'
   return active === 'zh' ? 'zh' : 'en'
 }
 
-function installModelLockObserver(): void {
+function installModelLockObserver(ctx: ClientContext): void {
   if (typeof document === 'undefined') return
 
   const cleanUI = () => {
+    const isZh = getActiveLocale(ctx) === 'zh'
+    const loginPrompt = isZh ? '请登录账号后使用' : 'Please log in to your account first'
+
     // 1. Hide models nav button in Settings dialog
     const navButtons = document.querySelectorAll('button[class*="navCell"], button[class*="SettingsRoot_navCell"]')
     for (const btn of navButtons) {
@@ -72,14 +77,55 @@ function installModelLockObserver(): void {
         }
       }
     }
-    // 4. Clear model unavailable block from composer textarea
+
+    // 4. Handle logged-out vs logged-in state on composer textarea and card
     const textareas = document.querySelectorAll('textarea')
-    for (const ta of textareas) {
-      const ph = ta.placeholder || ''
-      if (ta.disabled && (ph.includes('模型不可用') || ph.includes('选择模型') || ph.toLowerCase().includes('model is unavailable'))) {
-        ta.disabled = false
-        ta.removeAttribute('disabled')
-        ta.placeholder = '输入消息或使用 / 调用命令...'
+    const composerCards = document.querySelectorAll('[data-composer-card]')
+
+    if (!isEzaiLoggedIn) {
+      // Not logged in: disable input, show login prompt, and guard click to popup modal
+      for (const ta of textareas) {
+        ta.disabled = true
+        ta.setAttribute('disabled', 'true')
+        ta.placeholder = loginPrompt
+        ta.dataset.ezaiLoggedOut = 'true'
+      }
+
+      for (const card of composerCards) {
+        card.setAttribute('data-ezai-logged-out', 'true')
+        if (!(card as any)._ezaiClickAttached) {
+          ;(card as any)._ezaiClickAttached = true
+          card.addEventListener('click', (e: MouseEvent) => {
+            if (!isEzaiLoggedIn) {
+              e.preventDefault()
+              e.stopPropagation()
+              showEzaiLoginModal(getActiveLocale(ctx))
+            }
+          }, true)
+        }
+      }
+
+      // Hide any technical model-unavailable toasts when logged out
+      const toasts = document.querySelectorAll('div[role="alert"], div[class*="Toast_toast"]')
+      for (const toast of toasts) {
+        const text = toast.textContent || ''
+        if (text.includes('no adapter serves provider') || text.includes('model-unavailable') || text.includes('选择模型')) {
+          (toast as HTMLElement).style.display = 'none'
+        }
+      }
+    } else {
+      // Logged in: restore textarea if it was previously locked by logout
+      for (const ta of textareas) {
+        if (ta.dataset.ezaiLoggedOut === 'true' || ta.placeholder === '请登录账号后使用' || ta.placeholder === 'Please log in to your account first') {
+          delete ta.dataset.ezaiLoggedOut
+          ta.disabled = false
+          ta.removeAttribute('disabled')
+          ta.placeholder = isZh ? '输入消息或使用 / 调用命令...' : 'Send a message or type / for commands...'
+        }
+      }
+
+      for (const card of composerCards) {
+        card.removeAttribute('data-ezai-logged-out')
       }
     }
 
@@ -93,6 +139,12 @@ function installModelLockObserver(): void {
     }
   }
 
+  // Listen for login / logout state changes
+  window.addEventListener('ezai-auth:state-change', (event: any) => {
+    isEzaiLoggedIn = Boolean(event.detail?.loggedIn)
+    cleanUI()
+  })
+
   // Run immediately and observe DOM changes
   cleanUI()
   const observer = new MutationObserver(() => {
@@ -103,14 +155,20 @@ function installModelLockObserver(): void {
 
 export function apply(ctx: ClientContext): void {
   injectCss()
-  installModelLockObserver()
+  installModelLockObserver(ctx)
 
-  // Intercept conversation composer model-unavailable blocks
+  // Intercept conversation composer blocks
   ctx.inject(['conversation'], (scope: ClientContext) => {
     const conversation = scope.get('conversation') as any
     if (conversation && conversation.blocks) {
       const originalSet = conversation.blocks.set.bind(conversation.blocks)
       conversation.blocks.set = (sessionId: any, block: any) => {
+        if (!isEzaiLoggedIn) {
+          // When logged out, lock with friendly prompt
+          const isZh = getActiveLocale(ctx) === 'zh'
+          originalSet(sessionId, { reason: isZh ? '请登录账号后使用' : 'Please log in to your account first' })
+          return
+        }
         if (block && typeof block.reason === 'string' && (block.reason.includes('模型') || block.reason.toLowerCase().includes('model'))) {
           originalSet(sessionId, undefined)
           return
@@ -137,10 +195,21 @@ export function apply(ctx: ClientContext): void {
     }, EzaiAccountTab)
   )
 
-  // 2. On startup, pop up the original EZAI Login Modal if user has no active session
+  // 2. On startup, check session and sync logged in state
   void (async () => {
     try {
       const response = await fetch('/api/ezai-auth/account', { headers: { accept: 'application/json' } })
+      if (response.status === 200) {
+        isEzaiLoggedIn = true
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: true } }))
+        }
+        return
+      }
+      isEzaiLoggedIn = false
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: false } }))
+      }
       if (response.status === 403) {
         const payload = (await response.json().catch(() => ({}))) as any
         if (payload.departmentDisallowed) {
@@ -158,3 +227,4 @@ export function apply(ctx: ClientContext): void {
     }
   })()
 }
+

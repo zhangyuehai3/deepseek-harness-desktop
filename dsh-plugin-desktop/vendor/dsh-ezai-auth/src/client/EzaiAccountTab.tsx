@@ -107,6 +107,9 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
           if (payload.departmentDisallowed) {
             if (active) {
               setAccount(undefined)
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: false } }))
+              }
               showDepartmentNoticeModal(payload.message)
               void fetchCaptcha()
             }
@@ -116,22 +119,36 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
         if (response.status === 401) {
           if (active) {
             setAccount(undefined)
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: false } }))
+            }
             void fetchCaptcha()
           }
           return
         }
         if (response.ok) {
           const payload = (await response.json()) as AccountResponse
-          if (active) setAccount(payload)
+          if (active) {
+            setAccount(payload)
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: true, user: payload.user } }))
+            }
+          }
         } else {
           if (active) {
             setAccount(undefined)
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: false } }))
+            }
             void fetchCaptcha()
           }
         }
       } catch {
         if (active) {
           setAccount(undefined)
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: false } }))
+          }
           void fetchCaptcha()
         }
       } finally {
@@ -183,6 +200,9 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
       }
       await fetchAccount()
       setForm({ username: '', password: '', captcha: '' })
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: true, user: payload.user } }))
+      }
       onLogin?.(payload.user)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -205,6 +225,9 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
       await fetch('/api/ezai-auth/logout', { method: 'POST' })
       setAccount(undefined)
       void fetchCaptcha()
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: false } }))
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setError(message || t('networkError'))
