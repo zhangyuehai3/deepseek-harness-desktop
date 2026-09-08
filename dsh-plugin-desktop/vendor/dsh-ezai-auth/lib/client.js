@@ -964,6 +964,7 @@ function EzaiAccountTab({ t, onLogin, hideHeader = false }) {
       setAccount(void 0);
       void fetchCaptcha();
       if (typeof window !== "undefined") {
+        window.__EZAI_LOGGED_IN__ = false;
         window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: false } }));
       }
     } catch (err) {
@@ -1476,11 +1477,33 @@ function installModelLockObserver(ctx) {
     const textareas = document.querySelectorAll("textarea");
     const composerCards = document.querySelectorAll("[data-composer-card]");
     if (!isEzaiLoggedIn) {
+      if (typeof window !== "undefined") {
+        window.__EZAI_LOGGED_IN__ = false;
+      }
       for (const ta of textareas) {
         ta.disabled = true;
         ta.setAttribute("disabled", "true");
         ta.placeholder = loginPrompt;
         ta.dataset.ezaiLoggedOut = "true";
+        if (ta.value !== "") {
+          ta.value = "";
+        }
+        try {
+          ta.setSelectionRange(0, 0);
+        } catch {
+        }
+      }
+      const mirrors = document.querySelectorAll("[data-input-mirror]");
+      for (const mirror of mirrors) {
+        if (mirror.textContent !== "\n" && mirror.textContent !== "") {
+          mirror.textContent = "\n";
+        }
+      }
+      const backdrops = document.querySelectorAll("[data-input-backdrop]");
+      for (const bd of backdrops) {
+        if (bd.textContent !== "") {
+          bd.textContent = "";
+        }
       }
       for (const card of composerCards) {
         card.setAttribute("data-ezai-logged-out", "true");
@@ -1504,6 +1527,9 @@ function installModelLockObserver(ctx) {
         }
       }
     } else {
+      if (typeof window !== "undefined") {
+        window.__EZAI_LOGGED_IN__ = true;
+      }
       for (const ta of textareas) {
         if (ta.dataset.ezaiLoggedOut === "true" || ta.placeholder === "\u8BF7\u767B\u5F55\u8D26\u53F7\u540E\u4F7F\u7528" || ta.placeholder === "Please log in to your account first") {
           delete ta.dataset.ezaiLoggedOut;
@@ -1526,6 +1552,9 @@ function installModelLockObserver(ctx) {
   };
   window.addEventListener("ezai-auth:state-change", (event) => {
     isEzaiLoggedIn = Boolean(event.detail?.loggedIn);
+    if (typeof window !== "undefined") {
+      window.__EZAI_LOGGED_IN__ = isEzaiLoggedIn;
+    }
     cleanUI();
   });
   cleanUI();

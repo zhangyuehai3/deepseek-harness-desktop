@@ -83,12 +83,37 @@ function installModelLockObserver(ctx: ClientContext): void {
     const composerCards = document.querySelectorAll('[data-composer-card]')
 
     if (!isEzaiLoggedIn) {
+      if (typeof window !== 'undefined') {
+        (window as any).__EZAI_LOGGED_IN__ = false
+      }
       // Not logged in: disable input, show login prompt, and guard click to popup modal
       for (const ta of textareas) {
         ta.disabled = true
         ta.setAttribute('disabled', 'true')
         ta.placeholder = loginPrompt
         ta.dataset.ezaiLoggedOut = 'true'
+        if (ta.value !== '') {
+          ta.value = ''
+        }
+        try {
+          ta.setSelectionRange(0, 0)
+        } catch {
+          // ignore
+        }
+      }
+
+      const mirrors = document.querySelectorAll('[data-input-mirror]')
+      for (const mirror of mirrors) {
+        if (mirror.textContent !== '\n' && mirror.textContent !== '') {
+          mirror.textContent = '\n'
+        }
+      }
+
+      const backdrops = document.querySelectorAll('[data-input-backdrop]')
+      for (const bd of backdrops) {
+        if (bd.textContent !== '') {
+          bd.textContent = ''
+        }
       }
 
       for (const card of composerCards) {
@@ -114,6 +139,9 @@ function installModelLockObserver(ctx: ClientContext): void {
         }
       }
     } else {
+      if (typeof window !== 'undefined') {
+        (window as any).__EZAI_LOGGED_IN__ = true
+      }
       // Logged in: restore textarea if it was previously locked by logout
       for (const ta of textareas) {
         if (ta.dataset.ezaiLoggedOut === 'true' || ta.placeholder === '请登录账号后使用' || ta.placeholder === 'Please log in to your account first') {
@@ -142,6 +170,9 @@ function installModelLockObserver(ctx: ClientContext): void {
   // Listen for login / logout state changes
   window.addEventListener('ezai-auth:state-change', (event: any) => {
     isEzaiLoggedIn = Boolean(event.detail?.loggedIn)
+    if (typeof window !== 'undefined') {
+      (window as any).__EZAI_LOGGED_IN__ = isEzaiLoggedIn
+    }
     cleanUI()
   })
 

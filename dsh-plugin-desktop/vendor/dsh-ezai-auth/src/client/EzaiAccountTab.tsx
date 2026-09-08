@@ -226,6 +226,7 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
       setAccount(undefined)
       void fetchCaptcha()
       if (typeof window !== 'undefined') {
+        (window as any).__EZAI_LOGGED_IN__ = false
         window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: false } }))
       }
     } catch (err) {
