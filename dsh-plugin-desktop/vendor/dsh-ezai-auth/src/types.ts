@@ -36,6 +36,8 @@ export interface LoginResponse {
 export interface AccountWeeklyUsage {
   week: string
   used: number
+  /** Timestamp (ms) of the last token accounting activity under this week record. */
+  lastActiveTime?: number
 }
 
 /** Session snapshot persisted to disk. */

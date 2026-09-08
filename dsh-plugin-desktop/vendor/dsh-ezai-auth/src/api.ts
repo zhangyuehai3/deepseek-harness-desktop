@@ -4,6 +4,7 @@ import https from 'node:https'
 import type http from 'node:http'
 import { ezaiLog } from './logger.ts'
 import type { EzaiSessionStore } from './session.ts'
+import { updateServerTime } from './trusted-time.ts'
 import type { EzaiPersonalInfo, EzaiUser, LoginResponse } from './types.ts'
 
 export interface EzaiClientOptions {
@@ -96,6 +97,9 @@ function request(url: string, options: { method?: string; headers?: Record<strin
         const chunks: Buffer[] = []
         res.on('data', (chunk: Buffer) => chunks.push(chunk))
         res.on('end', () => {
+          if (res.headers.date) {
+            updateServerTime(res.headers.date)
+          }
           resolve({
             statusCode: res.statusCode ?? 0,
             statusMessage: res.statusMessage ?? '',

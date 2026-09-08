@@ -3,6 +3,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
+import { getTrustedDate } from './trusted-time.ts'
 import type { AccountWeeklyUsage, EzaiPersonalInfo, EzaiUser, SessionSnapshot } from './types.ts'
 
 const DEFAULT_SESSION_DIR = '.dsh-ezai-auth'
@@ -16,7 +17,7 @@ const FILE_MODE = 0o600
  * Sunday night 24:00 (i.e. Monday 00:00:00) advances to the next week.
  * Format: "YYYY-MM-DD" of the Monday starting that week.
  */
-export function getCurrentWeekKey(date: Date = new Date()): string {
+export function getCurrentWeekKey(date: Date = getTrustedDate()): string {
   const d = new Date(date)
   const day = d.getDay() // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
   const diff = (day + 6) % 7 // Monday = 0, Tuesday = 1, ..., Sunday = 6
@@ -107,6 +108,27 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
     await writeFile(tokensPath, JSON.stringify(tokens, null, 2), { mode: FILE_MODE })
   }
 
+  function getMaxLastActiveTime(ledger: Record<string, AccountWeeklyUsage | number>): number {
+    let maxTime = 0
+    for (const key of Object.keys(ledger)) {
+      const item = ledger[key]
+      if (typeof item === 'object' && item !== null && typeof item.lastActiveTime === 'number') {
+        if (item.lastActiveTime > maxTime) {
+          maxTime = item.lastActiveTime
+        }
+      }
+    }
+    return maxTime
+  }
+
+  function getWeekForEntry(entry: AccountWeeklyUsage | number | undefined, maxLedgerActiveTime: number): string {
+    const itemActive = typeof entry === 'object' && entry !== null && typeof entry.lastActiveTime === 'number'
+      ? entry.lastActiveTime
+      : 0
+    const activeTime = Math.max(itemActive, maxLedgerActiveTime)
+    return getCurrentWeekKey(getTrustedDate(activeTime))
+  }
+
   function resolveUsageForWeek(entry: AccountWeeklyUsage | number | undefined, currentWeek: string): number {
     if (entry === undefined) return 0
     if (typeof entry === 'number') {
@@ -129,7 +151,9 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
       return snapshot?.cookies
     },
     async setCookies(cookies: string): Promise<void> {
-      const currentWeek = getCurrentWeekKey()
+      const ledger = await readAccountTokens()
+      const maxActive = getMaxLastActiveTime(ledger)
+      const currentWeek = getCurrentWeekKey(getTrustedDate(maxActive))
       const snapshot = (await readSnapshot()) ?? { cookies, user: {} as EzaiUser, loggedInAt: new Date().toISOString(), tokenUsed: 0, weekKey: currentWeek }
       snapshot.cookies = cookies
       await writeSnapshot(snapshot)
@@ -139,9 +163,10 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
       return snapshot?.user
     },
     async setUser(user: EzaiUser): Promise<void> {
-      const currentWeek = getCurrentWeekKey()
       const accountKey = user.id || user.login_name || user.email || 'default'
       const ledger = await readAccountTokens()
+      const maxActive = getMaxLastActiveTime(ledger)
+      const currentWeek = getWeekForEntry(ledger[accountKey], maxActive)
       const userTokens = resolveUsageForWeek(ledger[accountKey], currentWeek)
 
       const snapshot = (await readSnapshot()) ?? { cookies: '', user, loggedInAt: new Date().toISOString(), tokenUsed: userTokens, weekKey: currentWeek, accountTokens: ledger }
@@ -169,9 +194,10 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
     async getSnapshot(): Promise<SessionSnapshot | undefined> {
       const snapshot = await readSnapshot()
       if (snapshot && snapshot.user) {
-        const currentWeek = getCurrentWeekKey()
         const accountKey = snapshot.user.id || snapshot.user.login_name || snapshot.user.email || 'default'
         const ledger = await readAccountTokens()
+        const maxActive = getMaxLastActiveTime(ledger)
+        const currentWeek = getWeekForEntry(ledger[accountKey], maxActive)
         const currentUsed = resolveUsageForWeek(ledger[accountKey], currentWeek)
         if (snapshot.tokenUsed !== currentUsed || snapshot.weekKey !== currentWeek) {
           snapshot.tokenUsed = currentUsed
@@ -183,15 +209,26 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
       return snapshot
     },
     async addTokenUsage(tokens: number): Promise<number> {
-      const currentWeek = getCurrentWeekKey()
-      const snapshot = (await readSnapshot()) ?? { cookies: '', user: {} as EzaiUser, loggedInAt: new Date().toISOString(), tokenUsed: 0, weekKey: currentWeek }
+      const ledger = await readAccountTokens()
+      const snapshot = (await readSnapshot()) ?? { cookies: '', user: {} as EzaiUser, loggedInAt: new Date().toISOString(), tokenUsed: 0, weekKey: '' }
       const accountKey = snapshot.user?.id || snapshot.user?.login_name || snapshot.user?.email || 'default'
 
-      const ledger = await readAccountTokens()
-      const currentLedgerTokens = resolveUsageForWeek(ledger[accountKey], currentWeek)
+      const existingEntry = ledger[accountKey]
+      const itemActive = typeof existingEntry === 'object' && existingEntry !== null && typeof existingEntry.lastActiveTime === 'number'
+        ? existingEntry.lastActiveTime
+        : 0
+      const maxActive = Math.max(getMaxLastActiveTime(ledger), itemActive)
+      const nowTrusted = getTrustedDate(maxActive)
+      const currentWeek = getCurrentWeekKey(nowTrusted)
+
+      const currentLedgerTokens = resolveUsageForWeek(existingEntry, currentWeek)
       const next = currentLedgerTokens + Math.max(0, tokens)
 
-      ledger[accountKey] = { week: currentWeek, used: next }
+      ledger[accountKey] = {
+        week: currentWeek,
+        used: next,
+        lastActiveTime: nowTrusted.getTime(),
+      }
       await writeAccountTokens(ledger)
 
       snapshot.tokenUsed = next
@@ -201,18 +238,21 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
       return next
     },
     async getTokenUsage(): Promise<number> {
-      const currentWeek = getCurrentWeekKey()
+      const ledger = await readAccountTokens()
+      const maxActive = getMaxLastActiveTime(ledger)
       const snapshot = await readSnapshot()
       const accountKey = snapshot?.user?.id || snapshot?.user?.login_name || snapshot?.user?.email
       if (accountKey) {
-        const ledger = await readAccountTokens()
+        const currentWeek = getWeekForEntry(ledger[accountKey], maxActive)
         return resolveUsageForWeek(ledger[accountKey], currentWeek)
       }
+      const currentWeek = getCurrentWeekKey(getTrustedDate(maxActive))
       return resolveUsageForWeek(snapshot?.tokenUsed, currentWeek)
     },
     async getAccountTokenUsage(userId: string): Promise<number> {
-      const currentWeek = getCurrentWeekKey()
       const ledger = await readAccountTokens()
+      const maxActive = getMaxLastActiveTime(ledger)
+      const currentWeek = getWeekForEntry(ledger[userId], maxActive)
       return resolveUsageForWeek(ledger[userId], currentWeek)
     },
   }

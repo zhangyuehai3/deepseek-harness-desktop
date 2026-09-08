@@ -1,6 +1,7 @@
 /** HTTP client for ezsvsbox.com login/captcha/session. */
 import https from 'node:https';
 import { ezaiLog } from "./logger.js";
+import { updateServerTime } from "./trusted-time.js";
 function parseSetCookieHeader(values) {
     if (values === undefined)
         return '';
@@ -58,6 +59,9 @@ function request(url, options = {}) {
             const chunks = [];
             res.on('data', (chunk) => chunks.push(chunk));
             res.on('end', () => {
+                if (res.headers.date) {
+                    updateServerTime(res.headers.date);
+                }
                 resolve({
                     statusCode: res.statusCode ?? 0,
                     statusMessage: res.statusMessage ?? '',
