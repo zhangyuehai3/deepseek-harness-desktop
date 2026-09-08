@@ -82,6 +82,15 @@ function installModelLockObserver(): void {
         ta.placeholder = '输入消息或使用 / 调用命令...'
       }
     }
+
+    // 5. Update hero preview badge to "版本 2.0.2"
+    const badges = document.querySelectorAll('span[class*="previewBadge"], span[class*="HeroShell_previewBadge"]')
+    for (const badge of badges) {
+      const text = badge.textContent?.trim()
+      if (text === '预览版' || text === 'Preview') {
+        badge.textContent = '版本 2.0.2'
+      }
+    }
   }
 
   // Run immediately and observe DOM changes

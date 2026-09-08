@@ -1445,6 +1445,13 @@ function installModelLockObserver() {
         ta.placeholder = "\u8F93\u5165\u6D88\u606F\u6216\u4F7F\u7528 / \u8C03\u7528\u547D\u4EE4...";
       }
     }
+    const badges = document.querySelectorAll('span[class*="previewBadge"], span[class*="HeroShell_previewBadge"]');
+    for (const badge of badges) {
+      const text = badge.textContent?.trim();
+      if (text === "\u9884\u89C8\u7248" || text === "Preview") {
+        badge.textContent = "\u7248\u672C 2.0.2";
+      }
+    }
   };
   cleanUI();
   const observer = new MutationObserver(() => {
