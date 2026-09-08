@@ -5,6 +5,11 @@ diff --git a/lib/index.js b/lib/index.js
 +	inputModalities: z$1.array(z$1.enum(["text", "image"])).optional(),
 @@ -1025,0 +1027 @@ async function buildModelCatalog(ctx) {
 +					...model.inputModalities === void 0 ? {} : { inputModalities: [...model.inputModalities] },
+@@ -1700,2 +1702,2 @@
+-				const logged = agent.session.requestHeader()?.config;
+-				if (logged === void 0) return defaults.defaultModelSelection();
++				const logged = agent.session.requestHeader()?.config;
++				if (logged === void 0 || !routeServed(logged.provider)) return defaults.defaultModelSelection();
 diff --git a/lib/types/api/sessions.schema.js b/lib/types/api/sessions.schema.js
 --- a/lib/types/api/sessions.schema.js
 +++ b/lib/types/api/sessions.schema.js

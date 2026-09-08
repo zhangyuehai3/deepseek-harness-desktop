@@ -72,6 +72,16 @@ function installModelLockObserver(): void {
         }
       }
     }
+    // 4. Clear model unavailable block from composer textarea
+    const textareas = document.querySelectorAll('textarea')
+    for (const ta of textareas) {
+      const ph = ta.placeholder || ''
+      if (ta.disabled && (ph.includes('模型不可用') || ph.includes('选择模型') || ph.toLowerCase().includes('model is unavailable'))) {
+        ta.disabled = false
+        ta.removeAttribute('disabled')
+        ta.placeholder = '输入消息或使用 / 调用命令...'
+      }
+    }
   }
 
   // Run immediately and observe DOM changes
@@ -85,6 +95,21 @@ function installModelLockObserver(): void {
 export function apply(ctx: ClientContext): void {
   injectCss()
   installModelLockObserver()
+
+  // Intercept conversation composer model-unavailable blocks
+  ctx.inject(['conversation'], (scope: ClientContext) => {
+    const conversation = scope.get('conversation') as any
+    if (conversation && conversation.blocks) {
+      const originalSet = conversation.blocks.set.bind(conversation.blocks)
+      conversation.blocks.set = (sessionId: any, block: any) => {
+        if (block && typeof block.reason === 'string' && (block.reason.includes('模型') || block.reason.toLowerCase().includes('model'))) {
+          originalSet(sessionId, undefined)
+          return
+        }
+        originalSet(sessionId, block)
+      }
+    }
+  })
 
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ezai-auth: dictionaries')
 

@@ -148,4 +148,55 @@ describe('session store', () => {
 
     resetTrustedTimeForTesting()
   })
+
+  it('heals unroutable session model by automatically falling back to default model', async () => {
+    let agentRequestHandler: any = null
+    let llmStreamHandler: any = null
+
+    const mockCtx: any = {
+      on(event: string, handler: any) {
+        if (event === 'agent/request') agentRequestHandler = handler
+        if (event === 'llm/stream') llmStreamHandler = handler
+      },
+      get(name: string) {
+        if (name === 'llm') {
+          return {
+            listProviders() {
+              return [{ id: 'deepseek' }]
+            },
+          }
+        }
+        return undefined
+      },
+      slots: { inject() {} },
+      locale: { register() {} },
+      inject() {},
+      effect() {},
+    }
+
+    const { apply } = await import('../src/index.ts')
+    const tmpDir = await mkdtemp(join(tmpdir(), 'dsh-ezai-auth-'))
+    apply(mockCtx, { sessionStoreDir: tmpDir, tokenQuota: 200000 })
+
+    assert.ok(agentRequestHandler, 'agent/request hook should be registered')
+    assert.ok(llmStreamHandler, 'llm/stream hook should be registered')
+
+    // 1. Test agent/request intercepts legacy kimi-coding
+    const legacyRequested = { provider: 'kimi-coding', model: 'moonshot-v1-8k' }
+    const result1 = await agentRequestHandler({}, async () => legacyRequested)
+    assert.equal(result1.provider, 'deepseek')
+    assert.equal(result1.model, 'deepseek-v4-flash')
+
+    // 2. Test agent/request intercepts unknown/unserved provider
+    const unknownRequested = { provider: 'unknown-provider', model: 'unknown-model' }
+    const result2 = await agentRequestHandler({}, async () => unknownRequested)
+    assert.equal(result2.provider, 'deepseek')
+    assert.equal(result2.model, 'deepseek-v4-flash')
+
+    // 3. Test agent/request keeps valid served provider
+    const validRequested = { provider: 'deepseek', model: 'deepseek-chat' }
+    const result3 = await agentRequestHandler({}, async () => validRequested)
+    assert.equal(result3.provider, 'deepseek')
+    assert.equal(result3.model, 'deepseek-chat')
+  })
 })

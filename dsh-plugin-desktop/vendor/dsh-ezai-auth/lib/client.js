@@ -1436,6 +1436,15 @@ function installModelLockObserver() {
         }
       }
     }
+    const textareas = document.querySelectorAll("textarea");
+    for (const ta of textareas) {
+      const ph = ta.placeholder || "";
+      if (ta.disabled && (ph.includes("\u6A21\u578B\u4E0D\u53EF\u7528") || ph.includes("\u9009\u62E9\u6A21\u578B") || ph.toLowerCase().includes("model is unavailable"))) {
+        ta.disabled = false;
+        ta.removeAttribute("disabled");
+        ta.placeholder = "\u8F93\u5165\u6D88\u606F\u6216\u4F7F\u7528 / \u8C03\u7528\u547D\u4EE4...";
+      }
+    }
   };
   cleanUI();
   const observer = new MutationObserver(() => {
@@ -1446,6 +1455,19 @@ function installModelLockObserver() {
 function apply(ctx) {
   injectCss();
   installModelLockObserver();
+  ctx.inject(["conversation"], (scope) => {
+    const conversation = scope.get("conversation");
+    if (conversation && conversation.blocks) {
+      const originalSet = conversation.blocks.set.bind(conversation.blocks);
+      conversation.blocks.set = (sessionId, block) => {
+        if (block && typeof block.reason === "string" && (block.reason.includes("\u6A21\u578B") || block.reason.toLowerCase().includes("model"))) {
+          originalSet(sessionId, void 0);
+          return;
+        }
+        originalSet(sessionId, block);
+      };
+    }
+  });
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), "ezai-auth: dictionaries");
   ctx.slots.inject(
     "settings.section",

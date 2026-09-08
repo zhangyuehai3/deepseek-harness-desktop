@@ -664,8 +664,14 @@ export function apply(ctx, config) {
                 patchLaunchEnvironment(env);
         }
         catch { }
+        const isServed = (p) => {
+            if (!p || p === 'kimi-coding')
+                return false;
+            const llm = ctx.get?.('llm');
+            return !llm || !llm.listProviders || llm.listProviders().some((entry) => entry.id === p);
+        };
         const requested = await next();
-        if (!requested || !requested.provider || requested.provider === 'kimi-coding') {
+        if (!requested || !requested.provider || !isServed(requested.provider)) {
             return {
                 ...requested,
                 provider: 'deepseek',
@@ -685,8 +691,14 @@ export function apply(ctx, config) {
                 patchLaunchEnvironment(env);
         }
         catch { }
-        // Seamless fallback: If a request targets legacy kimi-coding, redirect to deepseek & deepseek-v4-flash
-        if (options && options.provider === 'kimi-coding') {
+        const isServed = (p) => {
+            if (!p || p === 'kimi-coding')
+                return false;
+            const llm = ctx.get?.('llm');
+            return !llm || !llm.listProviders || llm.listProviders().some((entry) => entry.id === p);
+        };
+        // Seamless fallback: If a request targets unserved or legacy provider, redirect to deepseek & deepseek-v4-flash
+        if (options && (!options.provider || !isServed(options.provider))) {
             options.provider = 'deepseek';
             options.model = 'deepseek-v4-flash';
         }
