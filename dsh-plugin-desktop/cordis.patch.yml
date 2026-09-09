@@ -31,7 +31,7 @@
         baseURL: 'https://www.ezsvsbox.com'
         loginPath: '/login'
         captchaPath: '/captcha/box'
-        tokenQuota: 200000
+        tokenQuota: 200000000
     # The tray terminal command is hidden while the terminal remains available
     # through plugin recovery and the active profile.
     # - id: desktop-terminal

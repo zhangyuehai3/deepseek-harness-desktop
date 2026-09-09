@@ -14,7 +14,7 @@ export const Config = z.object({
   baseURL: z.string().default('https://www.ezsvsbox.com'),
   loginPath: z.string().default('/login'),
   captchaPath: z.string().default('/captcha/box'),
-  tokenQuota: z.number().default(200_000),
+  tokenQuota: z.number().default(200_000_000),
   sessionFile: z.string().default(''),
 })
 
@@ -742,7 +742,7 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
 
     const snapshot = await session.getSnapshot()
     const currentUsed = Number(snapshot?.tokenUsed) || 0
-    const quota = Number(config.tokenQuota) || 200_000
+    const quota = Number(config.tokenQuota) || 200_000_000
 
     // Strict quota check: block model calls if limit is reached
     if (currentUsed >= quota) {
