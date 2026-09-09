@@ -1443,6 +1443,24 @@ function unlockAllSessions() {
   } catch {
   }
 }
+function lockAllSessions(ctx) {
+  if (!conversationService || !conversationService.blocks) return;
+  const isZh = getActiveLocale(ctx) === "zh";
+  const prompt = isZh ? "\u8BF7\u767B\u5F55\u8D26\u53F7\u540E\u4F7F\u7528" : "Please log in to your account first";
+  try {
+    const stores = conversationService.blocks.stores;
+    if (stores instanceof Map) {
+      for (const [sessionId] of stores.entries()) {
+        authBlockedSessions.add(sessionId);
+        try {
+          conversationService.blocks.set(sessionId, { reason: prompt });
+        } catch {
+        }
+      }
+    }
+  } catch {
+  }
+}
 function getActiveLocale(ctx) {
   const snapshot = ctx.locale.getSnapshot?.();
   const active = typeof snapshot?.active === "string" ? snapshot.active : "en";
@@ -1574,21 +1592,7 @@ function installModelLockObserver(ctx) {
         }
       }, 50);
     } else {
-      for (const ta of document.querySelectorAll("textarea")) {
-        if (ta.value !== "") {
-          ta.value = "";
-        }
-        try {
-          ta.setSelectionRange(0, 0);
-        } catch {
-        }
-      }
-      for (const mirror of document.querySelectorAll("[data-input-mirror]")) {
-        mirror.textContent = "\n";
-      }
-      for (const bd of document.querySelectorAll("[data-input-backdrop]")) {
-        bd.textContent = "";
-      }
+      lockAllSessions(ctx);
     }
     cleanUI2();
   });
@@ -1620,8 +1624,25 @@ function apply(ctx) {
         }
         originalSet(sessionId, block);
       };
+      const originalStoreFor = conversation.blocks.storeFor?.bind(conversation.blocks);
+      if (originalStoreFor) {
+        conversation.blocks.storeFor = (sessionId) => {
+          const store = originalStoreFor(sessionId);
+          if (!isEzaiLoggedIn) {
+            authBlockedSessions.add(sessionId);
+            const current = store.getSnapshot();
+            if (!current || !current.reason) {
+              const isZh = getActiveLocale(ctx) === "zh";
+              store.set({ reason: isZh ? "\u8BF7\u767B\u5F55\u8D26\u53F7\u540E\u4F7F\u7528" : "Please log in to your account first" });
+            }
+          }
+          return store;
+        };
+      }
       if (isEzaiLoggedIn) {
         unlockAllSessions();
+      } else {
+        lockAllSessions(ctx);
       }
     }
   });
@@ -1658,6 +1679,7 @@ function apply(ctx) {
         window.__EZAI_LOGGED_IN__ = false;
         window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: false } }));
       }
+      lockAllSessions(ctx);
       if (response.status === 403) {
         const payload = await response.json().catch(() => ({}));
         if (payload.departmentDisallowed) {

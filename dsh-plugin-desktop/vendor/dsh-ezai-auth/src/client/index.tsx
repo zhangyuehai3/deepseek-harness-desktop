@@ -44,6 +44,28 @@ function unlockAllSessions(): void {
   }
 }
 
+function lockAllSessions(ctx: ClientContext): void {
+  if (!conversationService || !conversationService.blocks) return
+  const isZh = getActiveLocale(ctx) === 'zh'
+  const prompt = isZh ? '请登录账号后使用' : 'Please log in to your account first'
+
+  try {
+    const stores = conversationService.blocks.stores
+    if (stores instanceof Map) {
+      for (const [sessionId] of stores.entries()) {
+        authBlockedSessions.add(sessionId)
+        try {
+          conversationService.blocks.set(sessionId, { reason: prompt })
+        } catch {
+          // ignore
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+}
+
 function getActiveLocale(ctx: ClientContext): 'zh' | 'en' {
   const snapshot = (ctx.locale as any).getSnapshot?.()
   const active = typeof snapshot?.active === 'string' ? snapshot.active : 'en'
@@ -200,21 +222,7 @@ function installModelLockObserver(ctx: ClientContext): void {
         }
       }, 50)
     } else {
-      // Clear draft once on logout
-      for (const ta of document.querySelectorAll('textarea')) {
-        if (ta.value !== '') {
-          ta.value = ''
-        }
-        try {
-          ta.setSelectionRange(0, 0)
-        } catch {}
-      }
-      for (const mirror of document.querySelectorAll('[data-input-mirror]')) {
-        mirror.textContent = '\n'
-      }
-      for (const bd of document.querySelectorAll('[data-input-backdrop]')) {
-        bd.textContent = ''
-      }
+      lockAllSessions(ctx)
     }
     cleanUI()
   })
@@ -259,8 +267,27 @@ export function apply(ctx: ClientContext): void {
         }
         originalSet(sessionId, block)
       }
+
+      const originalStoreFor = conversation.blocks.storeFor?.bind(conversation.blocks)
+      if (originalStoreFor) {
+        conversation.blocks.storeFor = (sessionId: any) => {
+          const store = originalStoreFor(sessionId)
+          if (!isEzaiLoggedIn) {
+            authBlockedSessions.add(sessionId)
+            const current = store.getSnapshot()
+            if (!current || !current.reason) {
+              const isZh = getActiveLocale(ctx) === 'zh'
+              store.set({ reason: isZh ? '请登录账号后使用' : 'Please log in to your account first' })
+            }
+          }
+          return store
+        }
+      }
+
       if (isEzaiLoggedIn) {
         unlockAllSessions()
+      } else {
+        lockAllSessions(ctx)
       }
     }
   })
@@ -301,6 +328,7 @@ export function apply(ctx: ClientContext): void {
         (window as any).__EZAI_LOGGED_IN__ = false
         window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: false } }))
       }
+      lockAllSessions(ctx)
       if (response.status === 403) {
         const payload = (await response.json().catch(() => ({}))) as any
         if (payload.departmentDisallowed) {
