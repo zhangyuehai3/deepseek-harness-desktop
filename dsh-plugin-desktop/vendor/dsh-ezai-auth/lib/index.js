@@ -432,6 +432,47 @@ async function removeDefaultModelConfig(ctx) {
     catch { }
 }
 const DISALLOWED_DEPARTMENT_NOTICE = '亲爱的同事，您好：\n\n十分感谢您对 EZAI 桌面智能助手的关注与支持！\n目前本体验版本专为【聚服中心】进行深度业务定制与专项定向内测，暂未面向其他部门开放使用。\n\n研发团队正在紧锣密鼓地推进跨业务线的适配与功能升级，后续更多部门的开放已在紧密排期中，敬请期待！\n\n为保障您的数据安全与系统状态一致，系统已为您安全退出登录并已清除本地配置。感谢您的理解与温暖包容！';
+/** Allowed departments (matches if the user's department string contains any of these). */
+export const ALLOWED_DEPARTMENTS = ['聚服中心'];
+/** Individual users whitelist allowed to log in even if outside the allowed departments. */
+export const ALLOWED_USERS_WHITELIST = [
+    { email: 'qiukai@ezaigc.com', name: '裘恺' },
+];
+/**
+ * Determine whether a user is permitted to use EZAI Desktop:
+ * 1. Matches individual user whitelist (by email e.g. qiukai@ezaigc.com, or name e.g. 裘恺);
+ * 2. Or belongs to an allowed department (e.g. '聚服中心').
+ */
+export function isUserAllowed(user, personalInfo, username) {
+    // 1. Check user whitelist by email (case-insensitive) and name (exact match)
+    const candidateEmails = [
+        user?.email,
+        personalInfo?.email,
+        username && username.includes('@') ? username : undefined,
+    ]
+        .filter((v) => typeof v === 'string' && v.trim() !== '')
+        .map(v => v.trim().toLowerCase());
+    const candidateNames = [
+        user?.name,
+        personalInfo?.name,
+    ]
+        .filter((v) => typeof v === 'string' && v.trim() !== '')
+        .map(v => v.trim());
+    for (const allowed of ALLOWED_USERS_WHITELIST) {
+        if (allowed.email && candidateEmails.includes(allowed.email.toLowerCase())) {
+            return true;
+        }
+        if (allowed.name && candidateNames.includes(allowed.name)) {
+            return true;
+        }
+    }
+    // 2. Check department restriction
+    const department = (personalInfo?.department || '').trim();
+    if (department && ALLOWED_DEPARTMENTS.some(dept => department.includes(dept))) {
+        return true;
+    }
+    return false;
+}
 export function apply(ctx, config) {
     const session = createSessionStore({ sessionFile: config.sessionFile || undefined });
     const client = createEzaiClient(config, session);
@@ -460,12 +501,11 @@ export function apply(ctx, config) {
     void (async () => {
         try {
             const snapshot = await session.getSnapshot();
-            const department = (snapshot?.personalInfo?.department || '').trim();
-            if (snapshot?.user && snapshot.cookies && (!department || department.includes('聚服中心'))) {
+            if (snapshot?.user && snapshot.cookies && isUserAllowed(snapshot.user, snapshot.personalInfo)) {
                 await ensureDefaultModelConfig(ctx);
             }
             else {
-                if (snapshot?.user && department && !department.includes('聚服中心')) {
+                if (snapshot?.user && !isUserAllowed(snapshot.user, snapshot.personalInfo)) {
                     await session.clear();
                 }
                 await removeDefaultModelConfig(ctx);
@@ -529,10 +569,10 @@ export function apply(ctx, config) {
                     }
                 }
                 catch { }
-                // Department restriction check: currently strictly restricted to '聚服中心'
+                // Check access permission: department '聚服中心' or individual whitelist (e.g. JS000021 裘恺)
                 const department = (personalInfo?.department || '').trim();
-                const isJuFu = department.includes('聚服中心');
-                if (!isJuFu) {
+                const allowed = isUserAllowed(user, personalInfo, username);
+                if (!allowed) {
                     // Delete session and remove all model configurations immediately
                     await session.clear();
                     await removeDefaultModelConfig(ctx);
@@ -602,9 +642,9 @@ export function apply(ctx, config) {
                     }
                     catch { }
                 }
-                // 4. Department restriction check: currently strictly restricted to '聚服中心'
+                // 4. Access permission check: department '聚服中心' or individual whitelist (e.g. JS000021 裘恺)
                 const department = (personalInfo?.department || '').trim();
-                if (department && !department.includes('聚服中心')) {
+                if (!isUserAllowed(snapshot.user, personalInfo, snapshot.user.login_name)) {
                     await session.clear();
                     await removeDefaultModelConfig(ctx);
                     finishJson(res, 403, {
@@ -612,7 +652,7 @@ export function apply(ctx, config) {
                         message: DISALLOWED_DEPARTMENT_NOTICE,
                         error: DISALLOWED_DEPARTMENT_NOTICE,
                         departmentDisallowed: true,
-                        department,
+                        department: department || '未知部门',
                     });
                     return;
                 }

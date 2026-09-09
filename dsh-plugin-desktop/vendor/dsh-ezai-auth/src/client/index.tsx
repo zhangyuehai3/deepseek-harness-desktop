@@ -8,6 +8,41 @@ import { injectCss } from './styles.ts'
 export const inject = ['slots', 'locale']
 
 let isEzaiLoggedIn = false
+let conversationService: any = null
+const authBlockedSessions = new Set<string>()
+
+function unlockAllSessions(): void {
+  if (!conversationService || !conversationService.blocks) return
+  for (const sessionId of authBlockedSessions) {
+    try {
+      conversationService.blocks.set(sessionId, undefined)
+    } catch {
+      // ignore
+    }
+  }
+  authBlockedSessions.clear()
+
+  try {
+    const stores = conversationService.blocks.stores
+    if (stores instanceof Map) {
+      for (const [sessionId, store] of stores.entries()) {
+        const snapshot = store?.getSnapshot?.()
+        if (
+          snapshot &&
+          typeof snapshot.reason === 'string' &&
+          (snapshot.reason.includes('登录') ||
+            snapshot.reason.toLowerCase().includes('log in') ||
+            snapshot.reason.includes('模型') ||
+            snapshot.reason.toLowerCase().includes('model'))
+        ) {
+          conversationService.blocks.set(sessionId, undefined)
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+}
 
 function getActiveLocale(ctx: ClientContext): 'zh' | 'en' {
   const snapshot = (ctx.locale as any).getSnapshot?.()
@@ -86,34 +121,11 @@ function installModelLockObserver(ctx: ClientContext): void {
       if (typeof window !== 'undefined') {
         (window as any).__EZAI_LOGGED_IN__ = false
       }
-      // Not logged in: disable input, show login prompt, and guard click to popup modal
+      // Not logged in: set placeholder, make readOnly so click bubbles to card without breaking IME
       for (const ta of textareas) {
-        ta.disabled = true
-        ta.setAttribute('disabled', 'true')
         ta.placeholder = loginPrompt
+        ta.readOnly = true
         ta.dataset.ezaiLoggedOut = 'true'
-        if (ta.value !== '') {
-          ta.value = ''
-        }
-        try {
-          ta.setSelectionRange(0, 0)
-        } catch {
-          // ignore
-        }
-      }
-
-      const mirrors = document.querySelectorAll('[data-input-mirror]')
-      for (const mirror of mirrors) {
-        if (mirror.textContent !== '\n' && mirror.textContent !== '') {
-          mirror.textContent = '\n'
-        }
-      }
-
-      const backdrops = document.querySelectorAll('[data-input-backdrop]')
-      for (const bd of backdrops) {
-        if (bd.textContent !== '') {
-          bd.textContent = ''
-        }
       }
 
       for (const card of composerCards) {
@@ -142,12 +154,17 @@ function installModelLockObserver(ctx: ClientContext): void {
       if (typeof window !== 'undefined') {
         (window as any).__EZAI_LOGGED_IN__ = true
       }
-      // Logged in: restore textarea if it was previously locked by logout
+      // Logged in: ensure textarea is fully interactive and clean any lock residue
       for (const ta of textareas) {
-        if (ta.dataset.ezaiLoggedOut === 'true' || ta.placeholder === '请登录账号后使用' || ta.placeholder === 'Please log in to your account first') {
-          delete ta.dataset.ezaiLoggedOut
+        delete ta.dataset.ezaiLoggedOut
+        if (ta.readOnly) {
+          ta.readOnly = false
+        }
+        if (ta.disabled) {
           ta.disabled = false
           ta.removeAttribute('disabled')
+        }
+        if (ta.placeholder === '请登录账号后使用' || ta.placeholder === 'Please log in to your account first') {
           ta.placeholder = isZh ? '输入消息或使用 / 调用命令...' : 'Send a message or type / for commands...'
         }
       }
@@ -157,21 +174,47 @@ function installModelLockObserver(ctx: ClientContext): void {
       }
     }
 
-    // 5. Update hero preview badge to "版本 2.0.2"
+    // 5. Update hero preview badge to "版本 2.0.3"
     const badges = document.querySelectorAll('span[class*="previewBadge"], span[class*="HeroShell_previewBadge"]')
     for (const badge of badges) {
       const text = badge.textContent?.trim()
-      if (text === '预览版' || text === 'Preview') {
-        badge.textContent = '版本 2.0.2'
+      if (text === '预览版' || text === 'Preview' || text === '版本 2.0.2') {
+        badge.textContent = '版本 2.0.3'
       }
     }
   }
 
   // Listen for login / logout state changes
   window.addEventListener('ezai-auth:state-change', (event: any) => {
-    isEzaiLoggedIn = Boolean(event.detail?.loggedIn)
+    const nextLoggedIn = Boolean(event.detail?.loggedIn)
+    isEzaiLoggedIn = nextLoggedIn
     if (typeof window !== 'undefined') {
       (window as any).__EZAI_LOGGED_IN__ = isEzaiLoggedIn
+    }
+    if (nextLoggedIn) {
+      unlockAllSessions()
+      setTimeout(() => {
+        const ta = document.querySelector('textarea:not([disabled])') as HTMLTextAreaElement | null
+        if (ta && document.activeElement !== ta) {
+          ta.focus()
+        }
+      }, 50)
+    } else {
+      // Clear draft once on logout
+      for (const ta of document.querySelectorAll('textarea')) {
+        if (ta.value !== '') {
+          ta.value = ''
+        }
+        try {
+          ta.setSelectionRange(0, 0)
+        } catch {}
+      }
+      for (const mirror of document.querySelectorAll('[data-input-mirror]')) {
+        mirror.textContent = '\n'
+      }
+      for (const bd of document.querySelectorAll('[data-input-backdrop]')) {
+        bd.textContent = ''
+      }
     }
     cleanUI()
   })
@@ -191,20 +234,33 @@ export function apply(ctx: ClientContext): void {
   // Intercept conversation composer blocks
   ctx.inject(['conversation'], (scope: ClientContext) => {
     const conversation = scope.get('conversation') as any
+    conversationService = conversation
     if (conversation && conversation.blocks) {
       const originalSet = conversation.blocks.set.bind(conversation.blocks)
       conversation.blocks.set = (sessionId: any, block: any) => {
         if (!isEzaiLoggedIn) {
+          authBlockedSessions.add(sessionId)
           // When logged out, lock with friendly prompt
           const isZh = getActiveLocale(ctx) === 'zh'
           originalSet(sessionId, { reason: isZh ? '请登录账号后使用' : 'Please log in to your account first' })
           return
         }
-        if (block && typeof block.reason === 'string' && (block.reason.includes('模型') || block.reason.toLowerCase().includes('model'))) {
+        authBlockedSessions.delete(sessionId)
+        if (
+          block &&
+          typeof block.reason === 'string' &&
+          (block.reason.includes('模型') ||
+            block.reason.toLowerCase().includes('model') ||
+            block.reason.includes('登录') ||
+            block.reason.toLowerCase().includes('log in'))
+        ) {
           originalSet(sessionId, undefined)
           return
         }
         originalSet(sessionId, block)
+      }
+      if (isEzaiLoggedIn) {
+        unlockAllSessions()
       }
     }
   })
@@ -233,12 +289,16 @@ export function apply(ctx: ClientContext): void {
       if (response.status === 200) {
         isEzaiLoggedIn = true
         if (typeof window !== 'undefined') {
+          (window as any).__EZAI_LOGGED_IN__ = true
           window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: true } }))
         }
+        unlockAllSessions()
+        cleanUI()
         return
       }
       isEzaiLoggedIn = false
       if (typeof window !== 'undefined') {
+        (window as any).__EZAI_LOGGED_IN__ = false
         window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: false } }))
       }
       if (response.status === 403) {

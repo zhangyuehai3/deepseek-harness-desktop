@@ -1419,6 +1419,30 @@ function showEzaiLoginModal(locale) {
 // src/client/index.tsx
 var inject = ["slots", "locale"];
 var isEzaiLoggedIn = false;
+var conversationService = null;
+var authBlockedSessions = /* @__PURE__ */ new Set();
+function unlockAllSessions() {
+  if (!conversationService || !conversationService.blocks) return;
+  for (const sessionId of authBlockedSessions) {
+    try {
+      conversationService.blocks.set(sessionId, void 0);
+    } catch {
+    }
+  }
+  authBlockedSessions.clear();
+  try {
+    const stores = conversationService.blocks.stores;
+    if (stores instanceof Map) {
+      for (const [sessionId, store] of stores.entries()) {
+        const snapshot = store?.getSnapshot?.();
+        if (snapshot && typeof snapshot.reason === "string" && (snapshot.reason.includes("\u767B\u5F55") || snapshot.reason.toLowerCase().includes("log in") || snapshot.reason.includes("\u6A21\u578B") || snapshot.reason.toLowerCase().includes("model"))) {
+          conversationService.blocks.set(sessionId, void 0);
+        }
+      }
+    }
+  } catch {
+  }
+}
 function getActiveLocale(ctx) {
   const snapshot = ctx.locale.getSnapshot?.();
   const active = typeof snapshot?.active === "string" ? snapshot.active : "en";
@@ -1426,7 +1450,7 @@ function getActiveLocale(ctx) {
 }
 function installModelLockObserver(ctx) {
   if (typeof document === "undefined") return;
-  const cleanUI = () => {
+  const cleanUI2 = () => {
     const isZh = getActiveLocale(ctx) === "zh";
     const loginPrompt = isZh ? "\u8BF7\u767B\u5F55\u8D26\u53F7\u540E\u4F7F\u7528" : "Please log in to your account first";
     const navButtons = document.querySelectorAll('button[class*="navCell"], button[class*="SettingsRoot_navCell"]');
@@ -1481,29 +1505,9 @@ function installModelLockObserver(ctx) {
         window.__EZAI_LOGGED_IN__ = false;
       }
       for (const ta of textareas) {
-        ta.disabled = true;
-        ta.setAttribute("disabled", "true");
         ta.placeholder = loginPrompt;
+        ta.readOnly = true;
         ta.dataset.ezaiLoggedOut = "true";
-        if (ta.value !== "") {
-          ta.value = "";
-        }
-        try {
-          ta.setSelectionRange(0, 0);
-        } catch {
-        }
-      }
-      const mirrors = document.querySelectorAll("[data-input-mirror]");
-      for (const mirror of mirrors) {
-        if (mirror.textContent !== "\n" && mirror.textContent !== "") {
-          mirror.textContent = "\n";
-        }
-      }
-      const backdrops = document.querySelectorAll("[data-input-backdrop]");
-      for (const bd of backdrops) {
-        if (bd.textContent !== "") {
-          bd.textContent = "";
-        }
       }
       for (const card of composerCards) {
         card.setAttribute("data-ezai-logged-out", "true");
@@ -1531,10 +1535,15 @@ function installModelLockObserver(ctx) {
         window.__EZAI_LOGGED_IN__ = true;
       }
       for (const ta of textareas) {
-        if (ta.dataset.ezaiLoggedOut === "true" || ta.placeholder === "\u8BF7\u767B\u5F55\u8D26\u53F7\u540E\u4F7F\u7528" || ta.placeholder === "Please log in to your account first") {
-          delete ta.dataset.ezaiLoggedOut;
+        delete ta.dataset.ezaiLoggedOut;
+        if (ta.readOnly) {
+          ta.readOnly = false;
+        }
+        if (ta.disabled) {
           ta.disabled = false;
           ta.removeAttribute("disabled");
+        }
+        if (ta.placeholder === "\u8BF7\u767B\u5F55\u8D26\u53F7\u540E\u4F7F\u7528" || ta.placeholder === "Please log in to your account first") {
           ta.placeholder = isZh ? "\u8F93\u5165\u6D88\u606F\u6216\u4F7F\u7528 / \u8C03\u7528\u547D\u4EE4..." : "Send a message or type / for commands...";
         }
       }
@@ -1545,21 +1554,47 @@ function installModelLockObserver(ctx) {
     const badges = document.querySelectorAll('span[class*="previewBadge"], span[class*="HeroShell_previewBadge"]');
     for (const badge of badges) {
       const text = badge.textContent?.trim();
-      if (text === "\u9884\u89C8\u7248" || text === "Preview") {
-        badge.textContent = "\u7248\u672C 2.0.2";
+      if (text === "\u9884\u89C8\u7248" || text === "Preview" || text === "\u7248\u672C 2.0.2") {
+        badge.textContent = "\u7248\u672C 2.0.3";
       }
     }
   };
   window.addEventListener("ezai-auth:state-change", (event) => {
-    isEzaiLoggedIn = Boolean(event.detail?.loggedIn);
+    const nextLoggedIn = Boolean(event.detail?.loggedIn);
+    isEzaiLoggedIn = nextLoggedIn;
     if (typeof window !== "undefined") {
       window.__EZAI_LOGGED_IN__ = isEzaiLoggedIn;
     }
-    cleanUI();
+    if (nextLoggedIn) {
+      unlockAllSessions();
+      setTimeout(() => {
+        const ta = document.querySelector("textarea:not([disabled])");
+        if (ta && document.activeElement !== ta) {
+          ta.focus();
+        }
+      }, 50);
+    } else {
+      for (const ta of document.querySelectorAll("textarea")) {
+        if (ta.value !== "") {
+          ta.value = "";
+        }
+        try {
+          ta.setSelectionRange(0, 0);
+        } catch {
+        }
+      }
+      for (const mirror of document.querySelectorAll("[data-input-mirror]")) {
+        mirror.textContent = "\n";
+      }
+      for (const bd of document.querySelectorAll("[data-input-backdrop]")) {
+        bd.textContent = "";
+      }
+    }
+    cleanUI2();
   });
-  cleanUI();
+  cleanUI2();
   const observer = new MutationObserver(() => {
-    cleanUI();
+    cleanUI2();
   });
   observer.observe(document.body, { childList: true, subtree: true });
 }
@@ -1568,20 +1603,26 @@ function apply(ctx) {
   installModelLockObserver(ctx);
   ctx.inject(["conversation"], (scope) => {
     const conversation = scope.get("conversation");
+    conversationService = conversation;
     if (conversation && conversation.blocks) {
       const originalSet = conversation.blocks.set.bind(conversation.blocks);
       conversation.blocks.set = (sessionId, block) => {
         if (!isEzaiLoggedIn) {
+          authBlockedSessions.add(sessionId);
           const isZh = getActiveLocale(ctx) === "zh";
           originalSet(sessionId, { reason: isZh ? "\u8BF7\u767B\u5F55\u8D26\u53F7\u540E\u4F7F\u7528" : "Please log in to your account first" });
           return;
         }
-        if (block && typeof block.reason === "string" && (block.reason.includes("\u6A21\u578B") || block.reason.toLowerCase().includes("model"))) {
+        authBlockedSessions.delete(sessionId);
+        if (block && typeof block.reason === "string" && (block.reason.includes("\u6A21\u578B") || block.reason.toLowerCase().includes("model") || block.reason.includes("\u767B\u5F55") || block.reason.toLowerCase().includes("log in"))) {
           originalSet(sessionId, void 0);
           return;
         }
         originalSet(sessionId, block);
       };
+      if (isEzaiLoggedIn) {
+        unlockAllSessions();
+      }
     }
   });
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), "ezai-auth: dictionaries");
@@ -1605,12 +1646,16 @@ function apply(ctx) {
       if (response.status === 200) {
         isEzaiLoggedIn = true;
         if (typeof window !== "undefined") {
+          window.__EZAI_LOGGED_IN__ = true;
           window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: true } }));
         }
+        unlockAllSessions();
+        cleanUI();
         return;
       }
       isEzaiLoggedIn = false;
       if (typeof window !== "undefined") {
+        window.__EZAI_LOGGED_IN__ = false;
         window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: false } }));
       }
       if (response.status === 403) {
