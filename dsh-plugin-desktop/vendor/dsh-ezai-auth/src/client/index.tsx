@@ -205,12 +205,12 @@ function installModelLockObserver(ctx: ClientContext): void {
       }
     }
 
-    // 5. Update hero preview badge to "版本 2.0.3"
+    // 5. Update hero preview badge to "版本 2.0.4"
     const badges = document.querySelectorAll('span[class*="previewBadge"], span[class*="HeroShell_previewBadge"]')
     for (const badge of badges) {
       const text = badge.textContent?.trim()
-      if (text === '预览版' || text === 'Preview' || text === '版本 2.0.2') {
-        badge.textContent = '版本 2.0.3'
+      if (text === '预览版' || text === 'Preview' || text === '版本 2.0.2' || text === '版本 2.0.3') {
+        badge.textContent = '版本 2.0.4'
       }
     }
   }
