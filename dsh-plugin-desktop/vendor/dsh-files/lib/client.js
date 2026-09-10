@@ -85,25 +85,45 @@ window.__ModuleLoader__.load({ id: "dsh-files", factory: (require) => { var modu
     if (t === "image/png" || t === "image/jpeg" || t === "image/webp" || t === "image/gif") return true;
     return /\.(png|jpe?g|webp|gif)$/.test(file.name.toLowerCase());
   }
-  function normalizeRasterImageFile(file) {
-    let type = (file.type ?? "").toLowerCase();
-    if (type === "image/jpeg" || type === "image/png" || type === "image/webp" || type === "image/gif") {
-      return file;
+  async function detectRasterImageMime(file) {
+    try {
+      const slice = file.slice(0, 16);
+      const buffer = await slice.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      if (bytes.length >= 3) {
+        if (bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) {
+          return "image/jpeg";
+        }
+        if (bytes.length >= 8 && bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71) {
+          return "image/png";
+        }
+        if (bytes.length >= 4 && bytes[0] === 71 && bytes[1] === 73 && bytes[2] === 70 && bytes[3] === 56) {
+          return "image/gif";
+        }
+        if (bytes.length >= 12 && bytes[0] === 82 && bytes[1] === 73 && bytes[2] === 70 && bytes[3] === 70 && bytes[8] === 87 && bytes[9] === 69 && bytes[10] === 66 && bytes[11] === 80) {
+          return "image/webp";
+        }
+      }
+    } catch {
+    }
+    const t = (file.type ?? "").toLowerCase();
+    if (t === "image/jpeg" || t === "image/png" || t === "image/webp" || t === "image/gif") {
+      return t;
     }
     const name = file.name.toLowerCase();
-    if (name.endsWith(".jpg") || name.endsWith(".jpeg") || type === "image/jpg" || type === "image/pjpeg") {
-      type = "image/jpeg";
-    } else if (name.endsWith(".png")) {
-      type = "image/png";
-    } else if (name.endsWith(".webp")) {
-      type = "image/webp";
-    } else if (name.endsWith(".gif")) {
-      type = "image/gif";
-    } else {
+    if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
+    if (name.endsWith(".png")) return "image/png";
+    if (name.endsWith(".webp")) return "image/webp";
+    if (name.endsWith(".gif")) return "image/gif";
+    return null;
+  }
+  async function normalizeRasterImageFile(file) {
+    const mime = await detectRasterImageMime(file);
+    if (!mime || file.type === mime) {
       return file;
     }
     try {
-      return new File([file], file.name, { type, lastModified: file.lastModified });
+      return new File([file], file.name, { type: mime, lastModified: file.lastModified });
     } catch {
       return file;
     }
@@ -286,7 +306,7 @@ body > div:has(#dshDropOverlayClip),
       const conversation = actx.get("conversation");
       if (conversation !== void 0 && typeof conversation.createDraftImages === "function") {
         try {
-          const normalized = normalizeRasterImageFile(file);
+          const normalized = await normalizeRasterImageFile(file);
           const drafts = conversation.createDraftImages([normalized]);
           const input = conversation.input.for(actx);
           if (drafts.length > 0 && typeof input.addImages === "function") {

@@ -124,28 +124,59 @@ function isRasterImage(file: File): boolean {
 }
 
 /**
- * 规范化图片 MIME 类型：针对扩展名为 .jpg/.jpeg 但 MIME 为 image/jpg 或为空的情况，
- * 封装为标准 image/jpeg，防止上游 imageMediaType 校验抛错。
+ * 精准通过文件前置字节魔数（Magic Bytes）嗅探真实图像格式，
+ * 避免因扩展名与真实内容不一致（例如将 PNG/WebP 重命名为 .jpg，或缺少有效 MIME）
+ * 导致服务端报 "Declared image type does not match its bytes (IMAGE_TYPE_MISMATCH)"。
  */
-function normalizeRasterImageFile(file: File): File {
-  let type = (file.type ?? '').toLowerCase()
-  if (type === 'image/jpeg' || type === 'image/png' || type === 'image/webp' || type === 'image/gif') {
-    return file
+async function detectRasterImageMime(file: File): Promise<'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' | null> {
+  try {
+    const slice = file.slice(0, 16)
+    const buffer = await slice.arrayBuffer()
+    const bytes = new Uint8Array(buffer)
+    if (bytes.length >= 3) {
+      // 1. JPEG: FF D8 FF
+      if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+        return 'image/jpeg'
+      }
+      // 2. PNG: 89 50 4E 47 0D 0A 1A 0A
+      if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+        return 'image/png'
+      }
+      // 3. GIF: GIF87a or GIF89a (47 49 46 38)
+      if (bytes.length >= 4 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+        return 'image/gif'
+      }
+      // 4. WebP: 52 49 46 46 (RIFF) ... 57 45 42 50 (WEBP)
+      if (
+        bytes.length >= 12 &&
+        bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+        bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50
+      ) {
+        return 'image/webp'
+      }
+    }
+  } catch {}
+
+  // 兜底回退
+  const t = (file.type ?? '').toLowerCase()
+  if (t === 'image/jpeg' || t === 'image/png' || t === 'image/webp' || t === 'image/gif') {
+    return t as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
   }
   const name = file.name.toLowerCase()
-  if (name.endsWith('.jpg') || name.endsWith('.jpeg') || type === 'image/jpg' || type === 'image/pjpeg') {
-    type = 'image/jpeg'
-  } else if (name.endsWith('.png')) {
-    type = 'image/png'
-  } else if (name.endsWith('.webp')) {
-    type = 'image/webp'
-  } else if (name.endsWith('.gif')) {
-    type = 'image/gif'
-  } else {
+  if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'image/jpeg'
+  if (name.endsWith('.png')) return 'image/png'
+  if (name.endsWith('.webp')) return 'image/webp'
+  if (name.endsWith('.gif')) return 'image/gif'
+  return null
+}
+
+async function normalizeRasterImageFile(file: File): Promise<File> {
+  const mime = await detectRasterImageMime(file)
+  if (!mime || file.type === mime) {
     return file
   }
   try {
-    return new File([file], file.name, { type, lastModified: file.lastModified })
+    return new File([file], file.name, { type: mime, lastModified: file.lastModified })
   } catch {
     return file
   }
@@ -388,7 +419,7 @@ async function attachFile(actx: ActionContext, file: File, sessionId: string, re
     const conversation = actx.get('conversation')
     if (conversation !== undefined && typeof conversation.createDraftImages === 'function') {
       try {
-        const normalized = normalizeRasterImageFile(file)
+        const normalized = await normalizeRasterImageFile(file)
         const drafts = conversation.createDraftImages([normalized])
         const input = conversation.input.for(actx)
         if (drafts.length > 0 && typeof input.addImages === 'function') {
