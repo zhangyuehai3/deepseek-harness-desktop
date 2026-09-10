@@ -623,7 +623,7 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
 // src/client/DepartmentNoticeModal.tsx
 var import_jsx_runtime = require("react/jsx-runtime");
 var NOTICE_MODAL_MOUNT_ID = "dsh-ezai-auth-department-notice-modal";
-function DepartmentNoticeModal({ message, onClose }) {
+function DepartmentNoticeModal({ title, message, onClose }) {
   const [visible, setVisible] = (0, import_react.useState)(false);
   (0, import_react.useEffect)(() => {
     injectCss();
@@ -712,7 +712,7 @@ function DepartmentNoticeModal({ message, onClose }) {
                   color: "var(--dsw-alias-label-primary, #153332)",
                   letterSpacing: "-0.01em"
                 },
-                children: "\u4F53\u9A8C\u9636\u6BB5\u6E29\u99A8\u63D0\u793A"
+                children: title || "\u4F53\u9A8C\u9636\u6BB5\u6E29\u99A8\u63D0\u793A"
               }
             ),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
@@ -749,7 +749,7 @@ function DepartmentNoticeModal({ message, onClose }) {
     }
   );
 }
-function showDepartmentNoticeModal(message, onConfirm) {
+function showDepartmentNoticeModal(message, onConfirm, title) {
   const existing = document.getElementById(NOTICE_MODAL_MOUNT_ID);
   if (existing && existing.parentNode) {
     existing.parentNode.removeChild(existing);
@@ -771,7 +771,7 @@ function showDepartmentNoticeModal(message, onConfirm) {
   container.id = NOTICE_MODAL_MOUNT_ID;
   document.body.appendChild(container);
   root = (0, import_client.createRoot)(container);
-  root.render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DepartmentNoticeModal, { message, onClose: dispose }));
+  root.render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(DepartmentNoticeModal, { title, message, onClose: dispose }));
   return dispose;
 }
 
@@ -860,7 +860,7 @@ function EzaiAccountTab({ t, onLogin, hideHeader = false }) {
               if (typeof window !== "undefined") {
                 window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: false } }));
               }
-              showDepartmentNoticeModal(payload.message);
+              showDepartmentNoticeModal(payload.message, void 0, payload.title);
               void fetchCaptcha();
             }
             return;
@@ -931,7 +931,7 @@ function EzaiAccountTab({ t, onLogin, hideHeader = false }) {
       });
       const payload = await response.json();
       if (response.status === 403 || payload.departmentDisallowed) {
-        showDepartmentNoticeModal(payload.message);
+        showDepartmentNoticeModal(payload.message, void 0, payload.title);
         setForm((previous) => ({ ...previous, password: "", captcha: "" }));
         void fetchCaptcha();
         return;
@@ -1489,6 +1489,13 @@ function installModelLockObserver(ctx) {
     for (const el of modelTriggers) {
       el.style.display = "none";
     }
+    const slashOptions = document.querySelectorAll('button[role="option"]');
+    for (const opt of slashOptions) {
+      const nameEl = opt.querySelector('span[class*="itemName"]');
+      if (nameEl && nameEl.textContent?.trim() === "model") {
+        opt.style.display = "none";
+      }
+    }
     const headings = document.querySelectorAll("h2");
     for (const heading of headings) {
       const headingText = heading.textContent?.trim();
@@ -1605,6 +1612,42 @@ function installModelLockObserver(ctx) {
 function apply(ctx) {
   injectCss();
   installModelLockObserver(ctx);
+  ctx.inject(["commandUi"], (scope) => {
+    const commandUi = scope.get("commandUi");
+    if (!commandUi) return;
+    const origCandidates = commandUi.candidates?.bind(commandUi);
+    if (origCandidates) {
+      commandUi.candidates = async (...args) => {
+        const rows = await origCandidates(...args);
+        if (Array.isArray(rows)) {
+          return rows.filter((r) => r && r.name !== "model");
+        }
+        return rows;
+      };
+    }
+    const disableModel = (contribution) => {
+      if (contribution && contribution.name === "model") {
+        contribution.available = () => false;
+      }
+    };
+    if (commandUi.live?.contributions) {
+      disableModel(commandUi.live.contributions.get("model"));
+    }
+    const origRegister = commandUi.register?.bind(commandUi);
+    if (origRegister) {
+      commandUi.register = (contribution) => {
+        disableModel(contribution);
+        return origRegister(contribution);
+      };
+    }
+    const origDispatch = commandUi.dispatch?.bind(commandUi);
+    if (origDispatch) {
+      commandUi.dispatch = (pick) => {
+        if (pick?.candidate?.name === "model") return;
+        return origDispatch(pick);
+      };
+    }
+  });
   ctx.inject(["conversation"], (scope) => {
     const conversation = scope.get("conversation");
     conversationService = conversation;
@@ -1685,7 +1728,7 @@ function apply(ctx) {
         if (payload.departmentDisallowed) {
           showDepartmentNoticeModal(payload.message, () => {
             showEzaiLoginModal(getActiveLocale(ctx));
-          });
+          }, payload.title);
           return;
         }
       }

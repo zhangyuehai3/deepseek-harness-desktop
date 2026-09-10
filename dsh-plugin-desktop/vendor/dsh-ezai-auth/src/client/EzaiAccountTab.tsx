@@ -110,7 +110,7 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
               if (typeof window !== 'undefined') {
                 window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: false } }))
               }
-              showDepartmentNoticeModal(payload.message)
+              showDepartmentNoticeModal(payload.message, undefined, payload.title)
               void fetchCaptcha()
             }
             return
@@ -189,7 +189,7 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
       }
 
       if (response.status === 403 || payload.departmentDisallowed) {
-        showDepartmentNoticeModal(payload.message)
+        showDepartmentNoticeModal(payload.message, undefined, payload.title)
         setForm((previous) => ({ ...previous, password: '', captcha: '' }))
         void fetchCaptcha()
         return

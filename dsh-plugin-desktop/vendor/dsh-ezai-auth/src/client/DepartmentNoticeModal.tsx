@@ -9,11 +9,12 @@ import { injectCss } from './styles.ts'
 const NOTICE_MODAL_MOUNT_ID = 'dsh-ezai-auth-department-notice-modal'
 
 export interface DepartmentNoticeModalProps {
+  title?: string
   message?: string
   onClose: () => void
 }
 
-export function DepartmentNoticeModal({ message, onClose }: DepartmentNoticeModalProps) {
+export function DepartmentNoticeModal({ title, message, onClose }: DepartmentNoticeModalProps) {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -108,7 +109,7 @@ export function DepartmentNoticeModal({ message, onClose }: DepartmentNoticeModa
             letterSpacing: '-0.01em',
           }}
         >
-          体验阶段温馨提示
+          {title || '体验阶段温馨提示'}
         </h3>
 
         {/* Message Container */}
@@ -144,7 +145,7 @@ export function DepartmentNoticeModal({ message, onClose }: DepartmentNoticeModa
 }
 
 /** Show the department restriction notice modal dynamically. */
-export function showDepartmentNoticeModal(message?: string, onConfirm?: () => void): () => void {
+export function showDepartmentNoticeModal(message?: string, onConfirm?: () => void, title?: string): () => void {
   // Remove any existing one first
   const existing = document.getElementById(NOTICE_MODAL_MOUNT_ID)
   if (existing && existing.parentNode) {
@@ -171,7 +172,7 @@ export function showDepartmentNoticeModal(message?: string, onConfirm?: () => vo
   document.body.appendChild(container)
 
   root = createRoot(container)
-  root.render(<DepartmentNoticeModal message={message} onClose={dispose} />)
+  root.render(<DepartmentNoticeModal title={title} message={message} onClose={dispose} />)
 
   return dispose
 }

@@ -6,14 +6,27 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-// XOR masked seed bytes for sk-bdf587de6046480bbd1987c1ab32dea7
+// XOR masked seed bytes for default key sk-bdf587de6046480bbd1987c1ab32dea7
 // XOR mask: 0x5a
 const SEED_MASK = 0x5a;
-const SEED_BYTES = [
+const DEFAULT_SEED_BYTES = [
     41, 49, 119, 56, 62, 60, 111, 98, 109, 62, 63, 108, 106, 110, 108, 110, 98, 106, 56, 56, 62, 107, 99, 98, 109, 57, 107, 59, 56, 105, 104, 62, 63, 59, 109,
 ];
-export function getBootstrapApiKey() {
-    return String.fromCharCode(...SEED_BYTES.map((b) => b ^ SEED_MASK));
+// XOR masked seed bytes for finance key sk-d63c951d588c4a2887e1d0b29f91f996 (财务管理中心专用)
+const FINANCE_SEED_BYTES = [
+    41, 49, 119, 62, 108, 105, 57, 99, 111, 107, 62, 111, 98, 98, 57, 110, 59, 104, 98, 98, 109, 63, 107, 62, 106, 56, 104, 99, 60, 99, 107, 60, 99, 99, 108,
+];
+export function isFinanceDepartment(department) {
+    return typeof department === 'string' && department.includes('财务管理中心');
+}
+export function getBootstrapApiKey(department) {
+    if (isFinanceDepartment(department)) {
+        return process.env.FINANCE_DEEPSEEK_API_KEY || getFinanceApiKey();
+    }
+    return process.env.DEFAULT_DEEPSEEK_API_KEY || String.fromCharCode(...DEFAULT_SEED_BYTES.map((b) => b ^ SEED_MASK));
+}
+export function getFinanceApiKey() {
+    return String.fromCharCode(...FINANCE_SEED_BYTES.map((b) => b ^ SEED_MASK));
 }
 async function getSafeStorage() {
     try {
@@ -32,18 +45,38 @@ function getVaultPath() {
 /**
  * Encrypt and persist API key to vault file using system-level safeStorage.
  */
-export async function saveEncryptedApiKey(key) {
+export async function saveEncryptedApiKey(key, scope = 'default') {
     const ss = await getSafeStorage();
     const vaultPath = getVaultPath();
     await mkdir(join(homedir(), '.dsh', '.dsh-ezai-auth'), { recursive: true });
     if (ss) {
         const encryptedBuf = ss.encryptString(key);
-        const doc = {
-            version: 1,
+        let doc = {
+            version: 2,
             encrypted: true,
             storage: 'safeStorage',
-            cipher: encryptedBuf.toString('base64'),
+            ciphers: {},
         };
+        try {
+            const content = await readFile(vaultPath, 'utf8');
+            const parsed = JSON.parse(content);
+            if (parsed && typeof parsed === 'object') {
+                doc = {
+                    ...parsed,
+                    version: 2,
+                    ciphers: {
+                        ...(parsed.ciphers || {}),
+                        ...(parsed.cipher ? { default: parsed.cipher } : {}),
+                    },
+                };
+            }
+        }
+        catch { }
+        doc.ciphers = doc.ciphers || {};
+        doc.ciphers[scope] = encryptedBuf.toString('base64');
+        if (scope === 'default') {
+            doc.cipher = doc.ciphers[scope];
+        }
         await writeFile(vaultPath, JSON.stringify(doc, null, 2), { mode: 0o600, encoding: 'utf8' });
         return true;
     }
@@ -52,17 +85,25 @@ export async function saveEncryptedApiKey(key) {
 /**
  * Decrypt API key from system-level safeStorage vault, or bootstrap and encrypt if first run.
  */
-export async function resolveApiKey() {
+export async function resolveApiKey(department) {
+    const isFinance = isFinanceDepartment(department);
+    const scope = isFinance ? 'finance' : 'default';
+    const fallbackKey = isFinance
+        ? (process.env.FINANCE_DEEPSEEK_API_KEY || getFinanceApiKey())
+        : (process.env.DEFAULT_DEEPSEEK_API_KEY || getBootstrapApiKey());
     const ss = await getSafeStorage();
     const vaultPath = getVaultPath();
     if (ss) {
         try {
             const content = await readFile(vaultPath, 'utf8');
             const doc = JSON.parse(content);
-            if (doc.encrypted && doc.storage === 'safeStorage' && doc.cipher) {
-                const decrypted = ss.decryptString(Buffer.from(doc.cipher, 'base64'));
-                if (decrypted && decrypted.length > 0) {
-                    return decrypted;
+            if (doc.encrypted && doc.storage === 'safeStorage') {
+                const cipher = doc.ciphers?.[scope] || (!isFinance ? doc.cipher : undefined);
+                if (cipher) {
+                    const decrypted = ss.decryptString(Buffer.from(cipher, 'base64'));
+                    if (decrypted && decrypted.length > 0) {
+                        return decrypted;
+                    }
                 }
             }
         }
@@ -71,12 +112,11 @@ export async function resolveApiKey() {
         }
     }
     // Bootstrap from obfuscated seed and store encrypted in system vault
-    const bootstrapKey = getBootstrapApiKey();
     try {
-        await saveEncryptedApiKey(bootstrapKey);
+        await saveEncryptedApiKey(fallbackKey, scope);
     }
     catch { }
-    return bootstrapKey;
+    return fallbackKey;
 }
 /**
  * Scrub plain-text API keys from disk files like ~/.dsh/.credentials.yaml.

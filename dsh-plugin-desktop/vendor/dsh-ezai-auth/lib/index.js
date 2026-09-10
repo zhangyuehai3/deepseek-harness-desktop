@@ -113,6 +113,13 @@ process.env.no_proxy = mergedNoProxy;
 import { getBootstrapApiKey, resolveApiKey, scrubDiskPlaintextCredentials } from "./vault.js";
 const DEEPSEEK_OPENAI_BASE_URL = 'https://api.deepseek.com';
 const DEEPSEEK_ANTHROPIC_BASE_URL = 'https://api.deepseek.com/anthropic';
+let activeDepartment = undefined;
+export function setActiveDepartment(department) {
+    activeDepartment = department;
+}
+export function getActiveDepartment() {
+    return activeDepartment;
+}
 // Initialize in-memory DEEPSEEK_API_KEY if not already provided
 if (!process.env.DEEPSEEK_API_KEY) {
     process.env.DEEPSEEK_API_KEY = getBootstrapApiKey();
@@ -131,6 +138,8 @@ const DEEPSEEK_MODELS = [
         name: 'DeepSeek V4 Flash',
         contextWindow: 1000000,
         maxTokens: 256000,
+        input: ['text', 'image'],
+        inputModalities: ['text', 'image'],
     },
     {
         id: 'deepseek-chat',
@@ -155,7 +164,7 @@ export function patchCredentialsService(credentials) {
             if (ref === 'DEEPSEEK_API_KEY') {
                 if (!process.env.DEEPSEEK_API_KEY)
                     return undefined;
-                const apiKey = await resolveApiKey();
+                const apiKey = await resolveApiKey(activeDepartment);
                 if (apiKey)
                     return { value: apiKey, source: 'env' };
             }
@@ -185,7 +194,7 @@ export function patchLaunchEnvironment(env) {
             if (name === 'DEEPSEEK_API_KEY') {
                 if (!process.env.DEEPSEEK_API_KEY)
                     return undefined;
-                const key = process.env.DEEPSEEK_API_KEY || getBootstrapApiKey();
+                const key = process.env.DEEPSEEK_API_KEY || getBootstrapApiKey(activeDepartment);
                 return { value: key, source: 'process' };
             }
             return origGet(name);
@@ -197,15 +206,16 @@ export function patchLaunchEnvironment(env) {
             if (name === 'DEEPSEEK_API_KEY' && (!sources || sources.includes('process'))) {
                 if (!process.env.DEEPSEEK_API_KEY)
                     return undefined;
-                const key = process.env.DEEPSEEK_API_KEY || getBootstrapApiKey();
+                const key = process.env.DEEPSEEK_API_KEY || getBootstrapApiKey(activeDepartment);
                 return { value: key, source: 'process' };
             }
             return origGetFrom(name, sources);
         };
     }
 }
-async function ensureDefaultModelConfig(ctx) {
-    const apiKey = await resolveApiKey();
+async function ensureDefaultModelConfig(ctx, department) {
+    activeDepartment = department;
+    const apiKey = await resolveApiKey(department);
     process.env.DEEPSEEK_API_KEY = apiKey;
     // 1. Ensure in Cordis credentials
     try {
@@ -237,6 +247,7 @@ async function ensureDefaultModelConfig(ctx) {
                 apiKeyEnv: 'DEEPSEEK_API_KEY',
                 api: 'openai-completions',
                 baseURL: DEEPSEEK_OPENAI_BASE_URL,
+                defaultInput: ['text', 'image'],
                 models: DEEPSEEK_MODELS,
             };
             currentProviders['deepseek-anthropic'] = {
@@ -244,6 +255,7 @@ async function ensureDefaultModelConfig(ctx) {
                 apiKeyEnv: 'DEEPSEEK_API_KEY',
                 api: 'anthropic-messages',
                 baseURL: DEEPSEEK_ANTHROPIC_BASE_URL,
+                defaultInput: ['text', 'image'],
                 models: DEEPSEEK_MODELS,
             };
             await settings.replace(piAiNs, {
@@ -293,6 +305,7 @@ async function ensureDefaultModelConfig(ctx) {
                 apiKeyEnv: 'DEEPSEEK_API_KEY',
                 api: 'openai-completions',
                 baseURL: DEEPSEEK_OPENAI_BASE_URL,
+                defaultInput: ['text', 'image'],
                 models: DEEPSEEK_MODELS,
             };
             settingsDoc['llm-pi-ai'].providers['deepseek-anthropic'] = {
@@ -300,6 +313,7 @@ async function ensureDefaultModelConfig(ctx) {
                 apiKeyEnv: 'DEEPSEEK_API_KEY',
                 api: 'anthropic-messages',
                 baseURL: DEEPSEEK_ANTHROPIC_BASE_URL,
+                defaultInput: ['text', 'image'],
                 models: DEEPSEEK_MODELS,
             };
             settingsDoc['agent-default-model'] = {
@@ -325,6 +339,7 @@ async function ensureDefaultModelConfig(ctx) {
                 apiKeyEnv: 'DEEPSEEK_API_KEY',
                 api: 'openai-completions',
                 baseURL: DEEPSEEK_OPENAI_BASE_URL,
+                defaultInput: ['text', 'image'],
                 models: DEEPSEEK_MODELS,
             };
             profileDoc['llm-pi-ai'].providers['deepseek-anthropic'] = {
@@ -332,6 +347,7 @@ async function ensureDefaultModelConfig(ctx) {
                 apiKeyEnv: 'DEEPSEEK_API_KEY',
                 api: 'anthropic-messages',
                 baseURL: DEEPSEEK_ANTHROPIC_BASE_URL,
+                defaultInput: ['text', 'image'],
                 models: DEEPSEEK_MODELS,
             };
             profileDoc['agent-default-model'] = {
@@ -348,6 +364,7 @@ async function ensureDefaultModelConfig(ctx) {
     catch { }
 }
 async function removeDefaultModelConfig(ctx) {
+    activeDepartment = undefined;
     // Clear in-memory env
     delete process.env.DEEPSEEK_API_KEY;
     // 1. Remove credential from Cordis credentials
@@ -431,20 +448,57 @@ async function removeDefaultModelConfig(ctx) {
     }
     catch { }
 }
-const DISALLOWED_DEPARTMENT_NOTICE = '亲爱的同事，您好：\n\n十分感谢您对 EZAI 桌面智能助手的关注与支持！\n目前本体验版本专为【聚服中心】进行深度业务定制与专项定向内测，暂未面向其他部门开放使用。\n\n研发团队正在紧锣密鼓地推进跨业务线的适配与功能升级，后续更多部门的开放已在紧密排期中，敬请期待！\n\n为保障您的数据安全与系统状态一致，系统已为您安全退出登录并已清除本地配置。感谢您的理解与温暖包容！';
-/** Allowed departments (matches if the user's department string contains any of these). */
-export const ALLOWED_DEPARTMENTS = ['聚服中心'];
-/** Individual users whitelist allowed to log in even if outside the allowed departments. */
-export const ALLOWED_USERS_WHITELIST = [
-    { email: 'qiukai@ezaigc.com', name: '裘恺' },
-];
+const DISALLOWED_DEPARTMENT_NOTICE = '亲爱的同事，您好：\n\n十分感谢您对 EZAI 桌面智能助手的关注与支持！\n目前本体验版本专为特定业务部门与授权白名单开放定向内测，暂未面向您所在的部门或账号开放使用。\n\n研发团队正在紧锣密鼓地推进跨业务线的适配与功能升级，后续更多部门与人员的开放已在紧密排期中，敬请期待！\n\n为保障您的数据安全与系统状态一致，系统已为您安全退出登录并已清除本地配置。感谢您的理解与温暖包容！';
+export const WHITELIST_ENDPOINT = 'https://ezai.ezsvs.com/whitelist.json';
+let cachedWhitelist = null;
+let cachedWhitelistTime = 0;
+const WHITELIST_CACHE_TTL_MS = 60 * 1000; // 1 min memory cache
+export async function fetchRemoteWhitelist() {
+    const now = Date.now();
+    if (cachedWhitelist && now - cachedWhitelistTime < WHITELIST_CACHE_TTL_MS) {
+        return { success: true, data: cachedWhitelist };
+    }
+    try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 4000);
+        const response = await fetch(WHITELIST_ENDPOINT, {
+            signal: controller.signal,
+            headers: { accept: 'application/json', 'cache-control': 'no-cache' },
+        });
+        clearTimeout(timer);
+        if (response.ok) {
+            const data = (await response.json());
+            if (data && typeof data === 'object' && !Array.isArray(data)) {
+                cachedWhitelist = data;
+                cachedWhitelistTime = now;
+                return { success: true, data: cachedWhitelist };
+            }
+            return { success: false, error: 'invalid whitelist payload' };
+        }
+        return { success: false, error: `whitelist request failed (${response.status})` };
+    }
+    catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { success: false, error: msg || 'network error' };
+    }
+}
 /**
- * Determine whether a user is permitted to use EZAI Desktop:
- * 1. Matches individual user whitelist (by email e.g. qiukai@ezaigc.com, or name e.g. 裘恺);
- * 2. Or belongs to an allowed department (e.g. '聚服中心').
+ * Determine whether a user is permitted to use EZAI Desktop based on dynamic remote whitelist:
+ * - If whitelist request fails (network error, offline, non-200), return allowed=false with clear prompt for popup dialog;
+ * - If user matches department "all" or individual whitelist, return allowed=true;
+ * - Otherwise return allowed=false with departmental trial notice for popup dialog.
  */
-export function isUserAllowed(user, personalInfo, username) {
-    // 1. Check user whitelist by email (case-insensitive) and name (exact match)
+export async function checkUserAllowed(user, personalInfo, username) {
+    const remote = await fetchRemoteWhitelist();
+    if (!remote.success) {
+        return {
+            allowed: false,
+            reason: 'whitelist_fetch_failed',
+            title: '网络连接异常提示',
+            message: '网络连接异常，无法获取当前授权白名单配置。\n\n请检查您的网络连接是否正常，或稍后重试。如问题持续存在，请联系系统管理员确认服务状态。',
+        };
+    }
+    const whitelist = remote.data;
     const candidateEmails = [
         user?.email,
         personalInfo?.email,
@@ -457,21 +511,40 @@ export function isUserAllowed(user, personalInfo, username) {
         personalInfo?.name,
     ]
         .filter((v) => typeof v === 'string' && v.trim() !== '')
-        .map(v => v.trim());
-    for (const allowed of ALLOWED_USERS_WHITELIST) {
-        if (allowed.email && candidateEmails.includes(allowed.email.toLowerCase())) {
-            return true;
-        }
-        if (allowed.name && candidateNames.includes(allowed.name)) {
-            return true;
-        }
-    }
-    // 2. Check department restriction
+        .map(v => v.trim().toLowerCase());
     const department = (personalInfo?.department || '').trim();
-    if (department && ALLOWED_DEPARTMENTS.some(dept => department.includes(dept))) {
-        return true;
+    for (const [deptName, config] of Object.entries(whitelist)) {
+        // 1. Department wide permission: "all"
+        if (config === 'all') {
+            if (department &&
+                (department === deptName || department.includes(deptName) || deptName.includes(department))) {
+                return { allowed: true };
+            }
+        }
+        else if (Array.isArray(config)) {
+            // 2. Individual member whitelist
+            for (const member of config) {
+                if (!member || typeof member !== 'object')
+                    continue;
+                if (member.email && candidateEmails.includes(member.email.trim().toLowerCase())) {
+                    return { allowed: true };
+                }
+                if (member.name && candidateNames.includes(member.name.trim().toLowerCase())) {
+                    return { allowed: true };
+                }
+            }
+        }
     }
-    return false;
+    return {
+        allowed: false,
+        reason: 'not_whitelisted',
+        title: '体验阶段温馨提示',
+        message: DISALLOWED_DEPARTMENT_NOTICE,
+    };
+}
+export async function isUserAllowed(user, personalInfo, username) {
+    const result = await checkUserAllowed(user, personalInfo, username);
+    return result.allowed;
 }
 export function apply(ctx, config) {
     const session = createSessionStore({ sessionFile: config.sessionFile || undefined });
@@ -501,11 +574,11 @@ export function apply(ctx, config) {
     void (async () => {
         try {
             const snapshot = await session.getSnapshot();
-            if (snapshot?.user && snapshot.cookies && isUserAllowed(snapshot.user, snapshot.personalInfo)) {
-                await ensureDefaultModelConfig(ctx);
+            if (snapshot?.user && snapshot.cookies && (await isUserAllowed(snapshot.user, snapshot.personalInfo))) {
+                await ensureDefaultModelConfig(ctx, snapshot.personalInfo?.department);
             }
             else {
-                if (snapshot?.user && !isUserAllowed(snapshot.user, snapshot.personalInfo)) {
+                if (snapshot?.user && !(await isUserAllowed(snapshot.user, snapshot.personalInfo))) {
                     await session.clear();
                 }
                 await removeDefaultModelConfig(ctx);
@@ -569,23 +642,24 @@ export function apply(ctx, config) {
                     }
                 }
                 catch { }
-                // Check access permission: department '聚服中心' or individual whitelist (e.g. JS000021 裘恺)
+                // Check access permission against dynamic whitelist
                 const department = (personalInfo?.department || '').trim();
-                const allowed = isUserAllowed(user, personalInfo, username);
-                if (!allowed) {
+                const check = await checkUserAllowed(user, personalInfo, username);
+                if (!check.allowed) {
                     // Delete session and remove all model configurations immediately
                     await session.clear();
                     await removeDefaultModelConfig(ctx);
                     finishJson(res, 403, {
                         status_code: 403,
-                        message: DISALLOWED_DEPARTMENT_NOTICE,
-                        error: DISALLOWED_DEPARTMENT_NOTICE,
+                        title: check.title,
+                        message: check.message,
+                        error: check.reason,
                         departmentDisallowed: true,
                         department: department || '未知部门',
                     });
                     return;
                 }
-                await ensureDefaultModelConfig(ctx);
+                await ensureDefaultModelConfig(ctx, personalInfo?.department);
                 finishJson(res, 200, { status_code: 200, message: '登录成功', user, personalInfo });
             }
             catch (err) {
@@ -642,19 +716,24 @@ export function apply(ctx, config) {
                     }
                     catch { }
                 }
-                // 4. Access permission check: department '聚服中心' or individual whitelist (e.g. JS000021 裘恺)
+                // 4. Access permission check against dynamic whitelist
                 const department = (personalInfo?.department || '').trim();
-                if (!isUserAllowed(snapshot.user, personalInfo, snapshot.user.login_name)) {
+                const check = await checkUserAllowed(snapshot.user, personalInfo, snapshot.user.login_name);
+                if (!check.allowed) {
                     await session.clear();
                     await removeDefaultModelConfig(ctx);
                     finishJson(res, 403, {
                         status_code: 403,
-                        message: DISALLOWED_DEPARTMENT_NOTICE,
-                        error: DISALLOWED_DEPARTMENT_NOTICE,
+                        title: check.title,
+                        message: check.message,
+                        error: check.reason,
                         departmentDisallowed: true,
                         department: department || '未知部门',
                     });
                     return;
+                }
+                if (personalInfo?.department && personalInfo.department !== activeDepartment) {
+                    await ensureDefaultModelConfig(ctx, personalInfo.department);
                 }
                 const tokenUsage = await client.fetchTokenUsage();
                 const payload = {

@@ -102,6 +102,15 @@ function installModelLockObserver(ctx: ClientContext): void {
       (el as HTMLElement).style.display = 'none'
     }
 
+    // 2.1 Hide 'model' slash command option in trigger suggestions popover menu
+    const slashOptions = document.querySelectorAll('button[role="option"]')
+    for (const opt of slashOptions) {
+      const nameEl = opt.querySelector('span[class*="itemName"]')
+      if (nameEl && nameEl.textContent?.trim() === 'model') {
+        (opt as HTMLElement).style.display = 'none'
+      }
+    }
+
     // 3. Dismiss ONLY the specific DeepSeek API Key onboarding dialog
     const headings = document.querySelectorAll('h2')
     for (const heading of headings) {
@@ -239,6 +248,52 @@ export function apply(ctx: ClientContext): void {
   injectCss()
   installModelLockObserver(ctx)
 
+  // Intercept commandUi to disable and hide /model slash command
+  ctx.inject(['commandUi'], (scope: ClientContext) => {
+    const commandUi = scope.get('commandUi') as any
+    if (!commandUi) return
+
+    // 1. Filter out 'model' from command candidates
+    const origCandidates = commandUi.candidates?.bind(commandUi)
+    if (origCandidates) {
+      commandUi.candidates = async (...args: any[]) => {
+        const rows = await origCandidates(...args)
+        if (Array.isArray(rows)) {
+          return rows.filter((r: any) => r && r.name !== 'model')
+        }
+        return rows
+      }
+    }
+
+    // 2. Mark 'model' contribution as unavailable if already registered or on new register
+    const disableModel = (contribution: any) => {
+      if (contribution && contribution.name === 'model') {
+        contribution.available = () => false
+      }
+    }
+
+    if (commandUi.live?.contributions) {
+      disableModel(commandUi.live.contributions.get('model'))
+    }
+
+    const origRegister = commandUi.register?.bind(commandUi)
+    if (origRegister) {
+      commandUi.register = (contribution: any) => {
+        disableModel(contribution)
+        return origRegister(contribution)
+      }
+    }
+
+    // 3. Guard dispatch against 'model'
+    const origDispatch = commandUi.dispatch?.bind(commandUi)
+    if (origDispatch) {
+      commandUi.dispatch = (pick: any) => {
+        if (pick?.candidate?.name === 'model') return
+        return origDispatch(pick)
+      }
+    }
+  })
+
   // Intercept conversation composer blocks
   ctx.inject(['conversation'], (scope: ClientContext) => {
     const conversation = scope.get('conversation') as any
@@ -334,7 +389,7 @@ export function apply(ctx: ClientContext): void {
         if (payload.departmentDisallowed) {
           showDepartmentNoticeModal(payload.message, () => {
             showEzaiLoginModal(getActiveLocale(ctx))
-          })
+          }, payload.title)
           return
         }
       }
