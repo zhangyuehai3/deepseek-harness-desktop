@@ -371,10 +371,6 @@ body > div:has(#dshDropOverlayClip),
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-        try {
-          window.dispatchEvent(new DragEvent("dragend"));
-        } catch {
-        }
         setBusy(true);
         void (async () => {
           try {
@@ -390,10 +386,6 @@ body > div:has(#dshDropOverlayClip),
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-        try {
-          window.dispatchEvent(new DragEvent("dragend"));
-        } catch {
-        }
       };
       const onPaste = (e) => {
         const items = e.clipboardData?.items;

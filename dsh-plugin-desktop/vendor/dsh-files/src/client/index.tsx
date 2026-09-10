@@ -489,9 +489,6 @@ function UploadButton({ attach, scope }: UploadButtonProps) {
       e.preventDefault()
       e.stopPropagation()
       e.stopImmediatePropagation()
-      try {
-        window.dispatchEvent(new DragEvent('dragend'))
-      } catch {}
       setBusy(true)
       void (async () => {
         try {
@@ -507,9 +504,6 @@ function UploadButton({ attach, scope }: UploadButtonProps) {
       e.preventDefault()
       e.stopPropagation()
       e.stopImmediatePropagation()
-      try {
-        window.dispatchEvent(new DragEvent('dragend'))
-      } catch {}
     }
     const onPaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items
