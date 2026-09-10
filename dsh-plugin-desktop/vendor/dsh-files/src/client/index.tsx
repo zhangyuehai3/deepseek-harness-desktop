@@ -123,6 +123,34 @@ function isRasterImage(file: File): boolean {
   return /\.(png|jpe?g|webp|gif)$/.test(file.name.toLowerCase())
 }
 
+/**
+ * 规范化图片 MIME 类型：针对扩展名为 .jpg/.jpeg 但 MIME 为 image/jpg 或为空的情况，
+ * 封装为标准 image/jpeg，防止上游 imageMediaType 校验抛错。
+ */
+function normalizeRasterImageFile(file: File): File {
+  let type = (file.type ?? '').toLowerCase()
+  if (type === 'image/jpeg' || type === 'image/png' || type === 'image/webp' || type === 'image/gif') {
+    return file
+  }
+  const name = file.name.toLowerCase()
+  if (name.endsWith('.jpg') || name.endsWith('.jpeg') || type === 'image/jpg' || type === 'image/pjpeg') {
+    type = 'image/jpeg'
+  } else if (name.endsWith('.png')) {
+    type = 'image/png'
+  } else if (name.endsWith('.webp')) {
+    type = 'image/webp'
+  } else if (name.endsWith('.gif')) {
+    type = 'image/gif'
+  } else {
+    return file
+  }
+  try {
+    return new File([file], file.name, { type, lastModified: file.lastModified })
+  } catch {
+    return file
+  }
+}
+
 const IGNORED_NAMES = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini', '.git', '.svn', '.hg'])
 function isIgnoredFile(name: string): boolean {
   if (IGNORED_NAMES.has(name) || name.startsWith('._')) return true
@@ -180,7 +208,9 @@ body > div:has(#dshDropOverlayClip),
 `
   document.head.appendChild(tag)
 
-  // 兜底拦截：确保非图片文件拖入/上传时，不会意外展示“仅支持 PNG、JPG、WebP、GIF 格式的图片”原生弹框与“图片拖动到此处即可添加”浮层
+  // 兜底拦截：确保非图片文件拖入/上传时，隐藏“仅支持 PNG、JPG、WebP、GIF 格式的图片”原生弹框与“图片拖动到此处即可添加”浮层
+  // 注意：绝对不可调用 node.remove()，否则破坏 React 真实 DOM 树会导致 React 卸载时抛出
+  // "Failed to execute 'removeChild' on 'Node'" 进而导致输入框组件崩溃卸载消失！
   if (typeof window !== 'undefined' && !(window as any).__dshFilesToastObserver) {
     ;(window as any).__dshFilesToastObserver = true
     try {
@@ -188,16 +218,21 @@ body > div:has(#dshDropOverlayClip),
         for (const m of mutations) {
           for (const node of Array.from(m.addedNodes)) {
             if (node instanceof HTMLElement) {
-              const text = node.textContent ?? ''
-              if (
-                text.includes('仅支持 PNG、JPG') ||
-                text.includes('Only PNG, JPG') ||
-                text.includes('图片拖动到此处即可添加') ||
-                text.includes('Drag images here') ||
-                node.querySelector?.('#dshDropOverlayClip')
-              ) {
-                node.style.display = 'none'
-                node.remove()
+              const isOverlayOrToast =
+                node.getAttribute('role') === 'status' ||
+                node.getAttribute('role') === 'alert' ||
+                node.matches?.('[class*="DropOverlay"], [class*="Toast"], [role="status"], [role="alert"]')
+              if (isOverlayOrToast) {
+                const text = node.textContent ?? ''
+                if (
+                  text.includes('仅支持 PNG、JPG') ||
+                  text.includes('Only PNG, JPG') ||
+                  text.includes('图片拖动到此处即可添加') ||
+                  text.includes('Drag images here') ||
+                  node.querySelector?.('#dshDropOverlayClip')
+                ) {
+                  node.style.display = 'none'
+                }
               }
             }
           }
@@ -353,7 +388,8 @@ async function attachFile(actx: ActionContext, file: File, sessionId: string, re
     const conversation = actx.get('conversation')
     if (conversation !== undefined && typeof conversation.createDraftImages === 'function') {
       try {
-        const drafts = conversation.createDraftImages([file])
+        const normalized = normalizeRasterImageFile(file)
+        const drafts = conversation.createDraftImages([normalized])
         const input = conversation.input.for(actx)
         if (drafts.length > 0 && typeof input.addImages === 'function') {
           const added = input.addImages(drafts.map((d) => d.id))
@@ -453,6 +489,9 @@ function UploadButton({ attach, scope }: UploadButtonProps) {
       e.preventDefault()
       e.stopPropagation()
       e.stopImmediatePropagation()
+      try {
+        window.dispatchEvent(new DragEvent('dragend'))
+      } catch {}
       setBusy(true)
       void (async () => {
         try {
@@ -468,6 +507,9 @@ function UploadButton({ attach, scope }: UploadButtonProps) {
       e.preventDefault()
       e.stopPropagation()
       e.stopImmediatePropagation()
+      try {
+        window.dispatchEvent(new DragEvent('dragend'))
+      } catch {}
     }
     const onPaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items

@@ -85,6 +85,29 @@ window.__ModuleLoader__.load({ id: "dsh-files", factory: (require) => { var modu
     if (t === "image/png" || t === "image/jpeg" || t === "image/webp" || t === "image/gif") return true;
     return /\.(png|jpe?g|webp|gif)$/.test(file.name.toLowerCase());
   }
+  function normalizeRasterImageFile(file) {
+    let type = (file.type ?? "").toLowerCase();
+    if (type === "image/jpeg" || type === "image/png" || type === "image/webp" || type === "image/gif") {
+      return file;
+    }
+    const name = file.name.toLowerCase();
+    if (name.endsWith(".jpg") || name.endsWith(".jpeg") || type === "image/jpg" || type === "image/pjpeg") {
+      type = "image/jpeg";
+    } else if (name.endsWith(".png")) {
+      type = "image/png";
+    } else if (name.endsWith(".webp")) {
+      type = "image/webp";
+    } else if (name.endsWith(".gif")) {
+      type = "image/gif";
+    } else {
+      return file;
+    }
+    try {
+      return new File([file], file.name, { type, lastModified: file.lastModified });
+    } catch {
+      return file;
+    }
+  }
   var IGNORED_NAMES = /* @__PURE__ */ new Set([".DS_Store", "Thumbs.db", "desktop.ini", ".git", ".svn", ".hg"]);
   function isIgnoredFile(name) {
     if (IGNORED_NAMES.has(name) || name.startsWith("._")) return true;
@@ -148,10 +171,12 @@ body > div:has(#dshDropOverlayClip),
           for (const m of mutations) {
             for (const node of Array.from(m.addedNodes)) {
               if (node instanceof HTMLElement) {
-                const text = node.textContent ?? "";
-                if (text.includes("\u4EC5\u652F\u6301 PNG\u3001JPG") || text.includes("Only PNG, JPG") || text.includes("\u56FE\u7247\u62D6\u52A8\u5230\u6B64\u5904\u5373\u53EF\u6DFB\u52A0") || text.includes("Drag images here") || node.querySelector?.("#dshDropOverlayClip")) {
-                  node.style.display = "none";
-                  node.remove();
+                const isOverlayOrToast = node.getAttribute("role") === "status" || node.getAttribute("role") === "alert" || node.matches?.('[class*="DropOverlay"], [class*="Toast"], [role="status"], [role="alert"]');
+                if (isOverlayOrToast) {
+                  const text = node.textContent ?? "";
+                  if (text.includes("\u4EC5\u652F\u6301 PNG\u3001JPG") || text.includes("Only PNG, JPG") || text.includes("\u56FE\u7247\u62D6\u52A8\u5230\u6B64\u5904\u5373\u53EF\u6DFB\u52A0") || text.includes("Drag images here") || node.querySelector?.("#dshDropOverlayClip")) {
+                    node.style.display = "none";
+                  }
                 }
               }
             }
@@ -261,7 +286,8 @@ body > div:has(#dshDropOverlayClip),
       const conversation = actx.get("conversation");
       if (conversation !== void 0 && typeof conversation.createDraftImages === "function") {
         try {
-          const drafts = conversation.createDraftImages([file]);
+          const normalized = normalizeRasterImageFile(file);
+          const drafts = conversation.createDraftImages([normalized]);
           const input = conversation.input.for(actx);
           if (drafts.length > 0 && typeof input.addImages === "function") {
             const added = input.addImages(drafts.map((d) => d.id));
@@ -345,6 +371,10 @@ body > div:has(#dshDropOverlayClip),
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
+        try {
+          window.dispatchEvent(new DragEvent("dragend"));
+        } catch {
+        }
         setBusy(true);
         void (async () => {
           try {
@@ -360,6 +390,10 @@ body > div:has(#dshDropOverlayClip),
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
+        try {
+          window.dispatchEvent(new DragEvent("dragend"));
+        } catch {
+        }
       };
       const onPaste = (e) => {
         const items = e.clipboardData?.items;
