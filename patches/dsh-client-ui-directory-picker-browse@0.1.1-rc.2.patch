@@ -6,19 +6,19 @@ diff --git a/lib/client.js b/lib/client.js
  			tag.dataset.plugin = "@deepseek-ai/dsh-client-ui-directory-picker-browse";
  			tag.dataset.pluginCss = tagId;
 -			tag.textContent = css;
-+			tag.textContent = css + ".luik7q_nativePickerButton{background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2)}";
++			tag.textContent = css + ".ZuhsRW_nativePickerButton{background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2)}";
  			document.head.appendChild(tag);
  		}
  		var DirectoryBrowser_module_css_default = {
 \ No newline at end of file
 @@ -51,6 +51,7 @@
- 			"crumbTrail": "luik7q_crumbTrail",
- 			"dialog": "luik7q_dialog",
- 			"divider": "luik7q_divider",
-+			"nativePickerButton": "luik7q_nativePickerButton",
- 			"editorScope": "luik7q_editorScope",
- 			"error": "luik7q_error",
- 			"footerAction": "luik7q_footerAction",
+ 			"crumbTrail": "ZuhsRW_crumbTrail",
+ 			"dialog": "ZuhsRW_dialog",
+ 			"divider": "ZuhsRW_divider",
++			"nativePickerButton": "ZuhsRW_nativePickerButton",
+ 			"editorScope": "ZuhsRW_editorScope",
+ 			"error": "ZuhsRW_error",
+ 			"footerAction": "ZuhsRW_footerAction",
 \ No newline at end of file
 @@ -279,7 +280,7 @@
  		* @param props - owner-controlled browser props.

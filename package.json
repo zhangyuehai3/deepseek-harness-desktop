@@ -12,6 +12,7 @@
     "dsh-plugin-desktop",
     "dsh-plugin-desktop/vendor/dsh-files",
     "dsh-plugin-desktop/vendor/dsh-ezai-auth",
+    "dsh-plugin-desktop/vendor/dsh-session-purge",
     "dsh-community-fabric",
     "dsh-community-market"
   ],

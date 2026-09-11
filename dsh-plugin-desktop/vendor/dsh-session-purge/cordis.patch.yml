@@ -1,0 +1,9 @@
+# dsh-session-purge — loader rows.
+#
+# Inserted as a profile patch layer, so the Host half (`lib/index.js`) mounts
+# `ctx.sessionPurge` and its private RPC channel. The browser half is picked up
+# automatically: this package declares `dsh.client` in package.json, and the
+# client-modules registry scans every enabled loader entry for that field.
+- insert:
+    - id: session-purge
+      name: dsh-session-purge

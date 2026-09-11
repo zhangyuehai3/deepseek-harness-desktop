@@ -32,6 +32,8 @@
         loginPath: '/login'
         captchaPath: '/captcha/box'
         tokenQuota: 200000000
+    - id: session-purge
+      name: dsh-session-purge
     # The tray terminal command is hidden while the terminal remains available
     # through plugin recovery and the active profile.
     # - id: desktop-terminal

@@ -25,11 +25,12 @@ const expectedWorkspaces = [
   'dsh-plugin-desktop',
   'dsh-plugin-desktop/vendor/dsh-files',
   'dsh-plugin-desktop/vendor/dsh-ezai-auth',
+  'dsh-plugin-desktop/vendor/dsh-session-purge',
   'dsh-community-fabric',
   'dsh-community-market',
 ]
 if (JSON.stringify(workspace.workspaces) !== JSON.stringify(expectedWorkspaces)) {
-  fail('the root Yarn workspace must contain the desktop, files vendor, ezai-auth vendor, community-fabric, and community-market packages')
+  fail('the root Yarn workspace must contain the desktop, files vendor, ezai-auth vendor, session-purge vendor, community-fabric, and community-market packages')
 }
 for (const [name, manifest] of [
   ['dsh-plugin-desktop', plugin],
@@ -81,9 +82,9 @@ for (const [owner, manifest] of [
   for (const field of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies', 'resolutions']) {
     for (const [name, range] of Object.entries(manifest[field] ?? {})) {
       if (typeof range !== 'string') continue
-      // The vendored files and ezai-auth plugins are part of the desktop product,
+      // The vendored files, ezai-auth, and session-purge plugins are part of the desktop product,
       // so they are allowed to resolve through the Yarn workspace.
-      if (owner === 'desktop' && ['dsh-files', 'dsh-ezai-auth'].includes(name) && range.startsWith('workspace:')) continue
+      if (owner === 'desktop' && ['dsh-files', 'dsh-ezai-auth', 'dsh-session-purge'].includes(name) && range.startsWith('workspace:')) continue
       if (/^(?:workspace|portal|link):/u.test(range)
         || (range.startsWith('file:') && range.includes('deepseek-harness'))) {
         fail(`${owner} ${field}.${name} bypasses the published DSH package boundary`)
