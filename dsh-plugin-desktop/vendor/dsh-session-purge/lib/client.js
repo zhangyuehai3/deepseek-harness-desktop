@@ -23,7 +23,7 @@ window.__ModuleLoader__.load({
 		const zh = {
 			"manage.open": "管理对话",
 			"manage.title": "管理对话",
-			"manage.description": "选择要永久删除的对话。删除会同时移除磁盘上的对话记录，无法恢复。",
+			"manage.description": "选择要删除的对话。删除后将进入 7 天倒计时缓冲期，期满后自动彻底清除，期间可随时恢复。",
 			"manage.empty": "暂无可管理的对话",
 			"manage.close": "关闭",
 			"manage.search": "搜索对话…",
@@ -35,14 +35,20 @@ window.__ModuleLoader__.load({
 			"manage.count.other": "共 {n} 个对话",
 			"delete.session": "删除",
 			"delete.confirm.title": "删除对话",
-			"delete.confirm.desc": "将永久删除「{name}」及其全部对话记录与磁盘日志，此操作无法撤销。",
-			"delete.confirm.action": "删除对话",
+			"delete.confirm.desc": "对话「{name}」将被移入待删除列表，并启动 7 天删除倒计时。倒计时结束后将彻底清除；在 7 天内，您可以随时在此处一键恢复。",
+			"delete.confirm.action": "移入待删除 (7天后清除)",
 			"delete.cancel": "取消",
-			"delete.pending": "正在删除对话…",
-			"delete.done": "已删除",
-			"delete.failed": "删除失败：{message}",
-			"delete.ok": "已永久删除「{name}」及其磁盘记录",
+			"delete.pending": "正在处理…",
+			"delete.done": "已移入待删除",
+			"delete.failed": "操作失败：{message}",
+			"delete.ok": "已移入待删除列表，7天后将彻底清除「{name}」",
+			"delete.restore": "恢复",
+			"delete.restored.ok": "已成功恢复对话「{name}」",
+			"delete.countdown.days": "剩余 {d} 天后自动删除",
+			"delete.countdown.hours": "剩余 {h} 小时后自动删除",
+			"delete.countdown.soon": "即将自动清除",
 			"row.delete.aria": "删除对话 {name}",
+			"row.restore.aria": "恢复对话 {name}",
 			"date.ymd": "{y}年{m}月{d}日",
 			"time.now": "刚刚",
 			"time.minutes": "{n}分钟",
@@ -55,7 +61,7 @@ window.__ModuleLoader__.load({
 		const en = {
 			"manage.open": "Manage conversations",
 			"manage.title": "Manage conversations",
-			"manage.description": "Choose a conversation to delete permanently. Deleting also removes its transcript on disk and cannot be undone.",
+			"manage.description": "Choose conversations to delete. Deleting starts a 7-day countdown buffer before permanent removal, during which you can restore them anytime.",
 			"manage.empty": "No conversations to manage",
 			"manage.close": "Close",
 			"manage.search": "Search conversations…",
@@ -67,14 +73,20 @@ window.__ModuleLoader__.load({
 			"manage.count.other": "{n} conversations",
 			"delete.session": "Delete",
 			"delete.confirm.title": "Delete conversation",
-			"delete.confirm.desc": "This permanently deletes “{name}”, its entire transcript, and its stored log on disk. This cannot be undone.",
-			"delete.confirm.action": "Delete conversation",
+			"delete.confirm.desc": "“{name}” will be moved to pending deletion and permanently deleted after a 7-day countdown. You can restore it anytime during this period.",
+			"delete.confirm.action": "Delete (7-day countdown)",
 			"delete.cancel": "Cancel",
-			"delete.pending": "Deleting conversation…",
-			"delete.done": "Deleted",
-			"delete.failed": "Delete failed: {message}",
-			"delete.ok": "Permanently deleted “{name}” and its stored log",
+			"delete.pending": "Processing…",
+			"delete.done": "Moved to pending",
+			"delete.failed": "Operation failed: {message}",
+			"delete.ok": "Moved to pending deletion. “{name}” will be permanently deleted in 7 days",
+			"delete.restore": "Restore",
+			"delete.restored.ok": "Successfully restored conversation “{name}”",
+			"delete.countdown.days": "{d}d left until deletion",
+			"delete.countdown.hours": "{h}h left until deletion",
+			"delete.countdown.soon": "Deleting soon",
 			"row.delete.aria": "Delete conversation {name}",
+			"row.restore.aria": "Restore conversation {name}",
 			"date.ymd": "{y}-{m}-{d}",
 			"time.now": "now",
 			"time.minutes": "{n}min",
@@ -87,28 +99,10 @@ window.__ModuleLoader__.load({
 		const CHANNEL = "/session-purge";
 		const ENDPOINT = "delete";
 
-		/**
-		 * Delete one conversation through the private RPC channel.
-		 *
-		 * The channel speaks the standard DSH envelope, so this is an ordinary
-		 * `connection.rpc.call` — no per-method schema table is involved (which is
-		 * exactly why a private channel was chosen over extending the shared `/api`
-		 * unary table).
-		 *
-		 * @param connection - the connection service.
-		 * @param sessionId - the conversation to delete.
-		 * @returns the Host's purge report.
-		 * @throws {Error} carrying the Host's failure message.
-		 */
-		async function deleteConversation(connection, sessionId) {
-			// A transport-level failure (unknown endpoint, 404, the 403 trust fence,
-			// a channel whose registration never happened) THROWS out of `call`
-			// instead of returning a business error. Report it verbatim rather than
-			// letting a generic message hide the cause: that distinction is what
-			// separates "the channel is broken" from "the Host rejected this id".
+		async function rpcCall(connection, endpoint, payload) {
 			let result;
 			try {
-				result = await connection.rpc.call(CHANNEL, ENDPOINT, { sessionId });
+				result = await connection.rpc.call(CHANNEL, endpoint, payload);
 			}
 			catch (reason) {
 				const detail = reason instanceof Error ? reason.message : String(reason);
@@ -120,20 +114,48 @@ window.__ModuleLoader__.load({
 			const error = result !== null && typeof result === "object" ? result.error : undefined;
 			const message = error !== null && typeof error === "object" && typeof error.message === "string"
 				? error.message
-				: `session delete failed (unrecognized response: ${JSON.stringify(result).slice(0, 200)})`;
+				: `session operation failed (${endpoint}): ${JSON.stringify(result).slice(0, 200)}`;
 			const failure = new Error(message);
 			failure.code = error !== null && typeof error === "object" ? error.code : undefined;
 			throw failure;
 		}
 
 		/**
-		 * Relative-time label reusing the sidebar's vocabulary so the panel reads
-		 * like the rest of the shell.
-		 *
-		 * @param epochMs - the row's updatedAt.
-		 * @param now - current epoch ms.
-		 * @param t - locale seat.
-		 * @returns the label.
+		 * Schedule one conversation for 7-day countdown deletion.
+		 */
+		async function scheduleConversation(connection, sessionId) {
+			return await rpcCall(connection, "schedule", { sessionId });
+		}
+
+		/**
+		 * Restore a scheduled conversation back to active.
+		 */
+		async function restoreConversation(connection, sessionId) {
+			return await rpcCall(connection, "restore", { sessionId });
+		}
+
+		/**
+		 * List all conversations currently in 7-day countdown.
+		 */
+		async function listPendingPurges(connection) {
+			try {
+				const res = await rpcCall(connection, "list-pending", {});
+				return Array.isArray(res?.pending) ? res.pending : [];
+			}
+			catch {
+				return [];
+			}
+		}
+
+		/**
+		 * Permanently delete one conversation immediately (fallback).
+		 */
+		async function deleteConversation(connection, sessionId) {
+			return await rpcCall(connection, ENDPOINT, { sessionId });
+		}
+
+		/**
+		 * Relative-time label reusing the sidebar's vocabulary.
 		 */
 		function timeLabel(epochMs, now, t) {
 			const delta = Math.max(0, now - epochMs);
@@ -152,8 +174,21 @@ window.__ModuleLoader__.load({
 			});
 		}
 
-		// The panel's stylesheet, tagged like every other plugin sheet so a reload
-		// replaces rather than stacks it.
+		/**
+		 * Countdown label for scheduled deletions.
+		 */
+		function countdownLabel(deleteAt, now, t) {
+			const delta = deleteAt - now;
+			if (delta <= 0) return t("delete.countdown.soon");
+			const hours = Math.ceil(delta / (3600 * 1000));
+			if (hours > 24) {
+				const days = Math.floor(hours / 24);
+				return t("delete.countdown.days", { d: String(days) });
+			}
+			return t("delete.countdown.hours", { h: String(hours) });
+		}
+
+		// The panel's stylesheet
 		const CSS = [
 			".dsp-layer{position:relative;display:flex;align-items:center}",
 			".dsp-layer.dsp-rail{justify-content:center;width:auto}",
@@ -171,11 +206,13 @@ window.__ModuleLoader__.load({
 			".dsp-list{min-height:0;flex:1;overflow-y:auto;margin:0;padding:2px 12px 12px;list-style:none}",
 			".dsp-row{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:10px}",
 			".dsp-row:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,.04))}",
+			".dsp-row-pending{background:rgba(217,119,6,.04)}",
 			".dsp-dot{flex:none;display:inline-flex;align-items:center}",
 			".dsp-main{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}",
 			".dsp-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;line-height:18px}",
 			".dsp-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;line-height:16px;color:var(--dsw-alias-label-tertiary,#999)}",
 			".dsp-state{flex:none;font-size:11px;line-height:16px;color:var(--dsw-alias-label-tertiary,#999)}",
+			".dsp-countdown{flex:none;font-size:11px;line-height:16px;padding:2px 6px;border-radius:4px;color:#d97706;background:rgba(217,119,6,.1)}",
 			".dsp-empty{padding:28px 20px;text-align:center;font-size:13px;color:var(--dsw-alias-label-tertiary,#999)}",
 			".dsp-error{margin:0;padding:0 20px 8px;font-size:12px;line-height:18px;color:var(--dsw-alias-state-error-primary,#d92d20)}",
 			".dsp-ok{margin:0;padding:8px 20px;border-radius:8px;font-size:12px;line-height:18px;color:var(--dsw-alias-state-success-primary,#067647);background:var(--dsw-alias-state-success-bg,rgba(6,118,71,.08))}",
@@ -200,10 +237,7 @@ window.__ModuleLoader__.load({
 		}
 
 		/**
-		 * The row's display name, falling back the way the sidebar does.
-		 *
-		 * @param row - the session summary.
-		 * @returns the name to show.
+		 * The row's display name.
 		 */
 		function displayNameOf(row) {
 			const display = row.displayTitle;
@@ -215,25 +249,17 @@ window.__ModuleLoader__.load({
 
 		/**
 		 * One conversation row.
-		 *
-		 * @param props.row - the session summary.
-		 * @param props.workspaceTitle - owning workspace, when it has one.
-		 * @param props.now - epoch ms for relative time.
-		 * @param props.busy - whether a delete is in flight.
-		 * @param props.onDelete - requests deletion of this row.
-		 * @param props.t - locale seat.
-		 * @returns the list item.
 		 */
-		function PurgeRow({ row, workspaceTitle, now, busy, onDelete, t }) {
+		function PurgeRow({ row, workspaceTitle, now, busy, pendingInfo, onDelete, onRestore, t }) {
 			const running = row.running === true;
 			const name = displayNameOf(row);
+			const isPending = pendingInfo !== undefined;
+
 			return jsxs("li", {
-				className: "dsp-row",
+				className: isPending ? "dsp-row dsp-row-pending" : "dsp-row",
 				children: [
 					jsx("span", {
 						className: "dsp-dot",
-						// StateDot's vocabulary is upstream's: 'ongoing' while a turn is
-						// live, 'done' once it is idle or finished.
 						children: jsx(StateDot, { state: running ? "ongoing" : "done" }),
 					}),
 					jsxs("span", {
@@ -246,44 +272,69 @@ window.__ModuleLoader__.load({
 							}),
 						],
 					}),
-					// The state word mirrors the Host gate exactly (`agent.status ===
-					// 'running'`), so a row the user cannot delete is always the one
-					// labelled 进行中/Running, and its button is disabled below. That
-					// correspondence is the whole point: an earlier build gated on
-					// "attached in memory" while labelling idle rows 空闲, so a delete
-					// could be refused for a reason the UI never showed.
-					jsx("span", { className: "dsp-state", children: running ? t("manage.running") : t("manage.idle") }),
-					jsx(Button, {
-						variant: "outline",
-						className: "dsp-danger",
-						disabled: busy || running,
-						"aria-label": t("row.delete.aria", { name }),
-						title: running ? t("manage.running.hint") : undefined,
-						onClick: onDelete,
-						children: t("delete.session"),
-					}),
+					isPending
+						? jsx("span", {
+							className: "dsp-countdown",
+							children: countdownLabel(pendingInfo.deleteAt, now, t),
+						})
+						: jsx("span", {
+							className: "dsp-state",
+							children: running ? t("manage.running") : t("manage.idle"),
+						}),
+					isPending
+						? jsx(Button, {
+							variant: "outline",
+							disabled: busy,
+							"aria-label": t("row.restore.aria", { name }),
+							onClick: onRestore,
+							children: t("delete.restore"),
+						})
+						: jsx(Button, {
+							variant: "outline",
+							className: "dsp-danger",
+							disabled: busy || running,
+							"aria-label": t("row.delete.aria", { name }),
+							title: running ? t("manage.running.hint") : undefined,
+							onClick: onDelete,
+							children: t("delete.session"),
+						}),
 				],
 			});
 		}
 
 		/**
 		 * Core conversation manager view: list + search + delete modal.
-		 * Used both as the Settings Section page and inside the quick popup PurgePanel.
 		 */
 		function SessionManageView({ sessions, workspaces, connection, t, isSettingsPage, onClose }) {
 			const [query, setQuery] = react.useState("");
 			const [target, setTarget] = react.useState(null);
 			const [busy, setBusy] = react.useState(false);
 			const [error, setError] = react.useState(null);
-			const [deleted, setDeleted] = react.useState(null);
+			const [notice, setNotice] = react.useState(null);
+			const [pendingList, setPendingList] = react.useState([]);
+
+			const refreshPending = react.useCallback(async () => {
+				if (!connection) return;
+				const list = await listPendingPurges(connection);
+				setPendingList(list);
+			}, [connection]);
 
 			react.useEffect(() => {
 				setQuery("");
 				setTarget(null);
 				setError(null);
 				setBusy(false);
-				setDeleted(null);
-			}, []);
+				setNotice(null);
+				void refreshPending();
+			}, [refreshPending]);
+
+			const pendingMap = react.useMemo(() => {
+				const map = new Map();
+				for (const item of pendingList) {
+					if (item?.sessionId) map.set(item.sessionId, item);
+				}
+				return map;
+			}, [pendingList]);
 
 			const workspaceTitleOf = react.useMemo(() => {
 				const bySession = new Map();
@@ -306,7 +357,8 @@ window.__ModuleLoader__.load({
 					if (summary === undefined) continue;
 					if (summary.origin === "subagent") continue;
 					if (summary.blank === true) continue;
-					if (archived.has(id)) continue;
+					// Keep rows visible if they are in pending purges even if archived
+					if (archived.has(id) && !pendingMap.has(id)) continue;
 					out.push(summary);
 				}
 				out.sort((left, right) => (right.updatedAt ?? 0) - (left.updatedAt ?? 0));
@@ -328,21 +380,46 @@ window.__ModuleLoader__.load({
 				setBusy(true);
 				setError(null);
 				try {
-					const report = await deleteConversation(connection, target);
+					const record = await scheduleConversation(connection, target);
 					const row = rows.find((candidate) => candidate.id === target);
-					setDeleted(row === undefined ? String(target) : displayNameOf(row));
+					const rowName = row === undefined ? String(target) : displayNameOf(row);
+					setNotice(t("delete.ok", { name: rowName }));
 					setTarget(null);
-					void report;
+					setPendingList((prev) => {
+						const filteredPrev = prev.filter((p) => p.sessionId !== target);
+						return [...filteredPrev, record];
+					});
 				}
 				catch (reason) {
 					const message = reason instanceof Error ? reason.message : String(reason);
-					console.error("[session-purge] delete failed:", reason);
+					console.error("[session-purge] schedule delete failed:", reason);
 					setError(message);
 				}
 				finally {
 					setBusy(false);
 				}
-			}, [target, busy, connection, rows]);
+			}, [target, busy, connection, rows, t]);
+
+			const handleRestore = react.useCallback(async (sessionId) => {
+				if (busy) return;
+				setBusy(true);
+				setError(null);
+				try {
+					await restoreConversation(connection, sessionId);
+					const row = rows.find((candidate) => candidate.id === sessionId);
+					const rowName = row === undefined ? String(sessionId) : displayNameOf(row);
+					setNotice(t("delete.restored.ok", { name: rowName }));
+					setPendingList((prev) => prev.filter((p) => p.sessionId !== sessionId));
+				}
+				catch (reason) {
+					const message = reason instanceof Error ? reason.message : String(reason);
+					console.error("[session-purge] restore failed:", reason);
+					setError(message);
+				}
+				finally {
+					setBusy(false);
+				}
+			}, [busy, connection, rows, t]);
 
 			const now = Date.now();
 			const targetRow = target === null ? undefined : rows.find((row) => row.id === target);
@@ -399,10 +476,10 @@ window.__ModuleLoader__.load({
 						role: "alert",
 						children: t("delete.failed", { message: error }),
 					}),
-					deleted !== null && jsx("p", {
+					notice !== null && jsx("p", {
 						className: "dsp-ok",
 						role: "status",
-						children: t("delete.ok", { name: deleted }),
+						children: notice,
 					}),
 					filtered.length === 0
 						? jsx("div", { className: "dsp-empty", children: t("manage.empty") })
@@ -413,9 +490,13 @@ window.__ModuleLoader__.load({
 								workspaceTitle: workspaceTitleOf.get(row.id),
 								now,
 								busy,
+								pendingInfo: pendingMap.get(row.id),
 								onDelete: () => {
 									setError(null);
 									setTarget(row.id);
+								},
+								onRestore: () => {
+									void handleRestore(row.id);
 								},
 								t,
 							}, row.id)),
@@ -543,44 +624,6 @@ window.__ModuleLoader__.load({
 			});
 		}
 
-		/**
-		 * Relabel the sidebar's "Ungrouped" bucket.
-		 */
-		function relabelUngroupedBucket(ctx, labelZh, labelEn) {
-			const locale = ctx.get("locale");
-			const table = locale?.dicts;
-			if (!(table instanceof Map)) return () => {};
-
-			const replacements = { zh: labelZh, en: labelEn };
-
-			const patch = () => {
-				const locales = table.get("workspace");
-				if (!(locales instanceof Map)) return false;
-				let changed = false;
-				for (const [localeId, dict] of locales) {
-					if (dict === null || typeof dict !== "object") continue;
-					const wanted = replacements[localeId] ?? labelEn;
-					if (dict["group.ungrouped"] === wanted) continue;
-					locales.set(localeId, { ...dict, "group.ungrouped": wanted });
-					changed = true;
-				}
-				return changed;
-			};
-
-			const first = patch();
-			if (first) locale.publish?.(locale.snapshot?.active, false);
-
-			const unsubscribe = typeof locale.subscribe === "function"
-				? locale.subscribe(() => {
-					if (patch()) locale.publish?.(locale.snapshot?.active, false);
-				})
-				: undefined;
-
-			return () => {
-				if (typeof unsubscribe === "function") unsubscribe();
-			};
-		}
-
 		/** Required services (cordis fiber inject). */
 		exports.inject = ["slots", "sessions", "workspaces", "connection", "locale"];
 
@@ -588,7 +631,6 @@ window.__ModuleLoader__.load({
 		 * Register the conversation manager into:
 		 * 1. Settings section "管理对话" (under EZAI Account, order: 120)
 		 * 2. Sidebar footer quick action
-		 * 3. Relabel the sidebar's ungrouped bucket
 		 */
 		exports.apply = function apply(ctx) {
 			const connection = ctx.get("connection");
@@ -599,7 +641,6 @@ window.__ModuleLoader__.load({
 			if (locale !== undefined && typeof locale.register === "function") {
 				ctx.effect(() => locale.register(NS, { zh, en }), "dsh-session-purge: dictionaries");
 			}
-			ctx.effect(() => relabelUngroupedBucket(ctx, "回收站", "Recycle Bin"), "dsh-session-purge: ungrouped relabel");
 			
 			// 1. Sidebar footer action
 			ctx.slots.inject("sidebar.footer.action", () => ctx.slots.register({

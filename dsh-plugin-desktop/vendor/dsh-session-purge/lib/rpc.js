@@ -31,8 +31,15 @@ import { SessionPurgeError, SessionPurgeErrorCode } from "./index.js";
 /** The private RPC channel this plugin owns. */
 export const PURGE_CHANNEL = '/session-purge';
 
-/** The one endpoint on {@link PURGE_CHANNEL}. */
+/** The primary delete endpoint on {@link PURGE_CHANNEL}. */
 export const PURGE_ENDPOINT = 'delete';
+
+export const ENDPOINTS = Object.freeze({
+    DELETE: 'delete',
+    SCHEDULE: 'schedule',
+    RESTORE: 'restore',
+    LIST_PENDING: 'list-pending',
+});
 
 /** Envelope vocabulary mirrored from the upstream RPC carrier. */
 const CLIENT_REQUEST_TYPE = 'client-request';
@@ -123,32 +130,76 @@ function wireError(error, sessionId) {
  * @returns the response envelope's `result`.
  */
 async function dispatch(ctx, endpoint, payload, _signal) {
-    if (endpoint !== PURGE_ENDPOINT) {
-        // `bad-request` is the only client-valid way to reject an unknown endpoint,
-        // and its details.issues must be an array.
-        return { ok: false, error: { code: 'bad-request', message: `unknown session-purge endpoint "${endpoint}"`, details: { issues: [] } } };
-    }
-    const sessionId = payload !== null && typeof payload === 'object' ? payload.sessionId : undefined;
     const purge = ctx.get('sessionPurge');
     if (purge === undefined) {
-        return { ok: false, error: { code: 'internal', message: 'session delete is unavailable: the session-purge service is not mounted', details: {} } };
+        return { ok: false, error: { code: 'internal', message: 'session-purge service is not mounted', details: {} } };
     }
-    try {
-        const report = await purge.delete(sessionId);
-        ctx.logger?.info?.(`[session-purge] deleted "${String(sessionId)}": ${JSON.stringify(report)}`);
-        return { ok: true, value: report };
-    }
-    catch (error) {
-        const wire = wireError(error, sessionId);
-        if (wire.code === 'internal') {
-            // Log the stack: an internal error is a deployment fault worth a trace.
-            ctx.logger?.error?.(`[session-purge] ${wire.message}\n${error instanceof Error ? error.stack : ''}`);
+
+    const sessionId = payload !== null && typeof payload === 'object' ? payload.sessionId : undefined;
+
+    if (endpoint === 'delete') {
+        try {
+            const report = await purge.delete(sessionId);
+            ctx.logger?.info?.(`[session-purge] deleted "${String(sessionId)}": ${JSON.stringify(report)}`);
+            return { ok: true, value: report };
+        } catch (error) {
+            const wire = wireError(error, sessionId);
+            if (wire.code === 'internal') {
+                ctx.logger?.error?.(`[session-purge] ${wire.message}\n${error instanceof Error ? error.stack : ''}`);
+            } else {
+                ctx.logger?.warn?.(`[session-purge] delete refused for "${String(sessionId)}": ${wire.message}`);
+            }
+            return { ok: false, error: wire };
         }
-        else {
-            ctx.logger?.warn?.(`[session-purge] delete refused for "${String(sessionId)}": ${wire.message}`);
-        }
-        return { ok: false, error: wire };
     }
+
+    if (endpoint === 'schedule') {
+        try {
+            const countdownMs = payload !== null && typeof payload === 'object' && typeof payload.countdownMs === 'number'
+                ? payload.countdownMs
+                : undefined;
+            const result = await purge.schedule(sessionId, countdownMs);
+            ctx.logger?.info?.(`[session-purge] scheduled purge for "${String(sessionId)}": ${JSON.stringify(result)}`);
+            return { ok: true, value: result };
+        } catch (error) {
+            const wire = wireError(error, sessionId);
+            if (wire.code === 'internal') {
+                ctx.logger?.error?.(`[session-purge] ${wire.message}\n${error instanceof Error ? error.stack : ''}`);
+            } else {
+                ctx.logger?.warn?.(`[session-purge] schedule refused for "${String(sessionId)}": ${wire.message}`);
+            }
+            return { ok: false, error: wire };
+        }
+    }
+
+    if (endpoint === 'restore') {
+        try {
+            const result = await purge.restore(sessionId);
+            ctx.logger?.info?.(`[session-purge] restored "${String(sessionId)}": ${JSON.stringify(result)}`);
+            return { ok: true, value: result };
+        } catch (error) {
+            const wire = wireError(error, sessionId);
+            if (wire.code === 'internal') {
+                ctx.logger?.error?.(`[session-purge] ${wire.message}\n${error instanceof Error ? error.stack : ''}`);
+            } else {
+                ctx.logger?.warn?.(`[session-purge] restore refused for "${String(sessionId)}": ${wire.message}`);
+            }
+            return { ok: false, error: wire };
+        }
+    }
+
+    if (endpoint === 'list-pending') {
+        try {
+            const pending = await purge.listPending();
+            return { ok: true, value: { pending } };
+        } catch (error) {
+            const wire = wireError(error, sessionId);
+            return { ok: false, error: wire };
+        }
+    }
+
+    // `bad-request` is the only client-valid way to reject an unknown endpoint
+    return { ok: false, error: { code: 'bad-request', message: `unknown session-purge endpoint "${endpoint}"`, details: { issues: [] } } };
 }
 
 /**

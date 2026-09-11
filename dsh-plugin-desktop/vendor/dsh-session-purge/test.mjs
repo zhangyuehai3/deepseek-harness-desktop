@@ -6,6 +6,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const tests = [
   ['tests/service.proxy.test.mjs'],
   ['tests/host.purge.test.mjs'],
+  ['tests/host.countdown.test.mjs'],
   ['tests/client.bundle.test.mjs', 'lib/client.js'],
   ['tests/locale.relabel.test.mjs', 'lib/client.js'],
   ['tests/client.render.test.mjs', 'lib/client.js'],

@@ -112,18 +112,18 @@ for (const order of ['upstream-first', 'plugin-first']) {
     const t = locale.bind('workspace');
     const table = locale.dicts.get('workspace');
 
-    check('zh label is 回收站', table.get('zh')['group.ungrouped'] === '回收站', table.get('zh')['group.ungrouped']);
-    check('en label is Recycle Bin', table.get('en')['group.ungrouped'] === 'Recycle Bin', table.get('en')['group.ungrouped']);
-    check('the bound seat resolves to the new label', t('group.ungrouped') === '回收站', t('group.ungrouped'));
+    check('zh label preserves 未分组', table.get('zh')['group.ungrouped'] === '未分组', table.get('zh')['group.ungrouped']);
+    check('en label preserves Ungrouped', table.get('en')['group.ungrouped'] === 'Ungrouped', table.get('en')['group.ungrouped']);
+    check('the bound seat resolves to native label', t('group.ungrouped') === '未分组', t('group.ungrouped'));
     check('unrelated zh keys survive', table.get('zh')['session.new'] === '新会话', table.get('zh')['session.new']);
     check('unrelated en keys survive', table.get('en')['session.new'] === 'New Session', table.get('en')['session.new']);
 
-    // A language switch must NOT revert the label.
+    // A language switch maintains native labels
     locale.publish('en', true);
-    check('after switching to en the label stays', locale.bind('workspace')('group.ungrouped') === 'Recycle Bin',
+    check('after switching to en the label is native', locale.bind('workspace')('group.ungrouped') === 'Ungrouped',
         locale.bind('workspace')('group.ungrouped'));
     locale.publish('zh', true);
-    check('after switching back to zh the label stays', locale.bind('workspace')('group.ungrouped') === '回收站',
+    check('after switching back to zh the label is native', locale.bind('workspace')('group.ungrouped') === '未分组',
         locale.bind('workspace')('group.ungrouped'));
 }
 

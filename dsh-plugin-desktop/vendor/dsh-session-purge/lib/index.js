@@ -18,11 +18,16 @@
  *
  * @module dsh-session-purge
  */
-import { rm } from 'node:fs/promises';
+import { rm, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { homedir } from 'node:os';
 import { Service } from '@deepseek-ai/cordis';
 import { mountPurgeChannel } from "./rpc.js";
 
 export const name = 'dsh-session-purge';
+
+/** 7 days countdown in milliseconds. */
+export const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Failure codes surfaced to the UI; the wire carries `code` + `message`. */
 export const SessionPurgeErrorCode = Object.freeze({
@@ -57,6 +62,11 @@ export class SessionPurgeError extends Error {
 /** Sidecar cleanups are best-effort: a failure is reported, never fatal. */
 const SIDECAR_TIMEOUT_MS = 10_000;
 
+function resolvePendingFilePath() {
+    const home = process.env.DSH_HOME || join(homedir(), '.dsh');
+    return join(home, 'session-purge', 'pending_purges.json');
+}
+
 /**
  * The purge service, provided as `ctx.sessionPurge`.
  *
@@ -78,12 +88,229 @@ export class SessionPurgeService extends Service {
      * `#private` methods, so this class avoids `#` entirely.
      */
     __inflight = new Map();
+    __storageFile = null;
+    __sweepTimer = null;
 
     /**
      * @param ctx - the owning plugin context.
+     * @param options - optional service configuration.
      */
-    constructor(ctx) {
+    constructor(ctx, options = {}) {
         super(ctx, 'sessionPurge');
+        this.__storageFile = typeof options?.storageFile === 'string'
+            ? options.storageFile
+            : resolvePendingFilePath();
+
+        // Periodically check for expired countdown items (e.g. every 10 minutes)
+        const sweepInterval = typeof options?.sweepIntervalMs === 'number'
+            ? options.sweepIntervalMs
+            : 10 * 60 * 1000;
+        if (sweepInterval > 0) {
+            this.__sweepTimer = setInterval(() => {
+                this.sweepExpired().catch((err) => {
+                    this.ctx.logger?.warn?.(`[session-purge] sweep expired failed: ${describe(err)}`);
+                });
+            }, sweepInterval);
+            if (typeof this.__sweepTimer?.unref === 'function') {
+                this.__sweepTimer.unref();
+            }
+        }
+
+        this.ctx.on('dispose', () => {
+            if (this.__sweepTimer !== null) {
+                clearInterval(this.__sweepTimer);
+                this.__sweepTimer = null;
+            }
+        });
+    }
+
+    async __loadPending() {
+        if (!this.__storageFile) return [];
+        try {
+            const raw = await readFile(this.__storageFile, 'utf8');
+            const data = JSON.parse(raw);
+            if (Array.isArray(data?.pending)) return data.pending;
+            return [];
+        } catch {
+            return [];
+        }
+    }
+
+    async __savePending(items) {
+        if (!this.__storageFile) return;
+        try {
+            await mkdir(dirname(this.__storageFile), { recursive: true });
+            await writeFile(this.__storageFile, JSON.stringify({ version: 1, pending: items }, null, 2), 'utf8');
+        } catch (err) {
+            this.ctx.logger?.warn?.(`[session-purge] failed to save pending purges: ${describe(err)}`);
+        }
+    }
+
+    /**
+     * Schedule a conversation for deletion with a 7-day countdown.
+     *
+     * @param sessionId - the conversation to schedule.
+     * @param countdownMs - optional custom countdown duration (defaults to 7 days).
+     * @returns the scheduled record.
+     */
+    async schedule(sessionId, countdownMs = SEVEN_DAYS_MS) {
+        const id = typeof sessionId === 'string' ? sessionId.trim() : '';
+        if (id.length === 0) {
+            throw new SessionPurgeError(
+                SessionPurgeErrorCode.INVALID_ID,
+                sessionId,
+                'a conversation id is required to delete a conversation',
+            );
+        }
+
+        const agent = this.ctx.get('agents')?.get?.(id);
+        if (agent?.status === 'running') {
+            throw new SessionPurgeError(
+                SessionPurgeErrorCode.LIVE,
+                id,
+                `cannot delete conversation "${id}" while it is running: stop it first`,
+            );
+        }
+
+        const listing = await this.ctx.sessionPersistence.list();
+        const meta = listing.find((header) => header.id === id);
+        if (meta === undefined) {
+            throw new SessionPurgeError(
+                SessionPurgeErrorCode.NOT_FOUND,
+                id,
+                `no conversation "${id}" exists`,
+            );
+        }
+
+        const pending = await this.__loadPending();
+        const existing = pending.find((item) => item.sessionId === id);
+        if (existing) {
+            return existing;
+        }
+
+        const scheduledAt = Date.now();
+        const deleteAt = scheduledAt + countdownMs;
+        const record = { sessionId: id, scheduledAt, deleteAt };
+        pending.push(record);
+        await this.__savePending(pending);
+
+        // Hide the conversation from the active sidebar by archiving it in the workspace registry
+        const registry = this.ctx.get('workspaceRegistry');
+        if (registry !== undefined && typeof registry.archiveSession === 'function') {
+            try {
+                await registry.archiveSession(id);
+            } catch (err) {
+                this.ctx.logger?.warn?.(`[session-purge] could not archive scheduled session ${id}: ${describe(err)}`);
+            }
+        }
+
+        return record;
+    }
+
+    /**
+     * Restore a scheduled conversation before its 7-day countdown expires.
+     *
+     * @param sessionId - the conversation to restore.
+     * @returns confirmation of restoration.
+     */
+    async restore(sessionId) {
+        const id = typeof sessionId === 'string' ? sessionId.trim() : '';
+        if (id.length === 0) {
+            throw new SessionPurgeError(
+                SessionPurgeErrorCode.INVALID_ID,
+                sessionId,
+                'a conversation id is required to restore a conversation',
+            );
+        }
+
+        const pending = await this.__loadPending();
+        const filtered = pending.filter((item) => item.sessionId !== id);
+        if (filtered.length !== pending.length) {
+            await this.__savePending(filtered);
+        }
+
+        // Unarchive the session so it re-appears in normal sidebar views
+        await this.__unarchiveSession(id);
+
+        return { sessionId: id, restored: true };
+    }
+
+    /**
+     * Unarchive a session in workspace registry so it shows up in normal lists.
+     */
+    async __unarchiveSession(id) {
+        const registry = this.ctx.get('workspaceRegistry');
+        if (!registry) return;
+        if (typeof registry.unarchiveSession === 'function') {
+            try {
+                await registry.unarchiveSession(id);
+                return;
+            } catch {}
+        }
+        try {
+            if (registry.global && typeof registry.global.get === 'function' && typeof registry.global.set === 'function') {
+                const current = registry.global.get();
+                if (current && Array.isArray(current.archivedSessionIds) && current.archivedSessionIds.includes(id)) {
+                    const next = {
+                        ...current,
+                        archivedSessionIds: current.archivedSessionIds.filter((sid) => sid !== id),
+                    };
+                    await registry.global.set(next);
+                    if ('state' in registry) registry.state = next;
+                }
+            }
+        } catch (err) {
+            this.ctx.logger?.warn?.(`[session-purge] could not unarchive session ${id}: ${describe(err)}`);
+        }
+    }
+
+    /**
+     * List all currently scheduled conversations and their countdowns.
+     */
+    async listPending() {
+        await this.sweepExpired();
+        return await this.__loadPending();
+    }
+
+    /**
+     * Sweep and permanently delete any conversations whose 7-day countdown has elapsed.
+     */
+    async sweepExpired() {
+        const pending = await this.__loadPending();
+        if (pending.length === 0) return [];
+        const now = Date.now();
+        const expired = [];
+        const remaining = [];
+
+        for (const item of pending) {
+            if (item.deleteAt <= now) {
+                expired.push(item);
+            } else {
+                remaining.push(item);
+            }
+        }
+
+        if (expired.length === 0) return [];
+
+        const deleted = [];
+        for (const item of expired) {
+            try {
+                await this.delete(item.sessionId);
+                deleted.push(item.sessionId);
+            } catch (err) {
+                // If the session was already not found, we still drop it from pending
+                if (err instanceof SessionPurgeError && err.code === SessionPurgeErrorCode.NOT_FOUND) {
+                    deleted.push(item.sessionId);
+                } else {
+                    this.ctx.logger?.error?.(`[session-purge] failed to auto-purge expired session ${item.sessionId}: ${describe(err)}`);
+                    // Keep it in remaining to retry on next sweep
+                    remaining.push(item);
+                }
+            }
+        }
+
+        await this.__savePending(remaining);
+        return deleted;
     }
 
     /**
@@ -111,8 +338,16 @@ export class SessionPurgeService extends Service {
         );
         const tail = run.then(() => undefined, () => undefined);
         this.__inflight.set(id, tail);
-        return run.finally(() => {
+        return run.finally(async () => {
             if (this.__inflight.get(id) === tail) this.__inflight.delete(id);
+            // Ensure deleted id is also cleared from pending purges if present
+            try {
+                const pending = await this.__loadPending();
+                const filtered = pending.filter((item) => item.sessionId !== id);
+                if (filtered.length !== pending.length) {
+                    await this.__savePending(filtered);
+                }
+            } catch {}
         });
     }
 
@@ -454,9 +689,10 @@ function describe(error) {
  * @param ctx - the plugin context.
  * @param _config - unused; this plugin takes no configuration.
  */
-export function apply(ctx, _config) {
-    ctx.plugin(SessionPurgeService);
+export function apply(ctx, config) {
+    ctx.plugin(SessionPurgeService, config);
     mountPurgeChannel(ctx);
 }
 
 export default apply;
+
