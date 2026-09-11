@@ -397,6 +397,11 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
               </svg>
               <span>{t('tokenUsage')}</span>
               <span className="dshEzaiWeeklyTag">{t('weeklyResetHint')}</span>
+              {account.tokenUsage?.isPeakHours !== undefined && (
+                <span className={`dshEzaiPeriodTag ${account.tokenUsage.isPeakHours ? 'peak' : 'offPeak'}`}>
+                  {account.tokenUsage.isPeakHours ? t('peakPeriod') : t('offPeakPeriod')}
+                </span>
+              )}
             </div>
             <span className="dshEzaiTokenVal">{percent}%</span>
           </div>
@@ -406,6 +411,9 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
           <div className="dshEzaiTokenFoot">
             <span>{t('tokenUsed')}: <strong>{formatNumber(used)}</strong></span>
             <span>{t('tokenQuota')}: <strong>{formatNumber(quota)}</strong> {t('tokenUnit')}</span>
+          </div>
+          <div className="dshEzaiPeriodHint">
+            {t('offPeakDiscountHint')}
           </div>
         </div>
 

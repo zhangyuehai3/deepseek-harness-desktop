@@ -499,6 +499,28 @@ export function injectCss(): void {
   padding: 1px 6px;
   border-radius: 4px;
 }
+.dshEzaiPeriodTag {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.dshEzaiPeriodTag.offPeak {
+  color: #2e7d32;
+  background: rgba(46, 125, 50, 0.09);
+  border: 1px solid rgba(46, 125, 50, 0.28);
+}
+.dshEzaiPeriodTag.peak {
+  color: #c25e00;
+  background: rgba(230, 110, 0, 0.08);
+  border: 1px solid rgba(230, 110, 0, 0.25);
+}
+.dshEzaiPeriodHint {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary, #7a9493);
+  margin-top: 6px;
+  line-height: 1.4;
+}
 .dshEzaiTokenVal {
   font-size: 13px;
   font-weight: 700;

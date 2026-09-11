@@ -29,6 +29,44 @@ export function getCurrentWeekKey(date: Date = getTrustedDate()): string {
   return `${year}-${month}-${dayOfMonth}`
 }
 
+/**
+ * Checks whether a given timestamp or Date corresponds to peak hours under Beijing Time (UTC+8).
+ *
+ * Peak hours: Monday to Friday, 9:00 - 12:00 and 14:00 - 18:00 (Beijing Time).
+ * Off-peak hours: All other times (weekends, weekday early morning, lunch break 12:00-14:00, evening).
+ */
+export function isPeakHours(date: Date = getTrustedDate()): boolean {
+  // Convert timestamp to Beijing Time (UTC+8)
+  const beijingTimeMs = date.getTime() + 8 * 60 * 60 * 1000
+  const bjDate = new Date(beijingTimeMs)
+
+  const day = bjDate.getUTCDay() // 0 = Sunday, 1 = Monday, ..., 5 = Friday, 6 = Saturday
+  if (day < 1 || day > 5) {
+    return false
+  }
+
+  const hour = bjDate.getUTCHours() // 0..23 in Beijing time
+  const minute = bjDate.getUTCMinutes() // 0..59 in Beijing time
+  const timeInMinutes = hour * 60 + minute
+
+  // Window 1: 9:00 - 12:00 -> [540, 720)
+  const morningPeak = timeInMinutes >= 9 * 60 && timeInMinutes < 12 * 60
+
+  // Window 2: 14:00 - 18:00 -> [840, 1080)
+  const afternoonPeak = timeInMinutes >= 14 * 60 && timeInMinutes < 18 * 60
+
+  return morningPeak || afternoonPeak
+}
+
+/**
+ * Returns the token billing multiplier for the given date.
+ * Peak hours: 1.0 (standard price)
+ * Off-peak hours: 0.5 (half price)
+ */
+export function getTokenRateMultiplier(date: Date = getTrustedDate()): number {
+  return isPeakHours(date) ? 1.0 : 0.5
+}
+
 export interface SessionStoreOptions {
   /** Explicit session file path; otherwise `$DSH_HOME/.dsh-ezai-auth/session.json`. */
   sessionFile?: string
@@ -48,6 +86,8 @@ export interface EzaiSessionStore {
   addTokenUsage(tokens: number): Promise<number>
   getTokenUsage(): Promise<number>
   getAccountTokenUsage(userId: string): Promise<number>
+  isCurrentPeakHours(): Promise<boolean>
+  getTokenRateMultiplier(): Promise<number>
 }
 
 function parseSnapshot(text: string): SessionSnapshot | undefined {
@@ -222,7 +262,9 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
       const currentWeek = getCurrentWeekKey(nowTrusted)
 
       const currentLedgerTokens = resolveUsageForWeek(existingEntry, currentWeek)
-      const next = currentLedgerTokens + Math.max(0, tokens)
+      const multiplier = getTokenRateMultiplier(nowTrusted)
+      const billedTokens = Math.round(Math.max(0, tokens) * multiplier)
+      const next = currentLedgerTokens + billedTokens
 
       ledger[accountKey] = {
         week: currentWeek,
@@ -254,6 +296,18 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
       const maxActive = getMaxLastActiveTime(ledger)
       const currentWeek = getWeekForEntry(ledger[userId], maxActive)
       return resolveUsageForWeek(ledger[userId], currentWeek)
+    },
+    async isCurrentPeakHours(): Promise<boolean> {
+      const ledger = await readAccountTokens()
+      const maxActive = getMaxLastActiveTime(ledger)
+      const nowTrusted = getTrustedDate(maxActive)
+      return isPeakHours(nowTrusted)
+    },
+    async getTokenRateMultiplier(): Promise<number> {
+      const ledger = await readAccountTokens()
+      const maxActive = getMaxLastActiveTime(ledger)
+      const nowTrusted = getTrustedDate(maxActive)
+      return getTokenRateMultiplier(nowTrusted)
     },
   }
 }

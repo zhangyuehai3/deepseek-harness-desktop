@@ -41,6 +41,9 @@ export const zh = {
   'checkingSession': '正在加载账户信息…',
   'weeklyResetHint': '每周日 24:00 刷新',
   'loginRequiredHint': '请登录账号后使用',
+  'peakPeriod': '高峰时段 1.0x',
+  'offPeakPeriod': '空闲时段 0.5x',
+  'offPeakDiscountHint': '空闲时段价格为高峰时段价格的一半（系数 0.5）。高峰时段为北京时间周一至周五 9:00 - 12:00、14:00 - 18:00，其余为空闲时段。',
 } as const
 
 export const en: Record<keyof typeof zh, string> = {
@@ -82,4 +85,7 @@ export const en: Record<keyof typeof zh, string> = {
   'checkingSession': 'Loading account information…',
   'weeklyResetHint': 'Resets Sun 24:00',
   'loginRequiredHint': 'Please log in to your account first',
+  'peakPeriod': 'Peak Hours 1.0x',
+  'offPeakPeriod': 'Off-Peak 0.5x',
+  'offPeakDiscountHint': 'Off-peak hours billed at half price (0.5x coefficient). Peak hours: Mon-Fri 9:00 - 12:00, 14:00 - 18:00 (Beijing Time); all other times are off-peak.',
 }

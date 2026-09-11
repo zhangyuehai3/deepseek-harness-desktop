@@ -202,7 +202,9 @@ export function createEzaiClient(options, session) {
         },
         async fetchTokenUsage() {
             const used = await session.getTokenUsage();
-            return { used, quota: tokenQuota };
+            const isPeakHours = await session.isCurrentPeakHours();
+            const rateMultiplier = await session.getTokenRateMultiplier();
+            return { used, quota: tokenQuota, isPeakHours, rateMultiplier };
         },
         async validateSession(cookies) {
             const url = `${baseURL}/`;

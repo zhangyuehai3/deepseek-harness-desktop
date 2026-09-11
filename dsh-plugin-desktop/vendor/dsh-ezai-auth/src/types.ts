@@ -81,6 +81,8 @@ export interface AccountResponse {
   tokenUsage: {
     used: number
     quota: number
+    isPeakHours?: boolean
+    rateMultiplier?: number
   }
   personalInfo?: EzaiPersonalInfo
   warning?: string

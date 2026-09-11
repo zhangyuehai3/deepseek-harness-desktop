@@ -532,6 +532,28 @@ function injectCss() {
   padding: 1px 6px;
   border-radius: 4px;
 }
+.dshEzaiPeriodTag {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.dshEzaiPeriodTag.offPeak {
+  color: #2e7d32;
+  background: rgba(46, 125, 50, 0.09);
+  border: 1px solid rgba(46, 125, 50, 0.28);
+}
+.dshEzaiPeriodTag.peak {
+  color: #c25e00;
+  background: rgba(230, 110, 0, 0.08);
+  border: 1px solid rgba(230, 110, 0, 0.25);
+}
+.dshEzaiPeriodHint {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary, #7a9493);
+  margin-top: 6px;
+  line-height: 1.4;
+}
 .dshEzaiTokenVal {
   font-size: 13px;
   font-weight: 700;
@@ -1081,7 +1103,8 @@ function EzaiAccountTab({ t, onLogin, hideHeader = false }) {
           /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "dshEzaiTokenLabel", children: [
             /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { width: "15", height: "15", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", style: { color: "#265C5A" }, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("polygon", { points: "13 2 3 14 12 14 11 22 21 10 12 10 13 2" }) }),
             /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t("tokenUsage") }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "dshEzaiWeeklyTag", children: t("weeklyResetHint") })
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "dshEzaiWeeklyTag", children: t("weeklyResetHint") }),
+            account.tokenUsage?.isPeakHours !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: `dshEzaiPeriodTag ${account.tokenUsage.isPeakHours ? "peak" : "offPeak"}`, children: account.tokenUsage.isPeakHours ? t("peakPeriod") : t("offPeakPeriod") })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { className: "dshEzaiTokenVal", children: [
             percent,
@@ -1102,7 +1125,8 @@ function EzaiAccountTab({ t, onLogin, hideHeader = false }) {
             " ",
             t("tokenUnit")
           ] })
-        ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "dshEzaiPeriodHint", children: t("offPeakDiscountHint") })
       ] }),
       account.warning && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { style: { fontSize: "12px", color: "#7a9493", display: "flex", alignItems: "center", gap: "6px" }, children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", style: { flexShrink: 0 }, children: [
@@ -1279,7 +1303,10 @@ var zh = {
   "copied": "\u5DF2\u590D\u5236\u5230\u526A\u8D34\u677F",
   "checkingSession": "\u6B63\u5728\u52A0\u8F7D\u8D26\u6237\u4FE1\u606F\u2026",
   "weeklyResetHint": "\u6BCF\u5468\u65E5 24:00 \u5237\u65B0",
-  "loginRequiredHint": "\u8BF7\u767B\u5F55\u8D26\u53F7\u540E\u4F7F\u7528"
+  "loginRequiredHint": "\u8BF7\u767B\u5F55\u8D26\u53F7\u540E\u4F7F\u7528",
+  "peakPeriod": "\u9AD8\u5CF0\u65F6\u6BB5 1.0x",
+  "offPeakPeriod": "\u7A7A\u95F2\u65F6\u6BB5 0.5x",
+  "offPeakDiscountHint": "\u7A7A\u95F2\u65F6\u6BB5\u4EF7\u683C\u4E3A\u9AD8\u5CF0\u65F6\u6BB5\u4EF7\u683C\u7684\u4E00\u534A\uFF08\u7CFB\u6570 0.5\uFF09\u3002\u9AD8\u5CF0\u65F6\u6BB5\u4E3A\u5317\u4EAC\u65F6\u95F4\u5468\u4E00\u81F3\u5468\u4E94 9:00 - 12:00\u300114:00 - 18:00\uFF0C\u5176\u4F59\u4E3A\u7A7A\u95F2\u65F6\u6BB5\u3002"
 };
 var en = {
   "tabTitle": "EZAI Account",
@@ -1319,7 +1346,10 @@ var en = {
   "copied": "Copied to clipboard",
   "checkingSession": "Loading account information\u2026",
   "weeklyResetHint": "Resets Sun 24:00",
-  "loginRequiredHint": "Please log in to your account first"
+  "loginRequiredHint": "Please log in to your account first",
+  "peakPeriod": "Peak Hours 1.0x",
+  "offPeakPeriod": "Off-Peak 0.5x",
+  "offPeakDiscountHint": "Off-peak hours billed at half price (0.5x coefficient). Peak hours: Mon-Fri 9:00 - 12:00, 14:00 - 18:00 (Beijing Time); all other times are off-peak."
 };
 
 // src/client/EzaiLoginModal.tsx

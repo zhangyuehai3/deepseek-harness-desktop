@@ -27,7 +27,7 @@ export interface EzaiCaptcha {
 export interface EzaiClient {
   fetchCaptcha(): Promise<EzaiCaptcha>
   login(username: string, password: string, captcha: string, captchaCookies: string): Promise<{ user: EzaiUser; cookies: string }>
-  fetchTokenUsage(): Promise<{ used: number; quota: number }>
+  fetchTokenUsage(): Promise<{ used: number; quota: number; isPeakHours?: boolean; rateMultiplier?: number }>
   validateSession(cookies: string): Promise<{ valid: boolean; unverified?: boolean; reason?: string }>
   fetchPersonalInfo(cookies: string): Promise<EzaiPersonalInfo | undefined>
 }
@@ -246,9 +246,11 @@ export function createEzaiClient(options: EzaiClientOptions, session: EzaiSessio
       }
     },
 
-    async fetchTokenUsage(): Promise<{ used: number; quota: number }> {
+    async fetchTokenUsage(): Promise<{ used: number; quota: number; isPeakHours: boolean; rateMultiplier: number }> {
       const used = await session.getTokenUsage()
-      return { used, quota: tokenQuota }
+      const isPeakHours = await session.isCurrentPeakHours()
+      const rateMultiplier = await session.getTokenRateMultiplier()
+      return { used, quota: tokenQuota, isPeakHours, rateMultiplier }
     },
 
     async validateSession(cookies: string): Promise<{ valid: boolean; unverified?: boolean; reason?: string }> {
