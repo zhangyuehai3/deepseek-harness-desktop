@@ -248,15 +248,18 @@ export class SessionPurgeService extends Service {
             } catch {}
         }
         try {
-            if (registry.global && typeof registry.global.get === 'function' && typeof registry.global.set === 'function') {
-                const current = registry.global.get();
+            const storageDomain = this.ctx.get('storageDomain');
+            const domain = storageDomain?.get?.('workspace');
+            const global = registry?.global ?? domain?.global;
+            if (global && typeof global.get === 'function' && typeof global.set === 'function') {
+                const current = global.get();
                 if (current && Array.isArray(current.archivedSessionIds) && current.archivedSessionIds.includes(id)) {
                     const next = {
                         ...current,
                         archivedSessionIds: current.archivedSessionIds.filter((sid) => sid !== id),
                     };
-                    await registry.global.set(next);
-                    if ('state' in registry) registry.state = next;
+                    await global.set(next);
+                    if (registry && 'state' in registry) registry.state = next;
                 }
             }
         } catch (err) {

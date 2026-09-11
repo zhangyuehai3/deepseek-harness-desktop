@@ -122,6 +122,7 @@ try {
 check('the settings section renders without throwing', true);
 check('renders with the hooks the framework synthesizes (useSessions/useWorkspaces)', true);
 check('settings section contains heading and search', settingsHtml.includes('dsp-section-title') && settingsHtml.includes('dsp-search'));
+check('settings section contains tabs for all and pending', settingsHtml.includes('dsp-tabs') && settingsHtml.includes('dsp-tab'));
 
 console.log('\nrow filtering (the bug that shipped):');
 const src = readFileSync(bundlePath, 'utf8');
@@ -132,8 +133,8 @@ check('a running row disables its delete button', src.includes('disabled: busy |
 check('filters out ARCHIVED sessions', src.includes('archived.has(id)'),
     'archived sessions must be hidden, or delete looks like a no-op');
 check('reads the archive set from the workspaces snapshot', src.includes('archivedSessionIds'));
-check('the filter memo depends on the archive set',
-    /}, \[sessions, archived\]\)/.test(src), 'useMemo deps must include `archived` or the filter goes stale');
+check('the filter memo depends on the archive set and pending purges',
+    /}, \[sessions, archived, pendingMap, pendingList\]\)/.test(src), 'useMemo deps must include `archived` and `pendingMap` or the filter goes stale');
 
 console.log('\nRPC call shape:');
 check('uses the private channel', src.includes('const CHANNEL = "/session-purge"'));

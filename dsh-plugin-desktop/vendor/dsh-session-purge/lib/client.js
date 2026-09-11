@@ -33,6 +33,10 @@ window.__ModuleLoader__.load({
 			"manage.ungrouped": "未分组",
 			"manage.count.one": "共 {n} 个对话",
 			"manage.count.other": "共 {n} 个对话",
+			"manage.tab.all": "全部",
+			"manage.tab.pending": "待删除 ({n})",
+			"manage.tab.pending.empty": "待删除 (0)",
+			"manage.pending.empty": "暂无待删除对话（删除后的对话会在此保留 7 天，期满前可随时恢复）",
 			"delete.session": "删除",
 			"delete.confirm.title": "删除对话",
 			"delete.confirm.desc": "对话「{name}」将被移入待删除列表，并启动 7 天删除倒计时。倒计时结束后将彻底清除；在 7 天内，您可以随时在此处一键恢复。",
@@ -41,7 +45,7 @@ window.__ModuleLoader__.load({
 			"delete.pending": "正在处理…",
 			"delete.done": "已移入待删除",
 			"delete.failed": "操作失败：{message}",
-			"delete.ok": "已移入待删除列表，7天后将彻底清除「{name}」",
+			"delete.ok": "已移入待删除列表（保留7天，可在「待删除」中随时恢复「{name}」）",
 			"delete.restore": "恢复",
 			"delete.restored.ok": "已成功恢复对话「{name}」",
 			"delete.countdown.days": "剩余 {d} 天后自动删除",
@@ -71,6 +75,10 @@ window.__ModuleLoader__.load({
 			"manage.ungrouped": "Ungrouped",
 			"manage.count.one": "{n} conversation",
 			"manage.count.other": "{n} conversations",
+			"manage.tab.all": "All",
+			"manage.tab.pending": "Pending ({n})",
+			"manage.tab.pending.empty": "Pending (0)",
+			"manage.pending.empty": "No conversations pending deletion (deleted items are kept here for 7 days and can be restored anytime)",
 			"delete.session": "Delete",
 			"delete.confirm.title": "Delete conversation",
 			"delete.confirm.desc": "“{name}” will be moved to pending deletion and permanently deleted after a 7-day countdown. You can restore it anytime during this period.",
@@ -79,7 +87,7 @@ window.__ModuleLoader__.load({
 			"delete.pending": "Processing…",
 			"delete.done": "Moved to pending",
 			"delete.failed": "Operation failed: {message}",
-			"delete.ok": "Moved to pending deletion. “{name}” will be permanently deleted in 7 days",
+			"delete.ok": "Moved to pending deletion. You can restore “{name}” in Pending anytime within 7 days",
 			"delete.restore": "Restore",
 			"delete.restored.ok": "Successfully restored conversation “{name}”",
 			"delete.countdown.days": "{d}d left until deletion",
@@ -221,6 +229,12 @@ window.__ModuleLoader__.load({
 			".dsp-section-head{display:flex;flex-direction:column;gap:4px;padding-bottom:8px}",
 			".dsp-section-title{margin:0;font-size:18px;font-weight:600;line-height:26px}",
 			".dsp-section-desc{margin:0;font-size:13px;line-height:20px;color:var(--dsw-alias-label-secondary,#666)}",
+			".dsp-tabs{display:flex;align-items:center;gap:6px;padding:0 20px 8px}",
+			".dsp-tab{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:6px;border:none;background:transparent;color:var(--dsw-alias-label-secondary,#666);cursor:pointer;font-size:12px;font-weight:500;transition:all .15s ease}",
+			".dsp-tab:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,.04));color:var(--dsw-alias-label-primary,#1a1a1a)}",
+			".dsp-tab-active{background:var(--dsw-alias-interactive-bg-selected,rgba(0,0,0,.08));color:var(--dsw-alias-label-primary,#1a1a1a);font-weight:600}",
+			".dsp-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;font-size:11px;font-weight:600;color:#d97706;background:rgba(217,119,6,.14)}",
+			".dsp-section .dsp-tabs{padding:4px 0 8px}",
 			".dsp-section .dsp-toolbar{padding:4px 0 10px}",
 			".dsp-section .dsp-list{max-height:520px;border:1px solid var(--dsw-alias-border-l1,#e5e7eb);border-radius:12px;background:var(--dsw-alias-bg-layer-1,rgba(0,0,0,.02));padding:6px 8px}",
 			".dsp-section .dsp-row{padding:8px 10px;border-radius:8px}",
@@ -312,6 +326,7 @@ window.__ModuleLoader__.load({
 			const [error, setError] = react.useState(null);
 			const [notice, setNotice] = react.useState(null);
 			const [pendingList, setPendingList] = react.useState([]);
+			const [activeTab, setActiveTab] = react.useState("all");
 
 			const refreshPending = react.useCallback(async () => {
 				if (!connection) return;
@@ -352,6 +367,7 @@ window.__ModuleLoader__.load({
 
 			const rows = react.useMemo(() => {
 				const out = [];
+				const seen = new Set();
 				for (const id of sessions?.ids ?? []) {
 					const summary = sessions.byId?.[id];
 					if (summary === undefined) continue;
@@ -360,20 +376,43 @@ window.__ModuleLoader__.load({
 					// Keep rows visible if they are in pending purges even if archived
 					if (archived.has(id) && !pendingMap.has(id)) continue;
 					out.push(summary);
+					seen.add(id);
+				}
+				// Ensure every pending purge item is present even if omitted from sessions.ids
+				for (const item of pendingList) {
+					if (item?.sessionId && !seen.has(item.sessionId)) {
+						const fallback = sessions?.byId?.[item.sessionId] ?? {
+							id: item.sessionId,
+							title: item.sessionId,
+							displayTitle: item.sessionId,
+							updatedAt: item.scheduledAt ?? Date.now(),
+							running: false,
+							blank: false,
+						};
+						out.push(fallback);
+						seen.add(item.sessionId);
+					}
 				}
 				out.sort((left, right) => (right.updatedAt ?? 0) - (left.updatedAt ?? 0));
 				return out;
-			}, [sessions, archived]);
+			}, [sessions, archived, pendingMap, pendingList]);
+
+			const tabFiltered = react.useMemo(() => {
+				if (activeTab === "pending") {
+					return rows.filter((row) => pendingMap.has(row.id));
+				}
+				return rows;
+			}, [rows, activeTab, pendingMap]);
 
 			const filtered = react.useMemo(() => {
 				const needle = query.trim().toLowerCase();
-				if (needle.length === 0) return rows;
-				return rows.filter((row) => {
+				if (needle.length === 0) return tabFiltered;
+				return tabFiltered.filter((row) => {
 					const title = displayNameOf(row).toLowerCase();
 					const workspace = String(workspaceTitleOf.get(row.id) ?? "").toLowerCase();
 					return title.includes(needle) || workspace.includes(needle);
 				});
-			}, [rows, query, workspaceTitleOf]);
+			}, [tabFiltered, query, workspaceTitleOf]);
 
 			const confirmDelete = react.useCallback(async () => {
 				if (target === null || busy) return;
@@ -389,6 +428,8 @@ window.__ModuleLoader__.load({
 						const filteredPrev = prev.filter((p) => p.sessionId !== target);
 						return [...filteredPrev, record];
 					});
+					setActiveTab("pending");
+					void refreshPending();
 				}
 				catch (reason) {
 					const message = reason instanceof Error ? reason.message : String(reason);
@@ -398,7 +439,7 @@ window.__ModuleLoader__.load({
 				finally {
 					setBusy(false);
 				}
-			}, [target, busy, connection, rows, t]);
+			}, [target, busy, connection, rows, t, refreshPending]);
 
 			const handleRestore = react.useCallback(async (sessionId) => {
 				if (busy) return;
@@ -410,6 +451,7 @@ window.__ModuleLoader__.load({
 					const rowName = row === undefined ? String(sessionId) : displayNameOf(row);
 					setNotice(t("delete.restored.ok", { name: rowName }));
 					setPendingList((prev) => prev.filter((p) => p.sessionId !== sessionId));
+					void refreshPending();
 				}
 				catch (reason) {
 					const message = reason instanceof Error ? reason.message : String(reason);
@@ -419,7 +461,7 @@ window.__ModuleLoader__.load({
 				finally {
 					setBusy(false);
 				}
-			}, [busy, connection, rows, t]);
+			}, [busy, connection, rows, t, refreshPending]);
 
 			const now = Date.now();
 			const targetRow = target === null ? undefined : rows.find((row) => row.id === target);
@@ -455,6 +497,31 @@ window.__ModuleLoader__.load({
 							],
 						}),
 					jsxs("div", {
+						className: "dsp-tabs",
+						role: "tablist",
+						children: [
+							jsx("button", {
+								type: "button",
+								role: "tab",
+								"aria-selected": activeTab === "all",
+								className: activeTab === "all" ? "dsp-tab dsp-tab-active" : "dsp-tab",
+								onClick: () => setActiveTab("all"),
+								children: t("manage.tab.all"),
+							}),
+							jsxs("button", {
+								type: "button",
+								role: "tab",
+								"aria-selected": activeTab === "pending",
+								className: activeTab === "pending" ? "dsp-tab dsp-tab-active" : "dsp-tab",
+								onClick: () => setActiveTab("pending"),
+								children: [
+									t(pendingList.length > 0 ? "manage.tab.pending" : "manage.tab.pending.empty", { n: String(pendingList.length) }),
+									pendingList.length > 0 ? jsx("span", { className: "dsp-badge", children: String(pendingList.length) }) : null,
+								],
+							}),
+						],
+					}),
+					jsxs("div", {
 						className: "dsp-toolbar",
 						children: [
 							jsx("input", {
@@ -482,7 +549,10 @@ window.__ModuleLoader__.load({
 						children: notice,
 					}),
 					filtered.length === 0
-						? jsx("div", { className: "dsp-empty", children: t("manage.empty") })
+						? jsx("div", {
+							className: "dsp-empty",
+							children: activeTab === "pending" ? t("manage.pending.empty") : t("manage.empty"),
+						})
 						: jsx("ul", {
 							className: "dsp-list",
 							children: filtered.map((row) => jsx(PurgeRow, {
