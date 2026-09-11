@@ -615,6 +615,83 @@ function omitUnresolvedOptionalEntries(
   }
 }
 
+/** Official built-in packages and namespaces allowed to be loaded in strict mode. */
+export const OFFICIAL_PACKAGE_EXACT: ReadonlySet<string> = new Set([
+  'dsh-plugin-desktop',
+  'dsh-ezai-auth',
+  'dsh-files',
+  'dsh-session-purge',
+  'dsh-community-market',
+  'dsh-community-fabric',
+])
+
+/**
+ * Check if a package name belongs to the official built-in whitelist.
+ * Any user-installed, third-party, or unauthorized packages return false.
+ */
+export function isOfficialPlugin(packageName: string | undefined | null): boolean {
+  if (!packageName || typeof packageName !== 'string') return false
+  const trimmed = packageName.trim()
+  if (trimmed.startsWith('cordis:')) return true
+  if (trimmed.startsWith('@deepseek-ai/')) return true
+  if (trimmed === 'dsh-plugin-desktop' || trimmed.startsWith('dsh-plugin-desktop/')) return true
+  if (OFFICIAL_PACKAGE_EXACT.has(trimmed)) return true
+  return false
+}
+
+function filterUnauthorizedRows(rows: EntryOptions[]): EntryOptions[] {
+  const filtered: EntryOptions[] = []
+  for (const row of rows) {
+    if (typeof row.name === 'string' && !isOfficialPlugin(row.name)) {
+      console.warn(`[plugin-policy] Blocked unauthorized plugin insert: "${row.name}" (id: ${row.id ?? 'unknown'})`)
+      continue
+    }
+    if (row.group === true && Array.isArray(row.config)) {
+      const nested = filterUnauthorizedRows(row.config)
+      filtered.push({ ...row, config: nested })
+    } else {
+      filtered.push(row)
+    }
+  }
+  return filtered
+}
+
+/**
+ * Filter unauthorized plugin entries and patches in strict mode.
+ * Discards any entry that attempts to load or insert an unofficial package.
+ */
+export function filterUnauthorizedPatches(patches: readonly PatchOptions[]): PatchOptions[] {
+  const result: PatchOptions[] = []
+  for (const patch of patches) {
+    if (typeof patch.name === 'string' && !isOfficialPlugin(patch.name)) {
+      console.warn(`[plugin-policy] Blocked unauthorized plugin patch: "${patch.name}" (id: ${patch.id ?? 'unknown'})`)
+      continue
+    }
+    if (Array.isArray(patch.insert)) {
+      const filteredInserts = filterUnauthorizedRows(patch.insert)
+      if (filteredInserts.length === 0) {
+        continue
+      }
+      result.push({
+        ...patch,
+        insert: filteredInserts,
+      })
+    } else {
+      result.push(patch)
+    }
+  }
+  return result
+}
+
+/** Options configuring desktop profile composition security and behaviors. */
+export interface DesktopProfilePreparationOptions {
+  /**
+   * Enforce strict plugin whitelist.
+   * When true, discards unauthorized bundles and custom patch entries.
+   */
+  strictPlugins?: boolean
+}
+
 interface MarketPatchFilter {
   readonly patches: PatchOptions[]
   readonly removedProviderReference: boolean
@@ -730,7 +807,12 @@ export function prepareDesktopProfile(
   pluginStatePath?: string,
   marketSelection: DesktopMarketSnapshot = DEFAULT_DESKTOP_MARKET_SNAPSHOT,
   hooks: DesktopProfilePreparationHooks = {},
+  options: DesktopProfilePreparationOptions = {},
 ): PreparedDesktopProfile {
+  const strictPlugins = options.strictPlugins ?? (
+    process.env.DSH_STRICT_PLUGINS === '1'
+    || (process.env.NODE_ENV !== 'test' && process.env.DSH_ALLOW_UNOFFICIAL_PLUGINS !== '1')
+  )
   const profileDir = profileName === DESKTOP_PROFILE_NAME
     ? ensureDesktopProfile(home)
     : resolveProfileDir(profileName, home)
@@ -766,6 +848,10 @@ export function prepareDesktopProfile(
     providerAwareDisabledBundles.delete(DESKTOP_MARKET_IDENTITIES.dshMarket.packageName)
   }
   for (const layer of activeDesktopProfileLayers(profile, providerAwareDisabledBundles)) {
+    if (strictPlugins && !isOfficialPlugin(layer.packageName)) {
+      console.warn(`${BIN_NAME}: blocked unauthorized plugin bundle "${layer.packageName}"`)
+      continue
+    }
     if (layer.packageName === DESKTOP_MARKET_IDENTITIES.dshMarket.packageName) {
       dshMarketPatches = layer.patches
       continue
@@ -779,13 +865,15 @@ export function prepareDesktopProfile(
     throw new Error(`${BIN_NAME}: desktop profile is missing @deepseek-ai/dsh-web-app`)
   }
 
-  const loadedHomePatches = loadOptionalPatches(BIN_NAME, join(home, PROFILE_PATCH_FILENAME)) ?? []
+  const rawHomePatches = loadOptionalPatches(BIN_NAME, join(home, PROFILE_PATCH_FILENAME)) ?? []
+  const loadedHomePatches = strictPlugins ? filterUnauthorizedPatches(rawHomePatches) : rawHomePatches
+  const loadedProfilePatches = strictPlugins ? filterUnauthorizedPatches(profile.patches) : profile.patches
   const { patches: homePatches, skipped: skippedOptionalEntries } = omitUnresolvedOptionalEntries(
     loadedHomePatches,
     bareModuleBaseUrl,
   )
   const filteredBundles = filterMarketProviderPatches(bundlePatches)
-  const filteredProfile = filterMarketProviderPatches(profile.patches)
+  const filteredProfile = filterMarketProviderPatches(loadedProfilePatches)
   const filteredHome = filterMarketProviderPatches(homePatches)
   const hasProviderConflict = filteredBundles.removedProviderReference
     || filteredProfile.removedProviderReference

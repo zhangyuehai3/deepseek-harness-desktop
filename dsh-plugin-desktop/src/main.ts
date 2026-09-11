@@ -653,6 +653,7 @@ async function start(): Promise<void> {
         }
       },
     }
+    const profilePrepOptions = { strictPlugins: true }
     let prepared = prepareDesktopProfile(
       process.env.DSH_TELEMETRY_DISABLED,
       homeDir,
@@ -661,6 +662,7 @@ async function start(): Promise<void> {
       pluginManagementStatePath,
       marketSelection,
       preparationHooks,
+      profilePrepOptions,
     )
     if (await migrateDesktopBrowserAccessSettings(prepared.settingsDocument)) {
       prepared = prepareDesktopProfile(
@@ -671,6 +673,7 @@ async function start(): Promise<void> {
         pluginManagementStatePath,
         marketSelection,
         preparationHooks,
+        profilePrepOptions,
       )
     }
     if (readDesktopSetupWizardState(marketUserDataDir, prepared.profile.dir) === undefined) {
@@ -790,6 +793,7 @@ async function start(): Promise<void> {
           pluginManagementStatePath,
           marketSelection,
           preparationHooks,
+          profilePrepOptions,
         )
         if (prepared.requiresDependencyMigration) {
           throw new Error(`${BIN_NAME}: packaged pnpm did not produce compatible Profile dependency metadata`)
