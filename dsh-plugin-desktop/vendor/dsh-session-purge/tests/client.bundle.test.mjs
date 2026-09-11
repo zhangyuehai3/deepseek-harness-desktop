@@ -101,12 +101,9 @@ if (zhDict !== undefined && enDict !== undefined) {
 }
 
 console.log('\nregistration:');
-check('registered slot entries', registrations.length === 2, String(registrations.length));
+check('registered slot entries', registrations.length === 1, String(registrations.length));
 const footReg = registrations.find((r) => r.options?.name === 'sidebar.footer.action');
-check('registered into sidebar.footer.action', footReg !== undefined);
-check('foot registration has a stable id', footReg?.options?.id === 'session-purge', footReg?.options?.id);
-check('foot registration declares the locale namespace', footReg?.options?.locale === 'session-purge', footReg?.options?.locale);
-check('foot component is a function', typeof footReg?.component === 'function');
+check('sidebar.footer.action is omitted (managed in settings)', footReg === undefined);
 
 const settingsReg = registrations.find((r) => r.options?.name === 'settings.section');
 check('registered into settings.section', settingsReg !== undefined);

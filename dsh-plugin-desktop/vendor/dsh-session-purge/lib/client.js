@@ -534,44 +534,6 @@ window.__ModuleLoader__.load({
 		}
 
 		/**
-		 * The conversation manager panel (popup).
-		 */
-		function PurgePanel({ open, onClose, sessions, workspaces, connection, t }) {
-			react.useEffect(() => {
-				if (!open) return undefined;
-				const onKeyDown = (event) => {
-					if (event.key !== "Escape") return;
-					onClose();
-				};
-				document.addEventListener("keydown", onKeyDown);
-				return () => document.removeEventListener("keydown", onKeyDown);
-			}, [open, onClose]);
-
-			if (!open) return null;
-
-			return jsx("div", {
-				className: "dsp-overlay",
-				onClick: (event) => {
-					if (event.target === event.currentTarget) onClose();
-				},
-				children: jsx("div", {
-					className: "dsp-panel",
-					role: "dialog",
-					"aria-modal": "true",
-					"aria-label": t("manage.title"),
-					children: jsx(SessionManageView, {
-						sessions,
-						workspaces,
-						connection,
-						t,
-						isSettingsPage: false,
-						onClose,
-					}),
-				}),
-			});
-		}
-
-		/**
 		 * Official Settings Section for managing conversations, placed under EZAI Account.
 		 */
 		function SessionManageSection({ useSessions, useWorkspaces, connection, t }) {
@@ -589,48 +551,11 @@ window.__ModuleLoader__.load({
 			});
 		}
 
-		/**
-		 * The sidebar foot entry: a rail/wide trigger plus the manager panel.
-		 */
-		function PurgeFootAction({ wide, useSessions, useWorkspaces, connection, t }) {
-			const [open, setOpen] = react.useState(false);
-			const close = react.useCallback(() => setOpen(false), []);
-			const sessions = useSessions((snapshot) => snapshot);
-			const workspaces = useWorkspaces((snapshot) => snapshot);
-			return jsxs("div", {
-				className: wide ? "dsp-layer" : "dsp-layer dsp-rail",
-				children: [
-					jsxs("button", {
-						type: "button",
-						className: "dsp-trigger",
-						"aria-label": t("manage.open"),
-						title: wide ? undefined : t("manage.open"),
-						"aria-expanded": open,
-						onClick: () => setOpen(true),
-						children: [
-							jsx(IconListPenOutline16, { size: wide ? 16 : 18 }),
-							wide ? jsx("span", { children: t("manage.open") }) : null,
-						],
-					}),
-					jsx(PurgePanel, {
-						open,
-						onClose: close,
-						sessions,
-						workspaces,
-						connection,
-						t,
-					}),
-				],
-			});
-		}
-
 		/** Required services (cordis fiber inject). */
 		exports.inject = ["slots", "sessions", "workspaces", "connection", "locale"];
 
 		/**
-		 * Register the conversation manager into:
-		 * 1. Settings section "管理对话" (under EZAI Account, order: 120)
-		 * 2. Sidebar footer quick action
+		 * Register the conversation manager into Settings section "管理对话" (under EZAI Account, order: 120).
 		 */
 		exports.apply = function apply(ctx) {
 			const connection = ctx.get("connection");
@@ -641,17 +566,8 @@ window.__ModuleLoader__.load({
 			if (locale !== undefined && typeof locale.register === "function") {
 				ctx.effect(() => locale.register(NS, { zh, en }), "dsh-session-purge: dictionaries");
 			}
-			
-			// 1. Sidebar footer action
-			ctx.slots.inject("sidebar.footer.action", () => ctx.slots.register({
-				name: "sidebar.footer.action",
-				id: "session-purge",
-				order: 10,
-				locale: NS,
-				inject: () => ({ connection }),
-			}, PurgeFootAction));
 
-			// 2. Settings dialog section: right under EZAI Account (order: 120)
+			// Settings dialog section: right under EZAI Account (order: 120)
 			ctx.slots.inject("settings.section", () => ctx.slots.register({
 				name: "settings.section",
 				id: "session-purge",

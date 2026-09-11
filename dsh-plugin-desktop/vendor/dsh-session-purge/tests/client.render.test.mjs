@@ -98,33 +98,19 @@ const api = registration.factory((spec) => {
 });
 api.apply(ctx);
 
-check('the bundle registered slot entries', registered.length === 2, String(registered.length));
-const entry = registered.find(r => r.options?.name === 'sidebar.footer.action');
+check('the bundle registered slot entries', registered.length === 1, String(registered.length));
 const settingsEntry = registered.find(r => r.options?.name === 'settings.section');
-if (entry === undefined || settingsEntry === undefined) { console.log('\nnothing to render'); process.exit(1); }
+if (settingsEntry === undefined) { console.log('\nnothing to render'); process.exit(1); }
 
 const props = {
     wide: true,
     useSessions: (selector) => selector(sessionsSnapshot),
     useWorkspaces: (selector) => selector(workspacesSnapshot),
     t,
-    ...entry.options.inject(),
+    ...settingsEntry.options.inject(),
 };
 
 console.log('\nrender:');
-let html;
-try {
-    html = renderToStaticMarkup(React.createElement(entry.component, props));
-} catch (error) {
-    check('the component renders without throwing', false, `${error.constructor.name}: ${error.message}`);
-    console.log(`\n${failures} CHECK(S) FAILED`);
-    process.exit(1);
-}
-check('the component renders without throwing', true);
-check('the trigger button is present', html.includes('manage.open'), html.slice(0, 200));
-check('no dialog while closed', !html.includes('role="dialog"'));
-check('renders with the hooks the framework synthesizes (useSessions/useWorkspaces)', true);
-
 let settingsHtml;
 try {
     settingsHtml = renderToStaticMarkup(React.createElement(settingsEntry.component, props));
@@ -134,6 +120,7 @@ try {
     process.exit(1);
 }
 check('the settings section renders without throwing', true);
+check('renders with the hooks the framework synthesizes (useSessions/useWorkspaces)', true);
 check('settings section contains heading and search', settingsHtml.includes('dsp-section-title') && settingsHtml.includes('dsp-search'));
 
 console.log('\nrow filtering (the bug that shipped):');
