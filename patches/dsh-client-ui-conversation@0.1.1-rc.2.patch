@@ -1,0 +1,18 @@
+diff --git a/lib/client.js b/lib/client.js
+--- a/lib/client.js
++++ b/lib/client.js
+@@ -7180,12 +7180,10 @@
+ 			const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === pendingWorkspaceId);
+ 			(0, react.useEffect)(() => {
+ 				if (pendingWorkspaceId === void 0) return;
+-				if (sessionWorkspace?.workspaceId === pendingWorkspaceId || workspaces.phase === "ready" && pendingWorkspace === void 0) setPendingWorkspaceId(void 0);
++				if (sessionWorkspace?.workspaceId === pendingWorkspaceId) setPendingWorkspaceId(void 0);
+ 			}, [
+ 				pendingWorkspaceId,
+-				sessionWorkspace?.workspaceId,
+-				workspaces.phase,
+-				pendingWorkspace
++				sessionWorkspace?.workspaceId
+ 			]);
+ 			const settling = sessionId !== void 0 && composerPhase === "blank" && openState === "loading" && summaryBlank !== true;
+ 			const hero = sessionId === void 0 || composerPhase === "blank" && (openState === "open" || summaryBlank === true);

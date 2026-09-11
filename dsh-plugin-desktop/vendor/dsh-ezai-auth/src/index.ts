@@ -891,15 +891,8 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
       return !llm || !llm.listProviders || llm.listProviders().some((entry: any) => entry.id === p)
     }
 
-    // Seamless fallback: If a request targets unserved or legacy provider, redirect to deepseek & deepseek-flash
-    if (options && (!options.provider || !isServed(options.provider))) {
-      options.provider = 'deepseek'
-      options.model = 'deepseek-flash'
-    }
-    // Enforce exclusively DeepSeek V4.1 Flash
-    if (options && (options.provider === 'deepseek' || options.provider === 'deepseek-anthropic' || options.provider === 'deepseek-official')) {
-      options.model = 'deepseek-flash'
-    }
+    // Notice: Model & provider routing is already strictly enforced in agent/request.
+    // options passed to llm/stream is deeply frozen by upstream agent-loop; do NOT mutate it.
 
     const snapshot = await session.getSnapshot()
     const currentUsed = Number(snapshot?.tokenUsed) || 0

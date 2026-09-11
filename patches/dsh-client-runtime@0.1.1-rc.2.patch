@@ -1,8 +1,7 @@
 diff --git a/lib/client.js b/lib/client.js
-index ba3cb21f72..782a387b46 100644
 --- a/lib/client.js
 +++ b/lib/client.js
-@@ -9266,7 +9266,7 @@ Set the `cycles` parameter to `"ref"` to resolve cyclical schemas with defs.
+@@ -9266,7 +9266,7 @@
  				}
  				const persisted = this.selection.getSnapshot().sessionId;
  				if (current === void 0) {
@@ -11,3 +10,53 @@ index ba3cb21f72..782a387b46 100644
  				} else if (byId[current] !== void 0 && (persisted !== current || this.selection.getSnapshot().subagentAddress?.childSessionId !== currentAddress?.childSessionId || this.selection.getSnapshot().subagentAddress?.parentSessionId !== currentAddress?.parentSessionId || this.selection.getSnapshot().subagentAddress?.mode !== currentAddress?.mode)) this.selection.set({
  					sessionId: current,
  					...currentAddress === void 0 ? {} : { subagentAddress: currentAddress }
+@@ -9855,15 +9855,27 @@
+ 			* @returns the reused or newly created session id.
+ 			*/
+ 			async connectWorkspace(workspaceId) {
+-				const workspace = this.list.getSnapshot().items.find((item) => item.workspaceId === workspaceId);
+-				if (workspace === void 0) throw new Error(`workspaces.connectWorkspace: unknown workspace ${workspaceId}`);
++				let workspace = this.list.getSnapshot().items.find((item) => item.workspaceId === workspaceId);
++				if (workspace === void 0) {
++					this.project();
++					workspace = this.list.getSnapshot().items.find((item) => item.workspaceId === workspaceId);
++				}
++				if (workspace === void 0) {
++					const attempt = this.sessions.create({ workspaceId }).finally(() => {
++						this.connecting.delete(workspaceId);
++					});
++					this.connecting.set(workspaceId, attempt);
++					return attempt;
++				}
+ 				const inflight = this.connecting.get(workspaceId);
+ 				if (inflight !== void 0) return inflight;
+ 				const archived = this.list.getSnapshot().archivedSessionIds;
+ 				const sessions = this.sessions.list.getSnapshot();
++				const normPath = (p) => typeof p === "string" ? p.replaceAll("\\", "/").toLowerCase().replace(/\/+$/, "") : "";
++				const targetPath = normPath(workspace.path);
+ 				for (const id of sessions.ids) {
+ 					const summary = sessions.byId[id];
+-					if (summary !== void 0 && summary.blank && summary.cwd === workspace.path && workspace.sessionIds.includes(summary.id) && !archived.includes(summary.id)) return summary.id;
++					if (summary !== void 0 && summary.blank && (summary.cwd === workspace.path || normPath(summary.cwd) === targetPath) && workspace.sessionIds.includes(summary.id) && !archived.includes(summary.id)) return summary.id;
+ 				}
+ 				const attempt = this.sessions.create({ workspaceId }).finally(() => {
+ 					this.connecting.delete(workspaceId);
+@@ -9901,6 +9913,10 @@
+ 						state = "done";
+ 					}, (reason) => {
+ 						if (disposed) return;
++						if (workspace.recentWorkspaceId !== target) {
++							reconcile();
++							return;
++						}
+ 						state = "waiting";
+ 						console.warn("initial workspace selection failed:", reason);
+ 					});
+@@ -9945,6 +9961,7 @@
+ 			async create(input) {
+ 				const result = await this.manager.create(input);
+ 				if (!result.ok) throw new WorkspaceCreateError(result.error);
++				this.project();
+ 				return result.value.workspace;
+ 			}
+ 			/**

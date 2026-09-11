@@ -322,5 +322,16 @@ describe('session store', () => {
     const result5 = await agentRequestHandler({}, async () => legacyVisionRequested)
     assert.equal(result5.provider, 'deepseek-anthropic')
     assert.equal(result5.model, 'deepseek-flash')
+
+    // 5. Test llm/stream handles deeply frozen options without throwing TypeError
+    const frozenOptions = Object.freeze({ provider: 'deepseek', model: 'deepseek-flash' })
+    const streamGen = llmStreamHandler(frozenOptions, async function* () {
+      yield { type: 'chunk', text: 'hello' }
+    })
+    const chunks: any[] = []
+    for await (const chunk of streamGen) {
+      chunks.push(chunk)
+    }
+    assert.equal(chunks.length, 1)
   })
 })
