@@ -290,7 +290,7 @@ export function apply(ctx: Context, config: Config): void {
     }),
     'dsh-plugin-desktop: renderer boot report route',
   )
-  if (runtime.platform === 'win32') {
+  if (runtime.platform === 'win32' || runtime.platform === 'darwin') {
     ctx.effect(
       () => ctx.webServer.register({
         kind: 'exact',

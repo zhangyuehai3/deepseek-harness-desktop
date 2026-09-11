@@ -89,9 +89,9 @@ export function apply(ctx: ClientContext): void {
   }
   const environment = parseDesktopClientEnvironment(window.location.search)
   if (!environment) {
-    const isWin = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('dsh-desktop-platform') === 'win32')
-      || (typeof navigator !== 'undefined' && /windows|win32/i.test(navigator.userAgent || navigator.platform || ''))
-    if (isWin) {
+    const isDesktop = (typeof sessionStorage !== 'undefined' && (sessionStorage.getItem('dsh-desktop-platform') === 'win32' || sessionStorage.getItem('dsh-desktop-platform') === 'darwin'))
+      || (typeof navigator !== 'undefined' && /windows|win32|macintosh|mac os x/i.test(navigator.userAgent || navigator.platform || ''))
+    if (isDesktop) {
       ctx.effect(
         () => installDesktopDirectoryPickerBridge(),
         'dsh-plugin-desktop: native directory picker bridge',
@@ -113,13 +113,13 @@ export function apply(ctx: ClientContext): void {
     () => installWorkspaceFolderDrop({
       create: input => ctx.workspaces.create(input),
       startSession: workspaceId => { ctx.workspaces.startSession(workspaceId) },
-      ...(environment.platform === 'win32'
+      ...(environment.platform === 'win32' || environment.platform === 'darwin'
         ? { validateDirectory: (path: string) => requestDesktopDirectoryValidation(path) }
         : {}),
     }),
     'dsh-plugin-desktop: workspace folder drop',
   )
-  if (environment.platform === 'win32') {
+  if (environment.platform === 'win32' || environment.platform === 'darwin') {
     ctx.effect(
       () => installDesktopDirectoryPickerBridge(),
       'dsh-plugin-desktop: native directory picker bridge',

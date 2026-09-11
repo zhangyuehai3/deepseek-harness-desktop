@@ -132,7 +132,7 @@ diff --git a/lib/client.js b/lib/client.js
 -					"browser.showHidden": "显示隐藏文件"
 +					"browser.showHidden": "显示隐藏文件",
 +					"browser.nativePicker": "选择本地目录",
-+					"browser.nativePickerTooltip": "通过 Windows 资源管理器选择本地目录"
++					"browser.nativePickerTooltip": "通过系统文件管理器选择本地目录"
  				}], ["en", {
  					"browser.title": "Select Workspace Directory",
  					"browser.home": "Home",
@@ -144,7 +144,7 @@ diff --git a/lib/client.js b/lib/client.js
 -					"browser.showHidden": "Show hidden files"
 +					"browser.showHidden": "Show hidden files",
 +					"browser.nativePicker": "Browse Local...",
-+					"browser.nativePickerTooltip": "Choose directory via Windows Explorer"
++					"browser.nativePickerTooltip": "Choose directory via system file manager"
  				}]];
  				try {
  					for (const [locale, dict] of dictionaries) disposers.push(ctx.locale.register(LOCALE_NS, locale, dict));
@@ -153,12 +153,12 @@ diff --git a/lib/client.js b/lib/client.js
  			const injected = () => ({
  				listDirectory: (path, signal) => ctx.workspaces.listDirectory(path, signal),
  				createDirectory: (path, name) => ctx.workspaces.createDirectory(path, name),
-+				pickNativeDirectory: (typeof window !== "undefined" && (typeof window.__DSH_DESKTOP_PICK_DIRECTORY__ === "function" || new URLSearchParams(window.location.search).get("dsh-desktop-platform") === "win32" || (typeof sessionStorage !== "undefined" && sessionStorage.getItem("dsh-desktop-platform") === "win32") || /windows|win32/i.test(navigator.userAgent || navigator.platform || ""))) ? () => {
++				pickNativeDirectory: typeof window !== "undefined" ? () => {
 +					const pick = window.__DSH_DESKTOP_PICK_DIRECTORY__;
 +					if (typeof pick === "function") return pick();
 +					return window.fetch("/_dsh/desktop/pick-directory", { method: "POST", headers: { accept: "application/json" } }).then((r) => r.ok ? r.json() : null).then((d) => d && typeof d.path !== "undefined" ? d.path : null);
 +				} : void 0,
-+				validateDirectory: (typeof window !== "undefined" && (typeof window.__DSH_DESKTOP_VALIDATE_DIRECTORY__ === "function" || new URLSearchParams(window.location.search).get("dsh-desktop-platform") === "win32" || (typeof sessionStorage !== "undefined" && sessionStorage.getItem("dsh-desktop-platform") === "win32") || /windows|win32/i.test(navigator.userAgent || navigator.platform || ""))) ? (path) => {
++				validateDirectory: typeof window !== "undefined" ? (path) => {
 +					const validate = window.__DSH_DESKTOP_VALIDATE_DIRECTORY__;
 +					if (typeof validate === "function") return validate(path);
 +					return window.fetch("/_dsh/desktop/validate-directory", { method: "POST", headers: { accept: "application/json", "content-type": "application/json" }, body: JSON.stringify({ path }) }).then((r) => r.ok ? r.json() : null).then((d) => d && typeof d.allowed === "boolean" ? d.allowed : true).catch(() => true);
