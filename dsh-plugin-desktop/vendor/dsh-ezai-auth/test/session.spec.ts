@@ -193,11 +193,11 @@ describe('session store', () => {
     assert.equal(result2.provider, 'deepseek')
     assert.equal(result2.model, 'deepseek-flash')
 
-    // 3. Test agent/request keeps valid served provider
+    // 3. Test agent/request strictly locks to deepseek-flash
     const validRequested = { provider: 'deepseek', model: 'deepseek-chat' }
     const result3 = await agentRequestHandler({}, async () => validRequested)
     assert.equal(result3.provider, 'deepseek')
-    assert.equal(result3.model, 'deepseek-chat')
+    assert.equal(result3.model, 'deepseek-flash')
 
     // 4. Test agent/request seamlessly upgrades legacy deepseek-v4-flash to deepseek-flash
     const legacyModelRequested = { provider: 'deepseek', model: 'deepseek-v4-flash' }

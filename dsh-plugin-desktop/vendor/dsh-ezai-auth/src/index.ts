@@ -158,34 +158,6 @@ const DEEPSEEK_MODELS = [
     input: ['text', 'image'],
     inputModalities: ['text', 'image'],
   },
-  {
-    id: 'deepseek-v4-pro',
-    name: 'DeepSeek V4 Pro',
-    contextWindow: 1000000,
-    maxTokens: 256000,
-    input: ['text', 'image'],
-    inputModalities: ['text', 'image'],
-  },
-  {
-    id: 'deepseek-v4-flash',
-    name: 'DeepSeek V4 Flash (兼容已下线模型)',
-    contextWindow: 1000000,
-    maxTokens: 256000,
-    input: ['text', 'image'],
-    inputModalities: ['text', 'image'],
-  },
-  {
-    id: 'deepseek-chat',
-    name: 'DeepSeek Chat',
-    contextWindow: 65536,
-    maxTokens: 8192,
-  },
-  {
-    id: 'deepseek-reasoner',
-    name: 'DeepSeek Reasoner',
-    contextWindow: 65536,
-    maxTokens: 8192,
-  },
 ]
 
 export function patchCredentialsService(credentials: any): void {
@@ -871,7 +843,7 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
     })
   )
 
-  // 4. Intercept Agent request configuration: Default to deepseek & deepseek-flash
+  // 4. Intercept Agent request configuration: Exclusively DeepSeek V4.1 Flash
   ctx.on('agent/request', async (_payload: any, next: () => Promise<any>) => {
     try {
       const creds = ctx.get?.('credentials')
@@ -894,13 +866,11 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
         model: 'deepseek-flash',
       }
     }
-    // Seamless fallback/upgrade for legacy deepseek models to V4.1 Flash
+    // Enforce exclusively DeepSeek V4.1 Flash
     if (requested.provider === 'deepseek' || requested.provider === 'deepseek-anthropic' || requested.provider === 'deepseek-official') {
-      if (requested.model === 'deepseek-v4-flash' || requested.model === 'deepseek-v4-flash-vision-exp') {
-        return {
-          ...requested,
-          model: 'deepseek-flash',
-        }
+      return {
+        ...requested,
+        model: 'deepseek-flash',
       }
     }
     return requested
@@ -926,11 +896,9 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
       options.provider = 'deepseek'
       options.model = 'deepseek-flash'
     }
-    // Seamless upgrade for legacy deepseek models to V4.1 Flash
+    // Enforce exclusively DeepSeek V4.1 Flash
     if (options && (options.provider === 'deepseek' || options.provider === 'deepseek-anthropic' || options.provider === 'deepseek-official')) {
-      if (options.model === 'deepseek-v4-flash' || options.model === 'deepseek-v4-flash-vision-exp') {
-        options.model = 'deepseek-flash'
-      }
+      options.model = 'deepseek-flash'
     }
 
     const snapshot = await session.getSnapshot()
