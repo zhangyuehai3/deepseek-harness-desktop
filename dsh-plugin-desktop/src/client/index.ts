@@ -81,8 +81,24 @@ export const inject = [
 
 /** Register desktop-owned client surfaces for the current BrowserWindow mode. @param ctx - browser Cordis context. */
 export function apply(ctx: ClientContext): void {
+  if (typeof window !== 'undefined' && typeof sessionStorage !== 'undefined') {
+    const platform = new URLSearchParams(window.location.search).get('dsh-desktop-platform')
+    if (platform) {
+      try { sessionStorage.setItem('dsh-desktop-platform', platform) } catch {}
+    }
+  }
   const environment = parseDesktopClientEnvironment(window.location.search)
-  if (!environment) return
+  if (!environment) {
+    const isWin = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('dsh-desktop-platform') === 'win32')
+      || (typeof navigator !== 'undefined' && /windows|win32/i.test(navigator.userAgent || navigator.platform || ''))
+    if (isWin) {
+      ctx.effect(
+        () => installDesktopDirectoryPickerBridge(),
+        'dsh-plugin-desktop: native directory picker bridge',
+      )
+    }
+    return
+  }
   ctx.effect(
     () => provideDesktopWindow(ctx, desktopWindowService(environment)),
     'dsh-plugin-desktop: native window geometry service',

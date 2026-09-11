@@ -148,15 +148,15 @@ index 3d67601..f3181c7 100644
  			const injected = () => ({
  				listDirectory: (path, signal) => ctx.workspaces.listDirectory(path, signal),
  				createDirectory: (path, name) => ctx.workspaces.createDirectory(path, name),
-+				pickNativeDirectory: new URLSearchParams(window.location.search).get("dsh-desktop-platform") === "win32" ? () => {
++				pickNativeDirectory: (typeof window !== "undefined" && (typeof window.__DSH_DESKTOP_PICK_DIRECTORY__ === "function" || new URLSearchParams(window.location.search).get("dsh-desktop-platform") === "win32" || (typeof sessionStorage !== "undefined" && sessionStorage.getItem("dsh-desktop-platform") === "win32") || /windows|win32/i.test(navigator.userAgent || navigator.platform || ""))) ? () => {
 +					const pick = window.__DSH_DESKTOP_PICK_DIRECTORY__;
-+					if (typeof pick !== "function") throw new Error("DSH Desktop native directory picker is unavailable");
-+					return pick();
++					if (typeof pick === "function") return pick();
++					return window.fetch("/_dsh/desktop/pick-directory", { method: "POST", headers: { accept: "application/json" } }).then((r) => r.ok ? r.json() : null).then((d) => d && typeof d.path !== "undefined" ? d.path : null);
 +				} : void 0,
-+				validateDirectory: new URLSearchParams(window.location.search).get("dsh-desktop-platform") === "win32" ? (path) => {
++				validateDirectory: (typeof window !== "undefined" && (typeof window.__DSH_DESKTOP_VALIDATE_DIRECTORY__ === "function" || new URLSearchParams(window.location.search).get("dsh-desktop-platform") === "win32" || (typeof sessionStorage !== "undefined" && sessionStorage.getItem("dsh-desktop-platform") === "win32") || /windows|win32/i.test(navigator.userAgent || navigator.platform || ""))) ? (path) => {
 +					const validate = window.__DSH_DESKTOP_VALIDATE_DIRECTORY__;
-+					if (typeof validate !== "function") throw new Error("DSH Desktop directory validation is unavailable");
-+					return validate(path);
++					if (typeof validate === "function") return validate(path);
++					return window.fetch("/_dsh/desktop/validate-directory", { method: "POST", headers: { accept: "application/json", "content-type": "application/json" }, body: JSON.stringify({ path }) }).then((r) => r.ok ? r.json() : null).then((d) => d && typeof d.allowed === "boolean" ? d.allowed : true).catch(() => true);
 +				} : void 0,
  				t: ctx.locale.bind(LOCALE_NS)
  			});
