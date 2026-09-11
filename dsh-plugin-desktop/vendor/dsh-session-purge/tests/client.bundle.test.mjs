@@ -101,12 +101,18 @@ if (zhDict !== undefined && enDict !== undefined) {
 }
 
 console.log('\nregistration:');
-check('exactly one slot registration', registrations.length === 1, String(registrations.length));
-const reg = registrations[0];
-check('registered into sidebar.footer.action', reg?.options?.name === 'sidebar.footer.action', reg?.options?.name);
-check('registration has a stable id', reg?.options?.id === 'session-purge', reg?.options?.id);
-check('registration declares the locale namespace', reg?.options?.locale === 'session-purge', reg?.options?.locale);
-check('component is a function', typeof reg?.component === 'function');
+check('registered slot entries', registrations.length === 2, String(registrations.length));
+const footReg = registrations.find((r) => r.options?.name === 'sidebar.footer.action');
+check('registered into sidebar.footer.action', footReg !== undefined);
+check('foot registration has a stable id', footReg?.options?.id === 'session-purge', footReg?.options?.id);
+check('foot registration declares the locale namespace', footReg?.options?.locale === 'session-purge', footReg?.options?.locale);
+check('foot component is a function', typeof footReg?.component === 'function');
+
+const settingsReg = registrations.find((r) => r.options?.name === 'settings.section');
+check('registered into settings.section', settingsReg !== undefined);
+check('settings registration has id session-purge', settingsReg?.options?.id === 'session-purge', settingsReg?.options?.id);
+check('settings registration has order 120 (under ezai-account 110)', settingsReg?.options?.order === 120, String(settingsReg?.options?.order));
+check('settings component is a function', typeof settingsReg?.component === 'function');
 
 console.log(failures === 0 ? '\nCLIENT BUNDLE OK' : `\n${failures} CHECK(S) FAILED`);
 process.exit(failures === 0 ? 0 : 1);

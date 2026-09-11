@@ -35,7 +35,7 @@ index 59d01801f9f410d30c76af000710aa51ea98bfda..f6a00d4660a1dd7fb71cb4842b9fbe92
  		/** Nav glyph by section id; unknown ids fall back to the settings gear. */
  		function navIcon(id) {
  			if (id === "models") return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDataOutline16, {
-@@ -83,6 +109,10 @@ window.__ModuleLoader__.load({
+@@ -83,6 +109,14 @@ window.__ModuleLoader__.load({
  				className: SettingsRoot_module_css_default.navIcon,
  				size: 16
  			});
@@ -43,6 +43,11 @@ index 59d01801f9f410d30c76af000710aa51ea98bfda..f6a00d4660a1dd7fb71cb4842b9fbe92
 +				className: SettingsRoot_module_css_default.navIcon,
 +				size: 16
 +			});
++			if (id === "session-purge") return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconListPenOutline16, {
++				className: SettingsRoot_module_css_default.navIcon,
++				size: 16
++			});
  			return (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSettingsOutline16, {
  				className: SettingsRoot_module_css_default.navIcon,
  				size: 16
+

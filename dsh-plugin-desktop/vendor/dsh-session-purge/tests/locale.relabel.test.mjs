@@ -148,7 +148,7 @@ console.log('\ndefensive: no locale service / no workspace namespace');
     let threw;
     try { api.apply(ctx); } catch (error) { threw = error; }
     check('apply() does not throw without a locale service', threw === undefined, String(threw));
-    check('the panel still registers', registered.length === 1, String(registered.length));
+    check('the panel still registers', registered.length === 2, String(registered.length));
 }
 
 console.log(failures === 0 ? '\nLOCALE RELABEL OK' : `\n${failures} CHECK(S) FAILED`);

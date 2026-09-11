@@ -178,9 +178,16 @@ window.__ModuleLoader__.load({
 			".dsp-state{flex:none;font-size:11px;line-height:16px;color:var(--dsw-alias-label-tertiary,#999)}",
 			".dsp-empty{padding:28px 20px;text-align:center;font-size:13px;color:var(--dsw-alias-label-tertiary,#999)}",
 			".dsp-error{margin:0;padding:0 20px 8px;font-size:12px;line-height:18px;color:var(--dsw-alias-state-error-primary,#d92d20)}",
-			".dsp-error{margin:0;padding:0 20px 8px;font-size:12px;line-height:18px;color:var(--dsw-alias-state-error-primary,#d92d20)}",
 			".dsp-ok{margin:0;padding:8px 20px;border-radius:8px;font-size:12px;line-height:18px;color:var(--dsw-alias-state-success-primary,#067647);background:var(--dsw-alias-state-success-bg,rgba(6,118,71,.08))}",
 			".dsp-status{padding:0 20px 14px;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,#666)}",
+			".dsp-section{display:flex;flex-direction:column;gap:6px;width:100%;box-sizing:border-box;color:var(--dsw-alias-label-primary,#1a1a1a)}",
+			".dsp-section-head{display:flex;flex-direction:column;gap:4px;padding-bottom:8px}",
+			".dsp-section-title{margin:0;font-size:18px;font-weight:600;line-height:26px}",
+			".dsp-section-desc{margin:0;font-size:13px;line-height:20px;color:var(--dsw-alias-label-secondary,#666)}",
+			".dsp-section .dsp-toolbar{padding:4px 0 10px}",
+			".dsp-section .dsp-list{max-height:520px;border:1px solid var(--dsw-alias-border-l1,#e5e7eb);border-radius:12px;background:var(--dsw-alias-bg-layer-1,rgba(0,0,0,.02));padding:6px 8px}",
+			".dsp-section .dsp-row{padding:8px 10px;border-radius:8px}",
+			".dsp-section .dsp-error,.dsp-section .dsp-ok{margin-bottom:8px}",
 		].join("");
 
 		const CSS_TAG_ID = "dsh-session-purge/Panel.css";
@@ -260,48 +267,23 @@ window.__ModuleLoader__.load({
 		}
 
 		/**
-		 * The conversation manager panel.
-		 *
-		 * @param props.open - whether the panel is showing.
-		 * @param props.onClose - closes the panel.
-		 * @param props.sessions - the sessions-list snapshot (`{ids, byId, current}`).
-		 * @param props.workspaces - the workspaces snapshot (`{items, ...}`).
-		 * @param props.connection - the connection service (private RPC channel).
-		 * @param props.t - locale seat.
-		 * @returns the overlay tree, or null while closed.
+		 * Core conversation manager view: list + search + delete modal.
+		 * Used both as the Settings Section page and inside the quick popup PurgePanel.
 		 */
-		function PurgePanel({ open, onClose, sessions, workspaces, connection, t }) {
+		function SessionManageView({ sessions, workspaces, connection, t, isSettingsPage, onClose }) {
 			const [query, setQuery] = react.useState("");
 			const [target, setTarget] = react.useState(null);
 			const [busy, setBusy] = react.useState(false);
 			const [error, setError] = react.useState(null);
-			// The just-deleted conversation's name, shown as a success banner so the
-			// user gets explicit confirmation that the log was removed.
 			const [deleted, setDeleted] = react.useState(null);
 
-			// Reset transient state on open so a previous failure never greets a new
-			// visit, and never leaves the panel pinned open on a stale target.
 			react.useEffect(() => {
-				if (!open) return;
 				setQuery("");
 				setTarget(null);
 				setError(null);
 				setBusy(false);
 				setDeleted(null);
-			}, [open]);
-
-			// Escape closes the panel; the confirm dialog renders its own Modal and
-			// handles Escape itself, so it is left alone while a target is set.
-			react.useEffect(() => {
-				if (!open) return undefined;
-				const onKeyDown = (event) => {
-					if (event.key !== "Escape") return;
-					if (target !== null || busy) return;
-					onClose();
-				};
-				document.addEventListener("keydown", onKeyDown);
-				return () => document.removeEventListener("keydown", onKeyDown);
-			}, [open, target, busy, onClose]);
+			}, []);
 
 			const workspaceTitleOf = react.useMemo(() => {
 				const bySession = new Map();
@@ -312,19 +294,11 @@ window.__ModuleLoader__.load({
 				return bySession;
 			}, [workspaces]);
 
-			// Archived ids: the sidebar hides these, and so must this panel. An
-			// archived session has usually already lost its log, so offering a delete
-			// button for it produces a confusing "no such conversation" and makes a
-			// working delete look broken. Reading the same archive set the sidebar
-			// uses keeps both surfaces consistent.
 			const archived = react.useMemo(
 				() => new Set(workspaces?.archivedSessionIds ?? []),
 				[workspaces],
 			);
 
-			// Visible conversations: never a subagent's session (an internal child),
-			// never the blank provisional New Session row (no durable log yet), and
-			// never an archived session (already hidden from the sidebar).
 			const rows = react.useMemo(() => {
 				const out = [];
 				for (const id of sessions?.ids ?? []) {
@@ -354,8 +328,6 @@ window.__ModuleLoader__.load({
 				setBusy(true);
 				setError(null);
 				try {
-					// The Host report is the proof the log is gone; surface it so a
-					// completed delete is unmistakable rather than a silent row vanish.
 					const report = await deleteConversation(connection, target);
 					const row = rows.find((candidate) => candidate.id === target);
 					setDeleted(row === undefined ? String(target) : displayNameOf(row));
@@ -363,9 +335,6 @@ window.__ModuleLoader__.load({
 					void report;
 				}
 				catch (reason) {
-					// Show the user what happened AND leave a diagnostic in the console
-					// (the desktop host pipes renderer console output into its log file),
-					// so a failure is diagnosable without reproducing it interactively.
 					const message = reason instanceof Error ? reason.message : String(reason);
 					console.error("[session-purge] delete failed:", reason);
 					setError(message);
@@ -375,8 +344,6 @@ window.__ModuleLoader__.load({
 				}
 			}, [target, busy, connection, rows]);
 
-			if (!open) return null;
-
 			const now = Date.now();
 			const targetRow = target === null ? undefined : rows.find((row) => row.id === target);
 			const targetTitle = targetRow === undefined ? String(target ?? "") : displayNameOf(targetRow);
@@ -384,16 +351,16 @@ window.__ModuleLoader__.load({
 
 			return jsxs(react.Fragment, {
 				children: [
-					jsx("div", {
-						className: "dsp-overlay",
-						onClick: (event) => {
-							if (event.target === event.currentTarget && !busy) onClose();
-						},
-						children: jsxs("div", {
-							className: "dsp-panel",
-							role: "dialog",
-							"aria-modal": "true",
-							"aria-label": t("manage.title"),
+					isSettingsPage
+						? jsxs("div", {
+							className: "dsp-section-head",
+							children: [
+								jsx("h2", { className: "dsp-section-title", children: t("manage.title") }),
+								jsx("p", { className: "dsp-section-desc", children: t("manage.description") }),
+							],
+						})
+						: jsxs("div", {
+							className: "dsp-head-wrap",
 							children: [
 								jsxs("div", {
 									className: "dsp-head",
@@ -408,58 +375,56 @@ window.__ModuleLoader__.load({
 									],
 								}),
 								jsx("p", { className: "dsp-desc", children: t("manage.description") }),
-								jsxs("div", {
-									className: "dsp-toolbar",
-									children: [
-										jsx("input", {
-											className: "dsp-search",
-											type: "search",
-											value: query,
-											placeholder: t("manage.search"),
-											"aria-label": t("manage.search"),
-											onChange: (event) => setQuery(event.target.value),
-										}),
-										jsx("span", {
-											className: "dsp-count",
-											children: t(countKey, { n: String(filtered.length) }),
-										}),
-									],
-								}),
-								error !== null && jsx("p", {
-									className: "dsp-error",
-									role: "alert",
-									children: t("delete.failed", { message: error }),
-								}),
-								deleted !== null && jsx("p", {
-									className: "dsp-ok",
-									role: "status",
-									children: t("delete.ok", { name: deleted }),
-								}),
-								filtered.length === 0
-									? jsx("div", { className: "dsp-empty", children: t("manage.empty") })
-									: jsx("ul", {
-										className: "dsp-list",
-										children: filtered.map((row) => jsx(PurgeRow, {
-											row,
-											workspaceTitle: workspaceTitleOf.get(row.id),
-											now,
-											busy,
-											onDelete: () => {
-												setError(null);
-												setTarget(row.id);
-											},
-											t,
-										}, row.id)),
-									}),
 							],
 						}),
+					jsxs("div", {
+						className: "dsp-toolbar",
+						children: [
+							jsx("input", {
+								className: "dsp-search",
+								type: "search",
+								value: query,
+								placeholder: t("manage.search"),
+								"aria-label": t("manage.search"),
+								onChange: (event) => setQuery(event.target.value),
+							}),
+							jsx("span", {
+								className: "dsp-count",
+								children: t(countKey, { n: String(filtered.length) }),
+							}),
+						],
 					}),
+					error !== null && jsx("p", {
+						className: "dsp-error",
+						role: "alert",
+						children: t("delete.failed", { message: error }),
+					}),
+					deleted !== null && jsx("p", {
+						className: "dsp-ok",
+						role: "status",
+						children: t("delete.ok", { name: deleted }),
+					}),
+					filtered.length === 0
+						? jsx("div", { className: "dsp-empty", children: t("manage.empty") })
+						: jsx("ul", {
+							className: "dsp-list",
+							children: filtered.map((row) => jsx(PurgeRow, {
+								row,
+								workspaceTitle: workspaceTitleOf.get(row.id),
+								now,
+								busy,
+								onDelete: () => {
+									setError(null);
+									setTarget(row.id);
+								},
+								t,
+							}, row.id)),
+						}),
 					jsxs(Modal, {
 						open: target !== null,
 						onClose: () => {
 							if (!busy) setTarget(null);
 						},
-						closeLabel: t("manage.close"),
 						title: t("delete.confirm.title"),
 						description: t("delete.confirm.desc", { name: targetTitle }),
 						footer: jsxs(react.Fragment, {
@@ -488,24 +453,67 @@ window.__ModuleLoader__.load({
 		}
 
 		/**
+		 * The conversation manager panel (popup).
+		 */
+		function PurgePanel({ open, onClose, sessions, workspaces, connection, t }) {
+			react.useEffect(() => {
+				if (!open) return undefined;
+				const onKeyDown = (event) => {
+					if (event.key !== "Escape") return;
+					onClose();
+				};
+				document.addEventListener("keydown", onKeyDown);
+				return () => document.removeEventListener("keydown", onKeyDown);
+			}, [open, onClose]);
+
+			if (!open) return null;
+
+			return jsx("div", {
+				className: "dsp-overlay",
+				onClick: (event) => {
+					if (event.target === event.currentTarget) onClose();
+				},
+				children: jsx("div", {
+					className: "dsp-panel",
+					role: "dialog",
+					"aria-modal": "true",
+					"aria-label": t("manage.title"),
+					children: jsx(SessionManageView, {
+						sessions,
+						workspaces,
+						connection,
+						t,
+						isSettingsPage: false,
+						onClose,
+					}),
+				}),
+			});
+		}
+
+		/**
+		 * Official Settings Section for managing conversations, placed under EZAI Account.
+		 */
+		function SessionManageSection({ useSessions, useWorkspaces, connection, t }) {
+			const sessions = useSessions((snapshot) => snapshot);
+			const workspaces = useWorkspaces((snapshot) => snapshot);
+			return jsx("div", {
+				className: "dsp-section",
+				children: jsx(SessionManageView, {
+					sessions,
+					workspaces,
+					connection,
+					t,
+					isSettingsPage: true,
+				}),
+			});
+		}
+
+		/**
 		 * The sidebar foot entry: a rail/wide trigger plus the manager panel.
-		 *
-		 * `sidebar.footer.action` is a LIST slot, so this component IS the slot
-		 * cell. Keeping the trigger and the panel in one component makes the
-		 * open/closed state ordinary React state with no cross-slot handshake.
-		 *
-		 * Injected props arrive merged over the standard kit: `wide` and `t` come
-		 * from the shell, `useSessions`/`useWorkspaces` are synthesized from the
-		 * `hooks` face, and `connection` comes from the entry's own inject.
-		 *
-		 * @param props - the merged slot kit.
-		 * @returns the trigger and, while open, the manager panel.
 		 */
 		function PurgeFootAction({ wide, useSessions, useWorkspaces, connection, t }) {
 			const [open, setOpen] = react.useState(false);
 			const close = react.useCallback(() => setOpen(false), []);
-			// Selector-style reads (the framework's observable-hook contract): the
-			// snapshot is only re-read when its identity actually changes.
 			const sessions = useSessions((snapshot) => snapshot);
 			const workspaces = useWorkspaces((snapshot) => snapshot);
 			return jsxs("div", {
@@ -537,28 +545,6 @@ window.__ModuleLoader__.load({
 
 		/**
 		 * Relabel the sidebar's "Ungrouped" bucket.
-		 *
-		 * The bucket heading comes from the UPSTREAM `workspace` locale namespace
-		 * (`WorkspaceBrowser` renders `t('group.ungrouped')` through its own
-		 * `locale: 'workspace'` seat), so it cannot be changed by registering our own
-		 * namespace. `locale.register()` also REFUSES a namespace+locale pair that
-		 * already exists ("locale namespace ... already has locale ..."), so a second
-		 * registration is not an option either.
-		 *
-		 * What DOES work is replacing the stored dictionary objects in place. The
-		 * lookup chain is `active-locale entry ?? en-fallback entry`, so EVERY
-		 * registered locale of the namespace must be rewritten: patching only the
-		 * active one leaves a stale string in the other slot, and a language switch
-		 * would silently revert the label.
-		 *
-		 * This depends on `LocaleRuntime#dicts` (a Map<namespace, Map<locale, dict>>)
-		 * remaining reachable. If a future build renames or hides it, the feature
-		 * degrades to the stock label rather than throwing — see the guards below.
-		 *
-		 * @param ctx - client root context.
-		 * @param labelZh - the Simplified Chinese label.
-		 * @param labelEn - the English label.
-		 * @returns a disposer restoring the original dictionaries, or a no-op.
 		 */
 		function relabelUngroupedBucket(ctx, labelZh, labelEn) {
 			const locale = ctx.get("locale");
@@ -567,14 +553,6 @@ window.__ModuleLoader__.load({
 
 			const replacements = { zh: labelZh, en: labelEn };
 
-			/**
-			 * Patch every locale currently registered under `workspace`.
-			 *
-			 * Application order is NOT guaranteed: the upstream workspace plugin may
-			 * register its dictionaries before or after this plugin's apply(). Calling
-			 * this once at apply time and again on every locale revision covers both
-			 * orders (and a later HMR reload of either plugin).
-			 */
 			const patch = () => {
 				const locales = table.get("workspace");
 				if (!(locales instanceof Map)) return false;
@@ -582,8 +560,6 @@ window.__ModuleLoader__.load({
 				for (const [localeId, dict] of locales) {
 					if (dict === null || typeof dict !== "object") continue;
 					const wanted = replacements[localeId] ?? labelEn;
-					// Skip a dict we already patched, and anything already showing the
-					// wanted label (idempotent across the many revisions a boot emits).
 					if (dict["group.ungrouped"] === wanted) continue;
 					locales.set(localeId, { ...dict, "group.ungrouped": wanted });
 					changed = true;
@@ -594,8 +570,6 @@ window.__ModuleLoader__.load({
 			const first = patch();
 			if (first) locale.publish?.(locale.snapshot?.active, false);
 
-			// Re-patch on every later revision: covers the upstream namespace being
-			// registered after this plugin, and a locale switch that re-resolves.
 			const unsubscribe = typeof locale.subscribe === "function"
 				? locale.subscribe(() => {
 					if (patch()) locale.publish?.(locale.snapshot?.active, false);
@@ -611,24 +585,23 @@ window.__ModuleLoader__.load({
 		exports.inject = ["slots", "sessions", "workspaces", "connection", "locale"];
 
 		/**
-		 * Register the conversation manager into the sidebar foot and relabel the
-		 * sidebar's ungrouped bucket.
-		 *
-		 * @param ctx - client root context.
+		 * Register the conversation manager into:
+		 * 1. Settings section "管理对话" (under EZAI Account, order: 120)
+		 * 2. Sidebar footer quick action
+		 * 3. Relabel the sidebar's ungrouped bucket
 		 */
 		exports.apply = function apply(ctx) {
 			const connection = ctx.get("connection");
 			if (connection === undefined) {
 				throw new Error("dsh-session-purge: the connection service is unavailable");
 			}
-			// Dictionary registration is optional: the panel's own copy is nice to have,
-			// but losing it must never stop the delete action working, so a missing
-			// locale service degrades instead of aborting activation.
 			const locale = ctx.get("locale");
 			if (locale !== undefined && typeof locale.register === "function") {
 				ctx.effect(() => locale.register(NS, { zh, en }), "dsh-session-purge: dictionaries");
 			}
 			ctx.effect(() => relabelUngroupedBucket(ctx, "回收站", "Recycle Bin"), "dsh-session-purge: ungrouped relabel");
+			
+			// 1. Sidebar footer action
 			ctx.slots.inject("sidebar.footer.action", () => ctx.slots.register({
 				name: "sidebar.footer.action",
 				id: "session-purge",
@@ -636,8 +609,22 @@ window.__ModuleLoader__.load({
 				locale: NS,
 				inject: () => ({ connection }),
 			}, PurgeFootAction));
+
+			// 2. Settings dialog section: right under EZAI Account (order: 120)
+			ctx.slots.inject("settings.section", () => ctx.slots.register({
+				name: "settings.section",
+				id: "session-purge",
+				order: 120,
+				label: () => {
+					const t = ctx.locale?.bind?.(NS) ?? ((k) => (k === "manage.title" ? zh["manage.title"] : k));
+					return t("manage.title");
+				},
+				locale: NS,
+				inject: () => ({ connection }),
+			}, SessionManageSection));
 		};
 
 		return module.exports;
 	},
 });
+
