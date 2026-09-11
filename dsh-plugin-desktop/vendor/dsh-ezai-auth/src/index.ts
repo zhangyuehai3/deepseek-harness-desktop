@@ -151,8 +151,24 @@ void (async () => {
 
 const DEEPSEEK_MODELS = [
   {
+    id: 'deepseek-flash',
+    name: 'DeepSeek V4.1 Flash',
+    contextWindow: 1000000,
+    maxTokens: 256000,
+    input: ['text', 'image'],
+    inputModalities: ['text', 'image'],
+  },
+  {
+    id: 'deepseek-v4-pro',
+    name: 'DeepSeek V4 Pro',
+    contextWindow: 1000000,
+    maxTokens: 256000,
+    input: ['text', 'image'],
+    inputModalities: ['text', 'image'],
+  },
+  {
     id: 'deepseek-v4-flash',
-    name: 'DeepSeek V4 Flash',
+    name: 'DeepSeek V4 Flash (兼容已下线模型)',
     contextWindow: 1000000,
     maxTokens: 256000,
     input: ['text', 'image'],
@@ -287,7 +303,7 @@ async function ensureDefaultModelConfig(ctx: any, department?: string): Promise<
       const defaultModelNs = settingsNamespace('agent-default-model')
       await settings.replace(defaultModelNs, {
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
       })
     }
 
@@ -295,7 +311,7 @@ async function ensureDefaultModelConfig(ctx: any, department?: string): Promise<
     if (agentDefaultModel?.saveSelection) {
       await agentDefaultModel.saveSelection({
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
       })
     }
   } catch {
@@ -342,7 +358,7 @@ async function ensureDefaultModelConfig(ctx: any, department?: string): Promise<
       }
       settingsDoc['agent-default-model'] = {
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
       }
       await fs.writeFile(settingsPath, stringify(settingsDoc), 'utf8')
     } catch {}
@@ -375,7 +391,7 @@ async function ensureDefaultModelConfig(ctx: any, department?: string): Promise<
       }
       profileDoc['agent-default-model'] = {
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
       }
       await fs.mkdir(path.dirname(profileDesktopSettingsPath), { recursive: true })
       await fs.writeFile(profileDesktopSettingsPath, JSON.stringify(profileDoc, null, 2), 'utf8')
@@ -855,7 +871,7 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
     })
   )
 
-  // 4. Intercept Agent request configuration: Default to deepseek & deepseek-v4-flash
+  // 4. Intercept Agent request configuration: Default to deepseek & deepseek-flash
   ctx.on('agent/request', async (_payload: any, next: () => Promise<any>) => {
     try {
       const creds = ctx.get?.('credentials')
@@ -875,7 +891,16 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
       return {
         ...requested,
         provider: 'deepseek',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
+      }
+    }
+    // Seamless fallback/upgrade for legacy deepseek models to V4.1 Flash
+    if (requested.provider === 'deepseek' || requested.provider === 'deepseek-anthropic' || requested.provider === 'deepseek-official') {
+      if (requested.model === 'deepseek-v4-flash' || requested.model === 'deepseek-v4-flash-vision-exp') {
+        return {
+          ...requested,
+          model: 'deepseek-flash',
+        }
       }
     }
     return requested
@@ -896,10 +921,16 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
       return !llm || !llm.listProviders || llm.listProviders().some((entry: any) => entry.id === p)
     }
 
-    // Seamless fallback: If a request targets unserved or legacy provider, redirect to deepseek & deepseek-v4-flash
+    // Seamless fallback: If a request targets unserved or legacy provider, redirect to deepseek & deepseek-flash
     if (options && (!options.provider || !isServed(options.provider))) {
       options.provider = 'deepseek'
-      options.model = 'deepseek-v4-flash'
+      options.model = 'deepseek-flash'
+    }
+    // Seamless upgrade for legacy deepseek models to V4.1 Flash
+    if (options && (options.provider === 'deepseek' || options.provider === 'deepseek-anthropic' || options.provider === 'deepseek-official')) {
+      if (options.model === 'deepseek-v4-flash' || options.model === 'deepseek-v4-flash-vision-exp') {
+        options.model = 'deepseek-flash'
+      }
     }
 
     const snapshot = await session.getSnapshot()

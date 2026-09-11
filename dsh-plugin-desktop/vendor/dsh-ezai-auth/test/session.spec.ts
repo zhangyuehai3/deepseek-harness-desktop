@@ -162,7 +162,7 @@ describe('session store', () => {
         if (name === 'llm') {
           return {
             listProviders() {
-              return [{ id: 'deepseek' }]
+              return [{ id: 'deepseek' }, { id: 'deepseek-anthropic' }]
             },
           }
         }
@@ -185,18 +185,29 @@ describe('session store', () => {
     const legacyRequested = { provider: 'kimi-coding', model: 'moonshot-v1-8k' }
     const result1 = await agentRequestHandler({}, async () => legacyRequested)
     assert.equal(result1.provider, 'deepseek')
-    assert.equal(result1.model, 'deepseek-v4-flash')
+    assert.equal(result1.model, 'deepseek-flash')
 
     // 2. Test agent/request intercepts unknown/unserved provider
     const unknownRequested = { provider: 'unknown-provider', model: 'unknown-model' }
     const result2 = await agentRequestHandler({}, async () => unknownRequested)
     assert.equal(result2.provider, 'deepseek')
-    assert.equal(result2.model, 'deepseek-v4-flash')
+    assert.equal(result2.model, 'deepseek-flash')
 
     // 3. Test agent/request keeps valid served provider
     const validRequested = { provider: 'deepseek', model: 'deepseek-chat' }
     const result3 = await agentRequestHandler({}, async () => validRequested)
     assert.equal(result3.provider, 'deepseek')
     assert.equal(result3.model, 'deepseek-chat')
+
+    // 4. Test agent/request seamlessly upgrades legacy deepseek-v4-flash to deepseek-flash
+    const legacyModelRequested = { provider: 'deepseek', model: 'deepseek-v4-flash' }
+    const result4 = await agentRequestHandler({}, async () => legacyModelRequested)
+    assert.equal(result4.provider, 'deepseek')
+    assert.equal(result4.model, 'deepseek-flash')
+
+    const legacyVisionRequested = { provider: 'deepseek-anthropic', model: 'deepseek-v4-flash-vision-exp' }
+    const result5 = await agentRequestHandler({}, async () => legacyVisionRequested)
+    assert.equal(result5.provider, 'deepseek-anthropic')
+    assert.equal(result5.model, 'deepseek-flash')
   })
 })
