@@ -59,7 +59,7 @@ export interface DesktopPnpmRuntimeInstallation {
   dispose(): void
 }
 
-/** Inputs used to publish the packaged DSH command to Windows Host plugins. */
+/** Inputs used to publish the packaged EZAI command to Windows Host plugins. */
 export interface DesktopDshRuntimeOptions {
   platform: NodeJS.Platform
   appExecutable: string
@@ -70,7 +70,7 @@ export interface DesktopDshRuntimeOptions {
   environment?: NodeJS.ProcessEnv
 }
 
-/** Generated DSH command and its reversible Host PATH update. */
+/** Generated EZAI command and its reversible Host PATH update. */
 export interface DesktopDshRuntimeInstallation {
   pathDir: string
   dshShimPath: string
@@ -420,7 +420,7 @@ function windowsPnpmShim(options: DesktopPnpmRuntimeOptions): string {
   ].join('\r\n')
 }
 
-/** Build the public Windows DSH command scoped to one active profile. */
+/** Build the public Windows EZAI command scoped to one active profile. */
 function windowsDshShim(options: DesktopDshRuntimeOptions): string {
   return [
     '@echo off',
@@ -510,7 +510,7 @@ function installPathDirectory(
   }
 }
 
-/** Install the packaged DSH command into the Windows Host process PATH. */
+/** Install the packaged EZAI command into the Windows Host process PATH. */
 export function installDesktopDshRuntime(options: DesktopDshRuntimeOptions): DesktopDshRuntimeInstallation {
   if (options.platform !== 'win32') {
     throw new Error(`dsh-plugin-desktop: dsh runtime is unsupported on ${options.platform}`)
@@ -518,7 +518,7 @@ export function installDesktopDshRuntime(options: DesktopDshRuntimeOptions): Des
   assertDesktopProfileName(options.profileName)
   for (const [label, value] of [
     ['application executable', options.appExecutable],
-    ['DSH bootstrap', options.dshBootstrapPath],
+    ['EZAI bootstrap', options.dshBootstrapPath],
     ['Harness home', options.homeDir],
     ['state directory', options.stateDir],
   ] as const) assertScriptValue(label, value)

@@ -1,4 +1,4 @@
-/** Private RunAsNode bootstrap for the packaged DeepSeek Harness CLI. */
+/** Private RunAsNode bootstrap for the packaged EZAI Harness CLI. */
 
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -81,7 +81,7 @@ export function desktopCliProfileManifestUrl(
 }
 
 /**
- * Enter the packaged DSH CLI without any plugin-install transaction wrapper.
+ * Enter the packaged EZAI CLI without any plugin-install transaction wrapper.
  * Manual plugin commands and Market operations rely on unified checkpoints.
  */
 export async function runDesktopDshCli(

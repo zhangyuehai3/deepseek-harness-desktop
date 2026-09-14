@@ -31,6 +31,26 @@ function isValidationRequest(value: unknown): value is DesktopDirectoryValidatio
   return typeof path === 'string' && path.trim().length > 0
 }
 
+function isLoopbackAddress(address: string | undefined): boolean {
+  if (address === undefined) return false
+  return address === '127.0.0.1' || address === '::1' || address === '::ffff:127.0.0.1'
+}
+
+function isOriginAllowed(req: IncomingMessage, expectedOrigin: string): boolean {
+  if (req.headers.origin === expectedOrigin) return true
+  if (isLoopbackAddress(req.socket?.remoteAddress)) {
+    if (!req.headers.origin) return true
+    try {
+      const originUrl = new URL(req.headers.origin)
+      const expectedUrl = new URL(expectedOrigin)
+      if (originUrl.port === expectedUrl.port && (originUrl.hostname === '127.0.0.1' || originUrl.hostname === 'localhost')) {
+        return true
+      }
+    } catch {}
+  }
+  return false
+}
+
 /** Validate and serve one native directory-picker request from the desktop renderer. */
 export async function handleDesktopDirectoryPickerRequest(
   req: IncomingMessage,
@@ -40,7 +60,7 @@ export async function handleDesktopDirectoryPickerRequest(
   reportError: (cause: unknown) => void = () => {},
 ): Promise<void> {
   if (req.method !== 'POST') return finishJson(res, 405, { error: 'method not allowed' })
-  if (req.headers.origin !== expectedOrigin) return finishJson(res, 403, { error: 'forbidden' })
+  if (!isOriginAllowed(req, expectedOrigin)) return finishJson(res, 403, { error: 'forbidden' })
   try {
     const response: DesktopDirectoryPickerResponse = { path: await pickDirectory() }
     finishJson(res, 200, response)
@@ -59,7 +79,7 @@ export async function handleDesktopDirectoryValidationRequest(
   reportError: (cause: unknown) => void = () => {},
 ): Promise<void> {
   if (req.method !== 'POST') return finishJson(res, 405, { error: 'method not allowed' })
-  if (req.headers.origin !== expectedOrigin) return finishJson(res, 403, { error: 'forbidden' })
+  if (!isOriginAllowed(req, expectedOrigin)) return finishJson(res, 403, { error: 'forbidden' })
   if (req.headers['content-type']?.split(';', 1)[0]?.trim().toLowerCase() !== 'application/json') {
     return finishJson(res, 415, { error: 'content type must be application/json' })
   }

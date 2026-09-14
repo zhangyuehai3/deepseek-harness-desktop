@@ -88,7 +88,7 @@ export interface DesktopTerminalOptions {
   pnpmBinPath: string
   /** Electron version used by pnpm native dependency installation. */
   electronVersion: string
-  /** DSH profile selected by the desktop application. */
+  /** EZAI profile selected by the desktop application. */
   profileName: string
   /** Product version displayed in the welcome message. */
   productVersion: string
@@ -636,7 +636,7 @@ function windowsLaunchBroker(
   return [
     '@echo off',
     'setlocal EnableDelayedExpansion',
-    `start "EZAI Desktop Beta" /D "!${WINDOWS_PROFILE_DIRECTORY}!" ${target}`,
+    `start "EZAI Desktop" /D "!${WINDOWS_PROFILE_DIRECTORY}!" ${target}`,
     'exit /b %errorlevel%',
     '',
   ].join('\r\n')

@@ -1,4 +1,4 @@
-/** Desktop-owned pnpm execution capability for the active DSH Profile. */
+/** Desktop-owned pnpm execution capability for the active EZAI Profile. */
 
 import { delimiter, isAbsolute } from 'node:path'
 import { pathToFileURL } from 'node:url'
