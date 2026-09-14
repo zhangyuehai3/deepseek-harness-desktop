@@ -555,7 +555,9 @@
     "@deepseek-ai/dsh-web-search-exa@npm:0.1.5-rc.2": "file:vendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-web-search-exa-0.1.5-rc.2.tgz",
     "@deepseek-ai/dsh-web-search-exa@npm:^0.1.5-rc.2": "file:vendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-web-search-exa-0.1.5-rc.2.tgz",
     "@deepseek-ai/dsh-web-search-perplexity@npm:0.1.5-rc.2": "file:vendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-web-search-perplexity-0.1.5-rc.2.tgz",
-    "@deepseek-ai/dsh-web-search-perplexity@npm:^0.1.5-rc.2": "file:vendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-web-search-perplexity-0.1.5-rc.2.tgz"
+    "@deepseek-ai/dsh-web-search-perplexity@npm:^0.1.5-rc.2": "file:vendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-web-search-perplexity-0.1.5-rc.2.tgz",
+    "@deepseek-ai/dsh-remote-mock@npm:0.1.5-rc.2": "file:vendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-remote-mock-0.1.5-rc.2.tgz",
+    "@deepseek-ai/dsh-remote-mock@npm:^0.1.5-rc.2": "file:vendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-remote-mock-0.1.5-rc.2.tgz"
   },
   "dependenciesMeta": {
     "@deepseek-ai/dsh-subprocess-local": {

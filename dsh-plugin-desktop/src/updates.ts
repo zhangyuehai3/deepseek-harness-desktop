@@ -47,7 +47,6 @@ export function apply(ctx: Context, config: Config): void {
     const lifecycle = startDesktopUpdateLifecycle({
       adapter: ctx.desktopRuntime.updates,
       policy: config,
-      platform: ctx.desktopRuntime.platform,
       locale: () => ctx.desktopRuntime.locale,
       registerTrayItem: item => ctx.desktopRuntime.registerTrayItem(item),
     })
