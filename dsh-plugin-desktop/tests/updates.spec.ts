@@ -1,14 +1,23 @@
 import { mkdir, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
+import type {
+  ConnectionRequestRejection,
+  ConnectionTrustRequest,
+} from '@deepseek-ai/dsh-client-connection'
+import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type {
   DesktopNotification,
   DesktopRuntime,
   DesktopTrayItem,
 } from '../src/runtime.ts'
-import type { UpdateCheckResult } from '../src/update-checker.ts'
+import {
+  DESKTOP_RELEASE_CHANNEL_HEADER,
+  type UpdateCheckResult,
+} from '../src/update-checker.ts'
 import { apply, Config, inject, type Config as UpdateConfig } from '../src/updates.ts'
 
 const testConfig: UpdateConfig = {
@@ -25,6 +34,7 @@ function versionResponse(version: unknown): Response {
 interface Harness {
   readonly statePath: string
   readonly tray: DesktopTrayItem
+  readonly trays: readonly DesktopTrayItem[]
   readonly notifications: DesktopNotification[]
   readonly warnings: unknown[][]
   readonly confirmDownload: ReturnType<typeof vi.fn>
@@ -32,6 +42,10 @@ interface Harness {
   readonly downloadAndOpen: ReturnType<typeof vi.fn>
   readonly refresh: ReturnType<typeof vi.fn>
   readonly registrationDispose: ReturnType<typeof vi.fn>
+  readonly requestRejection: ReturnType<typeof vi.fn<(
+    request: ConnectionTrustRequest,
+  ) => ConnectionRequestRejection>>
+  readonly route: WebRoute
   dispose(): Promise<void>
 }
 
@@ -40,9 +54,11 @@ async function createHarness(options: {
   readonly canDownload?: boolean
   readonly config?: UpdateConfig
   readonly request?: DesktopRuntime['updates']['request']
-  readonly confirmDownload?: (version: string) => Promise<boolean>
+  readonly releaseChannel?: 'stable' | 'beta'
+  readonly currentVersion?: string
+  readonly confirmDownload?: (version: string, channel?: 'stable' | 'beta') => Promise<boolean>
   readonly showManualCheckResult?: (result: UpdateCheckResult | null) => Promise<void>
-  readonly downloadAndOpen?: (version: string, signal: AbortSignal) => Promise<void>
+  readonly downloadAndOpen?: (version: string, signal: AbortSignal, channel?: 'stable' | 'beta') => Promise<void>
   readonly notify?: (notification: DesktopNotification) => void
   readonly locale?: DesktopRuntime['locale']
   readonly state?: string
@@ -60,13 +76,19 @@ async function createHarness(options: {
   const confirmDownload = vi.fn(options.confirmDownload ?? (async () => false))
   const showManualCheckResult = vi.fn(options.showManualCheckResult ?? (async () => {}))
   const downloadAndOpen = vi.fn(options.downloadAndOpen ?? (async () => {}))
+  const requestRejection = vi.fn<(
+    request: ConnectionTrustRequest,
+  ) => ConnectionRequestRejection>(() => undefined)
   let tray: DesktopTrayItem | undefined
+  const trays: DesktopTrayItem[] = []
+  let route: WebRoute | undefined
   let disposer: (() => void | Promise<void>) | undefined
   const runtime = {
     locale: options.locale ?? 'en',
     updates: {
       isPackaged: options.packaged ?? true,
-      currentVersion: '2.0.0',
+      currentVersion: options.currentVersion ?? '2.0.0',
+      ...(options.releaseChannel === undefined ? {} : { releaseChannel: options.releaseChannel }),
       statePath,
       canDownload: options.canDownload ?? true,
       request: options.request ?? (async () => versionResponse('2.0.0')),
@@ -76,7 +98,8 @@ async function createHarness(options: {
       notify: options.notify ?? ((notification: DesktopNotification) => { notifications.push(notification) }),
     },
     registerTrayItem: (item: DesktopTrayItem) => {
-      tray = item
+      tray ??= item
+      trays.push(item)
       return { refresh, dispose: registrationDispose }
     },
   } as unknown as DesktopRuntime
@@ -84,8 +107,12 @@ async function createHarness(options: {
     desktopRuntime: runtime,
     webServer: {
       port: 43120,
-      register: () => () => {},
+      register: (registered: WebRoute) => {
+        route = registered
+        return () => {}
+      },
     },
+    connection: { requestRejection },
     logger: { warn: (...args: unknown[]) => { warnings.push(args) } },
     effect: (register: () => (() => void | Promise<void>)) => {
       disposer = register()
@@ -95,9 +122,11 @@ async function createHarness(options: {
 
   apply(ctx, options.config ?? testConfig)
   if (tray === undefined) throw new Error('Update tray item was not registered.')
+  if (route === undefined) throw new Error('Update route was not registered.')
   return {
     statePath,
     tray,
+    trays,
     notifications,
     warnings,
     confirmDownload,
@@ -105,6 +134,8 @@ async function createHarness(options: {
     downloadAndOpen,
     refresh,
     registrationDispose,
+    requestRejection,
+    route,
     dispose: async () => { await disposer?.() },
   }
 }
@@ -114,8 +145,39 @@ afterEach(() => {
 })
 
 describe('desktop update Host plugin', () => {
+  it('checks Beta automatically and installs an older stable release only through the explicit action', async () => {
+    const request = vi.fn(async (_url: string, init: RequestInit) => {
+      const channel = new Headers(init.headers).get(DESKTOP_RELEASE_CHANNEL_HEADER)
+      return Response.json(channel === 'beta'
+        ? { version: '2.0.6-beta.1', channel: 'beta' }
+        : { version: '2.0.4', channel: 'stable' })
+    })
+    const harness = await createHarness({
+      releaseChannel: 'beta',
+      currentVersion: '2.0.6-beta.1',
+      request,
+      confirmDownload: async () => true,
+    })
+
+    expect(harness.trays).toHaveLength(2)
+    await harness.tray.invoke()
+    expect(harness.downloadAndOpen).not.toHaveBeenCalled()
+
+    await harness.trays[1]!.invoke()
+    expect(harness.confirmDownload).toHaveBeenCalledWith('2.0.4', 'stable')
+    expect(harness.downloadAndOpen).toHaveBeenCalledWith(
+      '2.0.4',
+      expect.any(AbortSignal),
+      'stable',
+    )
+    const channels = request.mock.calls.map(([, init]) => new Headers(init.headers).get(DESKTOP_RELEASE_CHANNEL_HEADER))
+    expect(channels).toContain('beta')
+    expect(channels).toContain('stable')
+    await harness.dispose()
+  })
+
   it('exposes the packaged 60-second and six-hour background policy', () => {
-    expect(inject).toEqual(['desktopRuntime', 'webServer'])
+    expect(inject).toEqual(['desktopRuntime', 'webServer', 'connection'])
     expect(Config({} as UpdateConfig)).toEqual({
       enabled: true,
       initialDelayMs: 60_000,
@@ -124,6 +186,65 @@ describe('desktop update Host plugin', () => {
     })
     expect(() => Config({ intervalMs: 0 } as UpdateConfig)).toThrow()
     expect(() => Config({ requestTimeoutMs: 0 } as UpdateConfig)).toThrow()
+  })
+
+  it.each([
+    [401, 'unauthorized'],
+    [403, 'forbidden'],
+  ] as const)('applies the Connection %i rejection before the interactive update route', async (
+    status,
+    body,
+  ) => {
+    const request = vi.fn(async () => versionResponse('2.0.0'))
+    const harness = await createHarness({ packaged: false, request })
+    harness.requestRejection.mockReturnValue(status)
+    const req = { headers: {} } as IncomingMessage
+    const writeHead = vi.fn()
+    const end = vi.fn()
+    const res = { writeHead, end } as unknown as ServerResponse
+
+    await harness.route.handler(req, res)
+
+    expect(harness.requestRejection).toHaveBeenCalledWith(req)
+    expect(writeHead).toHaveBeenCalledWith(status)
+    expect(end).toHaveBeenCalledWith(body)
+    expect(request).not.toHaveBeenCalled()
+    expect(harness.showManualCheckResult).not.toHaveBeenCalled()
+    await harness.dispose()
+  })
+
+  it('passes an authenticated interactive update request to the existing route handler', async () => {
+    const request = vi.fn(async () => versionResponse('2.0.0'))
+    const harness = await createHarness({ packaged: false, request })
+    const req = {
+      method: 'POST',
+      headers: {
+        host: '127.0.0.1:43120',
+        origin: 'http://127.0.0.1:43120',
+        'content-type': 'application/json',
+      },
+      socket: { remoteAddress: '127.0.0.1' },
+      async * [Symbol.asyncIterator]() { yield Buffer.from('{}') },
+    } as unknown as IncomingMessage
+    let body = ''
+    const res = {
+      statusCode: 200,
+      setHeader: vi.fn(),
+      end: vi.fn((value?: string) => { body = value ?? '' }),
+    } as unknown as ServerResponse
+
+    await harness.route.handler(req, res)
+
+    expect(harness.requestRejection).toHaveBeenCalledWith(req)
+    expect(request).toHaveBeenCalledOnce()
+    expect(harness.showManualCheckResult).toHaveBeenCalledWith({
+      status: 'up-to-date',
+      currentVersion: '2.0.0',
+      latestVersion: '2.0.0',
+    })
+    expect(res.statusCode).toBe(200)
+    expect(JSON.parse(body)).toEqual({ accepted: true })
+    await harness.dispose()
   })
 
   it('renders the update tray command in the active native locale', async () => {

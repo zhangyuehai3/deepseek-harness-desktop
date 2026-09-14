@@ -1,8 +1,8 @@
 <p align="center">
-  <a href="https://dshdesktop.cn"><img src="assets/desktop-hero-en.png" alt="EZAI Desktop, an open-source desktop client built on DeepSeek Harness" width="100%"></a>
+  <a href="https://dshdesktop.cn"><img src="assets/desktop-hero-en.png" alt="DSH Desktop, an open-source desktop client built on DeepSeek Harness" width="100%"></a>
 </p>
 
-<h1 align="center">EZAI Desktop</h1>
+<h1 align="center">DSH Desktop</h1>
 
 <p align="center">
   <strong>An open-source desktop client for Windows and macOS, built on DeepSeek Harness.</strong>
@@ -17,7 +17,7 @@
 <p align="center"><sub>An independent community project, not affiliated with, authorized by, or endorsed by DeepSeek.<br>No DeepSeek employee or official upstream DeepSeek Harness team member currently participates in this repository; upstream contributors shown by GitHub are inherited from synchronized fork history.<br><a href="README.md">中文</a> · English</sub></p>
 
 <p align="center">
-  <img src="assets/desktop-chat-en.png" alt="EZAI Desktop chat interface in English" width="100%">
+  <img src="assets/desktop-chat-en.png" alt="DSH Desktop chat interface in English" width="100%">
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@
   <img src="https://img.shields.io/badge/macOS%20%7C%20Windows-4493F8?style=flat-square" alt="Supported platforms: macOS and Windows">
 </p>
 
-EZAI Desktop integrates the local Web UI, Host service, and plugin system from [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) into a native desktop application. It runs a pinned upstream version unchanged, while EZAI Desktop provides the window, tray, terminal, updates, and work profiles through the plugin mechanism provided by DeepSeek Harness.
+DSH Desktop integrates the local Web UI, Host service, and plugin system from [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) into a native desktop application. It runs a pinned upstream version unchanged, while DSH Desktop provides the window, tray, terminal, updates, and work profiles through the plugin mechanism provided by DeepSeek Harness.
 
 <a id="run"></a>
 
@@ -40,27 +40,20 @@ Current release installers support Windows x64 and macOS Universal. No extra env
 | Platform | Download | Installation |
 | --- | --- | --- |
 | Windows x64 | [Download installer](https://www.dshdesktop.cn/api/downloads/windows) | Run the NSIS installer and follow its prompts |
-| macOS Universal | [Download DMG](https://www.dshdesktop.cn/api/downloads/mac) | Open the DMG and drag EZAI Desktop into Applications |
+| macOS Universal | [Download DMG](https://www.dshdesktop.cn/api/downloads/mac) | Open the DMG and drag DSH Desktop into Applications |
 
 See the [user guide](docs/user-guide.en.md) and [FAQ](docs/faq.en.md) for plugin commands, platform details, and troubleshooting.
 
-Together with every plugin author, we want to build an open, composable, and sustainable EZAI plugin ecosystem where plugins grow alongside each other. Read the [EZAI plugin ecosystem manifesto](docs/plugin-ecosystem.en.md).
+Together with every plugin author, we want to build an open, composable, and sustainable DSH plugin ecosystem where plugins grow alongside each other. Read the [DSH plugin ecosystem manifesto](docs/plugin-ecosystem.en.md).
 
 <details open>
 <summary>❤️ Sponsors</summary>
 
 | Logo | Introduction |
 | --- | --- |
-| <a href="https://astraflow.ucloud.cn/modelverse/playground?ytag=geo_waituo_dsh"><img src="assets/sponsors/astraflow-logo.png" alt="UCloud AstraFlow" width="96"></a> | Thanks to UCloud AstraFlow for sponsoring this project. UCloud AstraFlow ModelVerse supports one-click access to 200+ models, including Kimi K3, DeepSeek V4/V3, Qwen 3, GLM5.2, happyhorse, and other leading open-source models worldwide, with no self-training required. [Website](https://astraflow.ucloud.cn/modelverse/playground?ytag=geo_waituo_dsh) |
-
-<details>
-<summary>More Sponsors</summary>
-
-| Logo | Introduction |
-| --- | --- |
-| <a href="https://88api.ai/sign-up?aff=VnEb"><img src="assets/sponsors/88api-logo.png" alt="88API" width="120"></a> | 88API is a one-stop multi-model API aggregation platform operated by an overseas company, with stable, efficient service and invoice support. It provides official-transfer and open-source DeepSeek channels, with pricing as low as 50% off, and is designed to work well with EZAI Desktop. One API key can connect to many domestic and overseas models across text chat, image, audio, music, and video generation APIs for AI coding, agent automation, content creation, and application development. Register here to try a convenient unified AI model calling service. [Website](https://88api.ai/sign-up?aff=VnEb) |
-
-</details>
+| <a href="https://dshdesktop.cn/sponsors/wuying"><img src="assets/sponsors/wuying-cloud-computer-logo.png" alt="Alibaba Cloud Wuying Cloud Computer" width="96"></a> | [**Alibaba Cloud · Wuying Cloud Computer**](https://dshdesktop.cn/sponsors/wuying)<br>Thanks to **Alibaba Cloud** Wuying Cloud Computer for sponsoring this project. Wuying Cloud Computer Personal Edition provides a cloud desktop for individual users, with compute, storage, and the desktop environment hosted in the cloud. It supports access from multiple device types and lets users choose specifications on demand, making it useful for remote work, learning, development, and lightweight creative workflows.<br><br>[**Register in WeChat →**](https://dshdesktop.cn/sponsors/wuying) |
+| <a href="https://astraflow.ucloud.cn/modelverse/playground?ytag=geo_waituo_dsh"><img src="assets/sponsors/astraflow-logo.png" alt="UCloud AstraFlow" width="96"></a> | [**UCloud · AstraFlow**](https://astraflow.ucloud.cn/modelverse/playground?ytag=geo_waituo_dsh)<br>Thanks to **UCloud** AstraFlow for sponsoring this project. **UCloud** AstraFlow ModelVerse supports one-click access to 200+ models, including Kimi K3, DeepSeek V4/V3, Qwen 3, GLM5.2, happyhorse, and other leading open-source models worldwide, with no self-training required.<br><br>[**Visit website →**](https://astraflow.ucloud.cn/modelverse/playground?ytag=geo_waituo_dsh) |
+| <a href="https://88api.ai/sign-up?aff=VnEb"><img src="assets/sponsors/88api-logo.png" alt="88API" width="120"></a> | [**88API**](https://88api.ai/sign-up?aff=VnEb)<br>88API is a one-stop multi-model API aggregation platform operated by an overseas company, with stable, efficient service and invoice support. It provides official-transfer and open-source DeepSeek channels, with pricing as low as 50% off, and is designed to work well with DSH Desktop. One API key can connect to many domestic and overseas models across text chat, image, audio, music, and video generation APIs for AI coding, agent automation, content creation, and application development.<br><br>[**Register now →**](https://88api.ai/sign-up?aff=VnEb) |
 
 </details>
 
@@ -75,7 +68,7 @@ Ordinary users can start with the [user guide](docs/user-guide.en.md); the devel
 | Install and use the application | [User guide](docs/user-guide.en.md) |
 | Check platforms, prerequisites, and product boundaries | [FAQ](docs/faq.en.md) |
 | Understand data processing and privacy choices | [Privacy Policy](PRIVACY.md) |
-| Understand why the project exists | [Why EZAI Desktop](docs/why-desktop.en.md) |
+| Understand why the project exists | [Why DSH Desktop](docs/why-desktop.en.md) |
 | See the full documentation and README map | [Documentation index](docs/README.en.md) |
 
 ### Developer and maintainer documentation
@@ -84,9 +77,9 @@ Ordinary users can start with the [user guide](docs/user-guide.en.md); the devel
 | --- | --- |
 | Read the plugin ecosystem manifesto | [Plugin ecosystem manifesto](docs/plugin-ecosystem.en.md) |
 | Build ordinary or Desktop plugins | [Plugin development](docs/plugin-development.en.md) |
-| Join the unified plugin-contract discussion | [EZAI Community Fabric Draft](dsh-community-fabric/README.md) |
+| Join the unified plugin-contract discussion | [DSH Community Fabric Draft](dsh-community-fabric/README.md) |
 | See the research behind the unified plugin framework | [Framework and real-plugin research](dsh-community-fabric/docs/research/mature-plugin-frameworks.md) |
-| Read the plugin market product and safety design | [EZAI Community Market](dsh-community-market/README.md) |
+| Read the plugin market product and safety design | [DSH Community Market](dsh-community-market/README.md) |
 | See what Desktop plugins can use | [Desktop plugin API](dsh-plugin-desktop/docs/plugin-services.md) |
 | Understand how the desktop works | [Architecture](docs/architecture.en.md) |
 | Read package-level build and release details | [`dsh-plugin-desktop/README.md`](dsh-plugin-desktop/README.md) |
@@ -107,44 +100,44 @@ Ordinary users can start with the [user guide](docs/user-guide.en.md); the devel
   <tr>
     <td width="50%" valign="top">
       <h3><a href="dsh-community-market/README.md">Plugin Marketplace</a> <img src="https://img.shields.io/badge/BUILT_IN-2EA44F?style=flat-square" alt="Built in"></h3>
-      <p>EZAI Community Market is complete and built in, with plugin discovery, details, installation, and management. The market openly connects to a wide range of plugin data sources: anyone can provide, integrate, and use a source that follows the public schemas, while existing APIs can join as cooperating sources through a reviewed adapter.</p>
+      <p>DSH Community Market is complete and built in, with plugin discovery, details, installation, and management. The market openly connects to a wide range of plugin data sources: anyone can provide, integrate, and use a source that follows the public schemas, while existing APIs can join as cooperating sources through a reviewed adapter.</p>
     </td>
     <td width="50%" valign="top">
       <h3>Co-build the Plugin Ecosystem</h3>
-      <p>The EZAI plugin ecosystem is built by the community. Upstream plugins, EZAI Desktop plugins, and other community plugins follow shared conventions and can work together through the same composition mechanism. Join us — read the <a href="docs/plugin-ecosystem.en.md">EZAI plugin ecosystem manifesto</a>.</p>
+      <p>The DSH plugin ecosystem is built by the community. Upstream plugins, DSH Desktop plugins, and other community plugins follow shared conventions and can work together through the same composition mechanism. Join us — read the <a href="docs/plugin-ecosystem.en.md">DSH plugin ecosystem manifesto</a>.</p>
     </td>
   </tr>
 </table>
 
 ### First-run setup, browser access, and LAN exposure
 
-On the normal first launch of each uninitialized profile, Desktop shows its native Setup Wizard first. It can configure the window mode and system material, plugin marketplace, notifications, whether to open the system default browser automatically, and the Web access scope; it can also be skipped. The Host and main EZAI window do not start until the wizard is completed or skipped. Completion or skip state is recorded separately for each profile; an explicit recovery launch still enters Recovery Assistant first.
+On the normal first launch of each uninitialized profile, Desktop shows its native Setup Wizard first. It can configure the window mode and system material, plugin marketplace, notifications, whether to open the system default browser automatically, and the Web access scope; it can also be skipped. The Host and main DSH window do not start until the wizard is completed or skipped. Completion or skip state is recorded separately for each profile; an explicit recovery launch still enters Recovery Assistant first.
 
 The Web service listens on the local loopback interface by default. When **Open in browser** is enabled, Desktop hands the page to the system default browser after the Web service is actually ready; this preference does not change the listener exposure. **Desktop settings** shows the actual local URL below the control. LAN access is a separate opt-in setting and exposes the currently available LAN URLs when enabled.
 
-> **Danger:** LAN exposure has no authentication. Anyone on the same local network can open EZAI and directly operate your computer. Enable it only on a fully trusted network and with great care.
+> **Danger:** LAN exposure has no authentication. Anyone on the same local network can open DSH and directly operate your computer. Enable it only on a fully trusted network and with great care.
 
-The automatic updater's fixed version-check request sends a locally generated, persistently stored random UUID in the `X-DSH-Desktop-Installation-Id` header; the value is not derived from hardware information. Package download requests and their download redirects do not receive this header.
+The automatic updater's fixed version-check request sends the installed version in the `X-DSH-Desktop-Version` header and a locally generated, persistently stored random UUID in the `X-DSH-Desktop-Installation-Id` header; the value is not derived from hardware information. Package download requests and their download redirects do not receive these headers.
 
 ## Plugin Ecosystem
 
-Plugins are extensions that add capabilities to EZAI — models, tools, interfaces, and workflows can all be plugins, combined like building blocks.
+Plugins are extensions that add capabilities to DSH — models, tools, interfaces, and workflows can all be plugins, combined like building blocks.
 
-EZAI Desktop does not modify upstream source, and it is not a fixed, hardcoded shell. A pinned upstream DeepSeek Harness version runs unchanged; the desktop shell itself — the window, tray, terminal, updates, and work profiles — integrates as an EZAI plugin through the plugin mechanism provided by DeepSeek Harness. From the core agent to the desktop shell, the whole product follows the same "everything is a plugin" rule: plugins compatible with the pinned upstream version can be used, while desktop capabilities are composed, replaced, and evolved in the same way.
+DSH Desktop does not modify upstream source, and it is not a fixed, hardcoded shell. A pinned upstream DeepSeek Harness version runs unchanged; the desktop shell itself — the window, tray, terminal, updates, and work profiles — integrates as a DSH plugin through the plugin mechanism provided by DeepSeek Harness. From the core agent to the desktop shell, the whole product follows the same "everything is a plugin" rule: plugins compatible with the pinned upstream version can be used, while desktop capabilities are composed, replaced, and evolved in the same way.
 
 We want the plugin ecosystem to work like a phone app store: every plugin is built against the same set of rules, so plugins can be installed together and work together without interfering with each other.
 
 ### For developers
 
-Unlike many other projects, this project itself is an EZAI [plugin](docs/plugin-development.en.md): the desktop shell uses the same plugin composition mechanism as third-party plugins. Desktop plugin capabilities are now available. We provide Desktop services so plugin developers can integrate their plugins with desktop capabilities: for example, viewing and switching work profiles, or installing, updating, and removing plugins in the active profile. See the [Desktop plugin API](dsh-plugin-desktop/docs/plugin-services.md) for complete usage details. See [Why EZAI Desktop](docs/why-desktop.en.md) and [Plugin development](docs/plugin-development.en.md) for the reasoning and the third-party boundary.
+Unlike many other projects, this project itself is a DSH [plugin](docs/plugin-development.en.md): the desktop shell uses the same plugin composition mechanism as third-party plugins. Desktop plugin capabilities are now available. We provide Desktop services so plugin developers can integrate their plugins with desktop capabilities: for example, viewing and switching work profiles, or installing, updating, and removing plugins in the active profile. See the [Desktop plugin API](dsh-plugin-desktop/docs/plugin-services.md) for complete usage details. See [Why DSH Desktop](docs/why-desktop.en.md) and [Plugin development](docs/plugin-development.en.md) for the reasoning and the third-party boundary.
 
 ## Relationship to DeepSeek Harness
 
-EZAI Desktop is an independent community project built on [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) and the Cordis plugin model, intended to provide an open and composable EZAI desktop experience.
+DSH Desktop is an independent community project built on [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) and the Cordis plugin model, intended to provide an open and composable DSH desktop experience.
 
 This repository is independently maintained by the community. No DeepSeek employee or member of the official upstream DeepSeek Harness team currently participates in its development, maintenance, or governance. Contributors from the upstream project may appear on GitHub's Contributors page because this repository inherited and later synchronized upstream commit history when it was forked. Such attribution reflects commit provenance only and does not imply involvement in this repository or any affiliation, partnership, authorization, or endorsement.
 
-The upstream project provides the core agent capabilities, plugin system, and Web UI. EZAI Desktop primarily provides:
+The upstream project provides the core agent capabilities, plugin system, and Web UI. DSH Desktop primarily provides:
 
 - Desktop application packaging
 - Starting, stopping, and recovering the local service
@@ -156,9 +149,9 @@ If you prefer to run DeepSeek Harness from the command line or contribute to its
 
 ## Special Thanks
 
-Special thanks to the [original DeepSeek Harness repository](https://github.com/deepseek-ai/deepseek-harness) and the DeepSeek AI team. EZAI Desktop is built from a pinned upstream checkout, and its core agents, models, tools, sessions, Web UI, and plugin ecosystem come from that project.
+Special thanks to the [original DeepSeek Harness repository](https://github.com/deepseek-ai/deepseek-harness) and the DeepSeek AI team. DSH Desktop is built from a pinned upstream checkout, and its core agents, models, tools, sessions, Web UI, and plugin ecosystem come from that project.
 
-We also thank [Cordis](https://github.com/cordiverse/cordis) for the plugin foundation that makes this composition possible. EZAI Desktop would not exist without these open-source projects.
+We also thank [Cordis](https://github.com/cordiverse/cordis) for the plugin foundation that makes this composition possible. DSH Desktop would not exist without these open-source projects.
 
 We are also grateful to the [Koishi.js](https://koishi.chat/) project and community for their long-standing work on plugin practices, tooling, and shared knowledge, and to everyone who contributes discussions, testing, feedback, and plugins.
 
@@ -191,13 +184,13 @@ Choose whichever platform you prefer to discuss usage, plugin development, and p
   </thead>
   <tbody>
     <tr>
-      <td align="center"><img src="assets/community-wechat-group.png" alt="EZAI Desktop WeCom QR code" title="Scan to add us on WeCom" width="180" height="180"></td>
-      <td align="center"><img src="assets/community-qq-group.jpg" alt="EZAI Desktop QQ group QR code" width="180" height="180"></td>
+      <td align="center"><img src="assets/community-wechat-group.png" alt="DSH Desktop WeCom QR code" title="Scan to add us on WeCom" width="180" height="180"></td>
+      <td align="center"><img src="assets/community-qq-group.jpg" alt="DSH Desktop QQ group QR code" width="180" height="180"></td>
     </tr>
   </tbody>
 </table>
 
-Discord: [Join the EZAI Desktop community](https://discord.gg/TJeGqKRNM)
+Discord: [Join the DSH Desktop community](https://discord.gg/TJeGqKRNM)
 
 If you would like to join our technical team, contact us at [t4wefan@qq.com](mailto:t4wefan@qq.com).
 
@@ -232,7 +225,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 > “DeepSeek Harness” is a registered trademark of DeepSeek AI. The name is used here solely to accurately describe compatibility, technical origin, and this project's relationship to upstream software.
 
-> EZAI Desktop is an independent community project and is not affiliated with, sponsored by, authorized by, or endorsed by DeepSeek.
+> DSH Desktop is an independent community project and is not affiliated with, sponsored by, authorized by, or endorsed by DeepSeek.
 
 ## Star History
 
