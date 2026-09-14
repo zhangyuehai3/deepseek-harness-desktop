@@ -117,7 +117,7 @@ function fixture(mutateStaged = false): { options: WindowsNsisAbBuildOptions, ca
         return
       }
       mkdirSync(output, { recursive: true })
-      writeFileSync(join(output, 'DSH-Desktop-9.8.7-x64-Setup.exe'), pe())
+      writeFileSync(join(output, 'EZAI-Desktop-9.8.7-x64-Setup.exe'), pe())
       const prepackaged = args.find(value => value.startsWith('--prepackaged='))?.slice('--prepackaged='.length)
         ?? /--prepackaged=(?:"([^"]+)"|([^ ]+))/u.exec(args.at(-1) ?? '')?.slice(1).find(Boolean)
       if (prepackaged !== undefined) {
@@ -154,7 +154,6 @@ describe('Windows NSIS A/B packaging', () => {
     )
     expect(calls[3]?.args).toContain('--reverse')
     expect(calls[3]?.args).toContain('--unsafe-paths')
-    expect(calls[3]?.args).toContain('--directory=.')
     expect(calls[3]?.args).toContain('--include=templates/nsis/include/extractAppPackage.nsh')
     expect(calls[3]?.env.GIT_CEILING_DIRECTORIES)
       .toBe(join(options.outputRoot, '.staged-builder', 'node_modules'))
@@ -265,7 +264,7 @@ describe('Windows NSIS A/B packaging', () => {
       'apply',
       '--reverse',
       '--unsafe-paths',
-      '--directory=.',
+      // `--directory=.` would make `--include` miss on git >= 2.42.
       '--include=templates/nsis/include/extractAppPackage.nsh',
       fileURLToPath(new URL('../../patches/app-builder-lib@26.15.7.patch', import.meta.url)),
     ], {

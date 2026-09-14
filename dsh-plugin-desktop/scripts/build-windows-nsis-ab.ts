@@ -80,6 +80,24 @@ function readVersion(desktopRoot: string): string {
   return manifest.version
 }
 
+/**
+ * Resolve the NSIS installer artifact name exactly as electron-builder renders
+ * `build.win.artifactName`, falling back to the EZAI Desktop stable template.
+ */
+function readInstallerArtifactName(desktopRoot: string, version: string): string {
+  const manifest = JSON.parse(readFileSync(join(desktopRoot, 'package.json'), 'utf8')) as {
+    build?: { win?: { artifactName?: unknown } } | undefined
+  }
+  const template = manifest.build?.win?.artifactName
+  if (typeof template !== 'string' || template.length === 0) {
+    return `EZAI-Desktop-${version}-x64-Setup.exe`
+  }
+  return template
+    .replaceAll('${version}', version)
+    .replaceAll('${arch}', 'x64')
+    .replaceAll('${ext}', 'exe')
+}
+
 function assertHost(options: WindowsNsisAbBuildOptions): void {
   if (options.platform !== 'win32') throw new Error('Windows NSIS A/B artifacts require a native Windows host')
   if (options.arch !== 'x64') throw new Error(`Windows NSIS A/B artifacts require x64 Node; received ${options.arch}`)
@@ -257,8 +275,9 @@ export function buildWindowsNsisAb(options: WindowsNsisAbBuildOptions): WindowsN
       '--reverse',
       // The patch target is an untracked package copy, not repository state.
       '--unsafe-paths',
-      // Anchor package-relative patch paths at the isolated -C directory.
-      '--directory=.',
+      // Note: `--directory=.` would prefix match paths with `./` and make
+      // `--include` miss every file on git >= 2.42, silently skipping the
+      // reversal. The -C directory already anchors package-relative paths.
       '--include=templates/nsis/include/extractAppPackage.nsh',
       options.appBuilderPatch,
     ],
@@ -305,7 +324,7 @@ export function buildWindowsNsisAb(options: WindowsNsisAbBuildOptions): WindowsN
     )
   }
 
-  const installerName = `DSH-Desktop-${version}-x64-Setup.exe`
+  const installerName = readInstallerArtifactName(options.desktopRoot, version)
   const directInstaller = join(directOutput, installerName)
   const stagedInstaller = join(stagedOutput, installerName)
   assertPortableExecutable(directInstaller, 'direct-extract NSIS installer')

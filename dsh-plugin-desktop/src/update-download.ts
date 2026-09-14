@@ -180,7 +180,7 @@ export function desktopUpdateFilename(
   validatedVersion(version, channel)
   const extension = platform === 'darwin' ? 'dmg' : 'exe'
   const platformName = platform === 'darwin' ? 'mac' : 'windows'
-  const product = channel === 'beta' ? 'DSH-Desktop-Beta' : 'DSH-Desktop'
+  const product = channel === 'beta' ? 'EZAI-Desktop-Beta' : 'EZAI-Desktop'
   return `${product}-${version}-${platformName}.${extension}`
 }
 

@@ -394,7 +394,7 @@ const COPY: Record<DesktopLocale, DesktopRecoveryCopy> = {
     confirmFactoryResetAction: '重置数据并重启',
     dataOperationFailedTitle: '数据操作失败',
     dataOperationFailedMessage: '未能完成数据目录操作。请查看错误详情，确认当前目录状态后再重试。',
-    openTerminal: '打开 DSH 终端',
+    openTerminal: '打开 EZAI 终端',
     emptySlot: '尚无检查点',
     availableSlot: '可恢复',
     noHealthyStartup: '此位置尚未保存成功启动时的配置。',

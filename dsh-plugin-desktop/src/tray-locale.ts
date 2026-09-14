@@ -53,7 +53,7 @@ const labels: Record<DesktopLocale, Record<DesktopTrayLabelKey, (value: string) 
     exportDiagnostics: () => '导出诊断信息…',
     exitSafeMode: () => '退出安全模式并重启…',
     openDesktop: productName => `打开 ${productName}`,
-    openTerminal: () => '打开 DSH 终端',
+    openTerminal: () => '打开 EZAI 终端',
     profile: profileName => `Profile：${profileName}`,
     quit: () => '退出',
     shellMode: mode => `模式：${mode}`,

@@ -276,8 +276,6 @@ describe('desktop update Host plugin', () => {
       status: 'up-to-date',
       currentVersion: '2.0.0',
       latestVersion: '2.0.0',
-      forceUpdate: false,
-      urls: undefined,
     })
     expect(harness.confirmDownload).not.toHaveBeenCalled()
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
@@ -378,7 +376,7 @@ describe('desktop update Host plugin', () => {
     await harness.tray.invoke()
 
     expect(request).toHaveBeenCalledTimes(2)
-    expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0', { forceUpdate: false })
+    expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0')
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
     expect(harness.showManualCheckResult).not.toHaveBeenCalled()
     expect(harness.tray.label()).toBe('EZAI Desktop 2.2.0 Available')
@@ -402,10 +400,10 @@ describe('desktop update Host plugin', () => {
 
   it.each([
     ['same version', async () => versionResponse('2.0.0'), {
-      status: 'up-to-date', currentVersion: '2.0.0', latestVersion: '2.0.0', forceUpdate: false, urls: undefined,
+      status: 'up-to-date', currentVersion: '2.0.0', latestVersion: '2.0.0',
     }],
     ['older version', async () => versionResponse('1.9.9'), {
-      status: 'up-to-date', currentVersion: '2.0.0', latestVersion: '1.9.9', forceUpdate: false, urls: undefined,
+      status: 'up-to-date', currentVersion: '2.0.0', latestVersion: '1.9.9',
     }],
     ['invalid version', async () => versionResponse('v2.1.0'), null],
     ['service unavailable', async () => new Response('unavailable', { status: 503 }), null],
@@ -487,8 +485,6 @@ describe('desktop update Host plugin', () => {
       status: 'update-available',
       currentVersion: '2.0.0',
       latestVersion: '2.1.0',
-      forceUpdate: false,
-      urls: undefined,
     })
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
     expect(harness.notifications).toEqual([])
