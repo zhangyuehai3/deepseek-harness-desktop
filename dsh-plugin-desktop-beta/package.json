@@ -328,7 +328,7 @@
   },
   "build": {
     "appId": "ai.deepseek.dsh.desktop.beta",
-    "productName": "DSH Desktop Beta",
+    "productName": "EZAI Desktop Beta",
     "asar": false,
     "npmRebuild": false,
     "afterPack": "./scripts/verify-packaged-runtime.ts",
