@@ -1,4 +1,4 @@
-/** Durable bounds for the one DSH Desktop main window. */
+/** Durable bounds for the one EZAI Desktop main window. */
 
 import { randomUUID } from 'node:crypto'
 import {

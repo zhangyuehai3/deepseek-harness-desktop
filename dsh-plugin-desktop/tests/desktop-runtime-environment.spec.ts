@@ -541,8 +541,8 @@ describe('desktop Host dsh runtime', () => {
     const environment: NodeJS.ProcessEnv = { Path: 'C:\\Windows' }
     const runtimeOptions = {
       platform: 'win32' as const,
-      appExecutable: 'C:\\Program Files\\DSH Desktop\\DSH Desktop.exe',
-      dshBootstrapPath: 'C:\\Program Files\\DSH Desktop\\resources\\app.asar\\desktop-cli.js',
+      appExecutable: 'C:\\Program Files\\EZAI Desktop\\EZAI Desktop.exe',
+      dshBootstrapPath: 'C:\\Program Files\\EZAI Desktop\\resources\\app.asar\\desktop-cli.js',
       profileName: 'web',
       homeDir: 'C:\\Users\\tester\\.dsh',
       stateDir,

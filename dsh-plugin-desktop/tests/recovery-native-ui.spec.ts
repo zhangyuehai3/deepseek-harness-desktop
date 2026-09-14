@@ -66,7 +66,7 @@ describe('Recovery native terminal action', () => {
     expect(windows).not.toContain('right-3')
     for (const markup of [mac, windows]) {
       expect(markup).toContain('rounded-full')
-      expect(markup).toContain('Open DSH Terminal')
+      expect(markup).toContain('Open EZAI Terminal')
       expect(markup).toContain('dsh-recovery://open-terminal')
     }
   })
@@ -89,7 +89,7 @@ describe('Recovery native terminal action', () => {
       {
         leading: createElement(RecoveryActionLink, { children: 'Back', href: 'dsh-profile-selector://cancel' }),
         children: createElement(RecoveryActionLink, {
-          children: 'Restart DSH Desktop',
+          children: 'Restart EZAI Desktop',
           href: 'dsh-profile-selector://restart',
           variant: 'default',
         }),

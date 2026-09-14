@@ -3,14 +3,14 @@
   "activeChannel": "beta",
   "channels": {
     "stable": {
-      "commit": "fb2c4b9e698e30edb738bca4cf0618587db7d203",
+      "commit": "ab264899d02c27689f4f803eb599ca36bcb01996",
       "sourceVersion": "0.1.5-rc.2",
       "runtimePackageVersion": "0.1.5-rc.2",
       "runtimeSource": "vendor/dsh-runtime/0.1.5-rc.2/manifest.json",
       "package": "dsh-plugin-desktop"
     },
     "beta": {
-      "commit": "fb2c4b9e698e30edb738bca4cf0618587db7d203",
+      "commit": "ab264899d02c27689f4f803eb599ca36bcb01996",
       "sourceVersion": "0.1.5-rc.2",
       "runtimePackageVersion": "0.1.5-rc.2",
       "runtimeSource": "vendor/dsh-runtime/0.1.5-rc.2/manifest.json",
