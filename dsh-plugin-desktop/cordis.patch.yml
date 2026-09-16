@@ -14,17 +14,8 @@
         readLimit: 2000
         sheetRowLimit: 200
         maxSheets: 5
-        cacheEntries: 16
-        cacheMaxBytes: 67108864
         maxOutputChars: 24000
         readTimeoutMs: 120000
-        uploadMaxBytes: 25165824
-        allowedExtensions: []
-        uploadTtlMs: 604800000
-        sweepIntervalMs: 3600000
-        maxConcurrentUploads: 4
-        maxUploadBytesPerSession: 0
-        trustedHosts: []
     - id: ezai-auth
       name: dsh-ezai-auth
       config:
@@ -32,6 +23,9 @@
         loginPath: '/login'
         captchaPath: '/captcha/box'
         tokenQuota: 200000000
+    # EZAI brand occupants for the sidebar brand row and the blank-session hero.
+    - id: ezai-brand
+      name: dsh-ezai-brand
     - id: session-purge
       name: dsh-session-purge
     # The tray terminal command is hidden while the terminal remains available

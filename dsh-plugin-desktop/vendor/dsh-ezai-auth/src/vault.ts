@@ -169,3 +169,92 @@ export async function scrubDiskPlaintextCredentials(): Promise<void> {
     // ignore
   }
 }
+
+export interface SavedCredentials {
+  username: string
+  password: string
+}
+
+/**
+ * Persist or clear saved login credentials using system-level safeStorage encryption.
+ */
+export async function saveSavedCredentials(credentials: SavedCredentials | null): Promise<boolean> {
+  const ss = await getSafeStorage()
+  const vaultPath = getVaultPath()
+  await mkdir(join(homedir(), '.dsh', '.dsh-ezai-auth'), { recursive: true })
+
+  let doc: VaultDocument = {
+    version: 2,
+    encrypted: true,
+    storage: ss ? 'safeStorage' : 'inMemory',
+    ciphers: {},
+  }
+  try {
+    const content = await readFile(vaultPath, 'utf8')
+    const parsed = JSON.parse(content) as VaultDocument
+    if (parsed && typeof parsed === 'object') {
+      doc = {
+        ...parsed,
+        version: 2,
+        ciphers: {
+          ...(parsed.ciphers || {}),
+          ...(parsed.cipher ? { default: parsed.cipher } : {}),
+        },
+      }
+    }
+  } catch {}
+
+  doc.ciphers = doc.ciphers || {}
+  if (!credentials) {
+    delete doc.ciphers['saved_credentials']
+  } else {
+    const payload = JSON.stringify(credentials)
+    if (ss) {
+      doc.ciphers['saved_credentials'] = ss.encryptString(payload).toString('base64')
+      doc.storage = 'safeStorage'
+    } else {
+      doc.ciphers['saved_credentials'] = Buffer.from(payload, 'utf8').toString('base64')
+    }
+  }
+
+  await writeFile(vaultPath, JSON.stringify(doc, null, 2), { mode: 0o600, encoding: 'utf8' })
+  return true
+}
+
+/**
+ * Decrypt and retrieve saved login credentials from vault.
+ */
+export async function getSavedCredentials(): Promise<SavedCredentials | null> {
+  const ss = await getSafeStorage()
+  const vaultPath = getVaultPath()
+
+  try {
+    const content = await readFile(vaultPath, 'utf8')
+    const doc = JSON.parse(content) as VaultDocument
+    const cipher = doc.ciphers?.['saved_credentials']
+    if (!cipher) return null
+
+    let decrypted = ''
+    if (ss && doc.storage === 'safeStorage') {
+      try {
+        decrypted = ss.decryptString(Buffer.from(cipher, 'base64'))
+      } catch {
+        // safeStorage failed or changed
+      }
+    }
+    if (!decrypted) {
+      try {
+        decrypted = Buffer.from(cipher, 'base64').toString('utf8')
+      } catch {}
+    }
+
+    if (decrypted) {
+      const parsed = JSON.parse(decrypted) as SavedCredentials
+      if (parsed && typeof parsed.username === 'string' && typeof parsed.password === 'string') {
+        return parsed
+      }
+    }
+  } catch {}
+
+  return null
+}

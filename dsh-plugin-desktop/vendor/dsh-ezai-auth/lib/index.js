@@ -110,7 +110,7 @@ const mergedNoProxy = existingNoProxy
     : BYPASS_HOSTS.join(',');
 process.env.NO_PROXY = mergedNoProxy;
 process.env.no_proxy = mergedNoProxy;
-import { getBootstrapApiKey, resolveApiKey, scrubDiskPlaintextCredentials } from "./vault.js";
+import { getBootstrapApiKey, resolveApiKey, scrubDiskPlaintextCredentials, getSavedCredentials, saveSavedCredentials } from "./vault.js";
 const DEEPSEEK_OPENAI_BASE_URL = 'https://api.deepseek.com';
 const DEEPSEEK_ANTHROPIC_BASE_URL = 'https://api.deepseek.com/anthropic';
 let activeDepartment = undefined;
@@ -758,6 +758,52 @@ export function apply(ctx, config) {
             catch (err) {
                 finishJson(res, 500, error(err instanceof Error ? err.message : 'logout failed'));
             }
+        },
+    }));
+    ctx.effect(() => ctx.webServer.register({
+        kind: 'prefix',
+        path: '/api/ezai-auth/saved-credentials',
+        handler: async (req, res) => {
+            const guard = networkGuard(req);
+            if (guard !== null) {
+                finishJson(res, 403, error(guard));
+                return;
+            }
+            if (req.method === 'GET') {
+                try {
+                    const saved = await getSavedCredentials();
+                    finishJson(res, 200, {
+                        remembered: saved !== null,
+                        username: saved?.username ?? '',
+                        password: saved?.password ?? '',
+                    });
+                }
+                catch (err) {
+                    finishJson(res, 500, error(err instanceof Error ? err.message : 'failed to read saved credentials'));
+                }
+                return;
+            }
+            if (req.method === 'POST') {
+                try {
+                    const body = (await readJson(req));
+                    if (typeof body !== 'object' || body === null) {
+                        finishJson(res, 400, error('invalid request body'));
+                        return;
+                    }
+                    if (body.remember === true && typeof body.username === 'string' && typeof body.password === 'string') {
+                        await saveSavedCredentials({ username: body.username, password: body.password });
+                    }
+                    else {
+                        await saveSavedCredentials(null);
+                    }
+                    finishJson(res, 200, { ok: true });
+                }
+                catch (err) {
+                    finishJson(res, 500, error(err instanceof Error ? err.message : 'failed to save credentials'));
+                }
+                return;
+            }
+            finishJson(res, 405, error('method not allowed'));
         },
     }));
     // 4. Intercept Agent request configuration: Exclusively DeepSeek V4.1 Flash

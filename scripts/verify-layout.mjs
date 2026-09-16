@@ -30,8 +30,8 @@ if (workspace.packageManager !== 'yarn@4.18.0') {
 }
 if (JSON.stringify(workspace.workspaces) !== JSON.stringify([
   'dsh-plugin-desktop',
-  'dsh-plugin-desktop/vendor/dsh-files',
   'dsh-plugin-desktop/vendor/dsh-ezai-auth',
+  'dsh-plugin-desktop/vendor/dsh-ezai-brand',
   'dsh-plugin-desktop/vendor/dsh-session-purge',
   'dsh-plugin-desktop-beta',
   'dsh-community-fabric',
@@ -95,7 +95,7 @@ for (const [owner, manifest] of [
       if (typeof range !== 'string') continue
       // The EZAI vendor plugins ship inside the desktop product workspace, so
       // they are allowed to resolve through the Yarn workspace.
-      if (owner.endsWith('desktop') && ['dsh-files', 'dsh-ezai-auth', 'dsh-session-purge'].includes(name) && range.startsWith('workspace:')) continue
+      if (owner.endsWith('desktop') && ['dsh-ezai-auth', 'dsh-ezai-brand', 'dsh-session-purge'].includes(name) && range.startsWith('workspace:')) continue
       if (/^(?:workspace|portal|link):/u.test(range)
         || (range.startsWith('file:') && range.includes('deepseek-harness'))) {
         fail(`${owner} ${field}.${name} bypasses the published DSH package boundary`)

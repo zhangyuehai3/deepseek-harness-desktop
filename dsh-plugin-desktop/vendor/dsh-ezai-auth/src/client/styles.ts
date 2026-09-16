@@ -81,8 +81,8 @@ export function injectCss(): void {
   margin-bottom: 24px;
 }
 .dshEzaiAuthLogo {
-  width: 50px;
-  height: 50px;
+  width: 52px;
+  height: 52px;
   border-radius: 14px;
   background: linear-gradient(135deg, #265C5A 0%, #19403e 100%);
   display: flex;
@@ -91,6 +91,12 @@ export function injectCss(): void {
   color: #98C455;
   box-shadow: 0 8px 18px -4px rgba(38, 92, 90, 0.4), 0 0 0 1px rgba(152, 196, 85, 0.35);
   margin-bottom: 14px;
+}
+.dshEzaiAuthLogoImg {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  display: block;
 }
 .dshEzaiAuthTitle {
   margin: 0 0 6px;
@@ -241,6 +247,60 @@ export function injectCss(): void {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-4px); }
   75% { transform: translateX(4px); }
+}
+
+/* Remember Password Row */
+.dshEzaiAuthRememberRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 6px 0 14px 0;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  color: var(--dsw-alias-label-secondary, #587372);
+  transition: color 0.15s ease;
+}
+.dshEzaiAuthRememberRow:hover {
+  color: var(--dsw-alias-label-primary, #153332);
+}
+.dshEzaiAuthCheckbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--dsw-alias-border-secondary, #b4c7c6);
+  border-radius: 4px;
+  outline: none;
+  margin: 0 8px 0 0;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+  background-color: var(--dsw-alias-bg-surface-elevated, #ffffff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.dshEzaiAuthCheckbox:hover {
+  border-color: #265C5A;
+}
+.dshEzaiAuthCheckbox:checked {
+  background-color: #265C5A;
+  border-color: #265C5A;
+}
+.dshEzaiAuthCheckbox:checked::after {
+  content: '';
+  width: 4px;
+  height: 8px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  position: absolute;
+  top: 1px;
+}
+.dshEzaiAuthCheckbox:focus-visible {
+  box-shadow: 0 0 0 2px rgba(152, 196, 85, 0.4);
 }
 
 /* Submit Button (#265C5A + #98C455) */

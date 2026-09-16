@@ -1,6 +1,6 @@
 /** EZAI account tab rendered inside Settings → Plugins and inside EzaiLoginModal. */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { AccountResponse, CaptchaResponse } from '../types.ts'
@@ -18,6 +18,30 @@ interface LoginForm {
   username: string
   password: string
   captcha: string
+}
+
+async function loadSavedCredentials(): Promise<{ username: string; password: string } | null> {
+  try {
+    const res = await fetch('/api/ezai-auth/saved-credentials', { headers: { accept: 'application/json' } })
+    if (res.ok) {
+      const data = (await res.json()) as { remembered?: boolean; username?: string; password?: string }
+      if (data.remembered && data.username && data.password) {
+        return { username: data.username, password: data.password }
+      }
+    }
+  } catch {}
+  if (typeof window !== 'undefined') {
+    try {
+      const local = window.localStorage.getItem('dsh_ezai_remember_creds')
+      if (local) {
+        const parsed = JSON.parse(local)
+        if (parsed && typeof parsed.username === 'string' && typeof parsed.password === 'string') {
+          return { username: parsed.username, password: parsed.password }
+        }
+      }
+    } catch {}
+  }
+  return null
 }
 
 function formatNumber(value: number): string {
@@ -56,6 +80,8 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
   const [captchaError, setCaptchaError] = useState<string | undefined>(undefined)
+  const [rememberPassword, setRememberPassword] = useState(true)
+  const captchaInputRef = useRef<HTMLInputElement | null>(null)
 
   const fetchAccount = useCallback(async () => {
     try {
@@ -100,6 +126,7 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
   useEffect(() => {
     let active = true
     async function init() {
+      let isLoggedIn = false
       try {
         const response = await fetch('/api/ezai-auth/account', { headers: { accept: 'application/json' } })
         if (response.status === 403) {
@@ -129,6 +156,7 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
         if (response.ok) {
           const payload = (await response.json()) as AccountResponse
           if (active) {
+            isLoggedIn = true
             setAccount(payload)
             if (typeof window !== 'undefined') {
               window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: true, user: payload.user } }))
@@ -154,6 +182,14 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
       } finally {
         if (active) {
           setCheckingSession(false)
+          if (!isLoggedIn) {
+            const saved = await loadSavedCredentials()
+            if (active && saved) {
+              setForm((prev) => ({ ...prev, username: saved.username, password: saved.password }))
+              setRememberPassword(true)
+              setTimeout(() => captchaInputRef.current?.focus(), 150)
+            }
+          }
         }
       }
     }
@@ -198,8 +234,35 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
       if (!response.ok || payload.status_code !== 200 || payload.user === undefined) {
         throw new Error(payload.message ?? payload.error ?? t('networkError'))
       }
+
+      // Persist or clear remembered credentials
+      try {
+        await fetch('/api/ezai-auth/saved-credentials', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'application/json' },
+          body: JSON.stringify({
+            remember: rememberPassword,
+            username: form.username,
+            password: form.password,
+          }),
+        })
+      } catch {}
+      if (typeof window !== 'undefined') {
+        try {
+          if (rememberPassword) {
+            window.localStorage.setItem('dsh_ezai_remember_creds', JSON.stringify({ username: form.username, password: form.password }))
+          } else {
+            window.localStorage.removeItem('dsh_ezai_remember_creds')
+          }
+        } catch {}
+      }
+
       await fetchAccount()
-      setForm({ username: '', password: '', captcha: '' })
+      if (!rememberPassword) {
+        setForm({ username: '', password: '', captcha: '' })
+      } else {
+        setForm((previous) => ({ ...previous, captcha: '' }))
+      }
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: true, user: payload.user } }))
       }
@@ -225,6 +288,14 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
       await fetch('/api/ezai-auth/logout', { method: 'POST' })
       setAccount(undefined)
       void fetchCaptcha()
+      const saved = await loadSavedCredentials()
+      if (saved) {
+        setForm({ username: saved.username, password: saved.password, captcha: '' })
+        setRememberPassword(true)
+        setTimeout(() => captchaInputRef.current?.focus(), 150)
+      } else {
+        setForm({ username: '', password: '', captcha: '' })
+      }
       if (typeof window !== 'undefined') {
         (window as any).__EZAI_LOGGED_IN__ = false
         window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: false } }))
@@ -494,6 +565,7 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
               </svg>
             </span>
             <input
+              ref={captchaInputRef}
               className="dshEzaiAuthInput"
               type="text"
               value={form.captcha}
@@ -537,6 +609,17 @@ export function EzaiAccountTab({ t, onLogin, hideHeader = false }: EzaiAccountTa
             <span>{captchaError}</span>
           </div>
         )}
+      </label>
+
+      <label className="dshEzaiAuthRememberRow">
+        <input
+          type="checkbox"
+          className="dshEzaiAuthCheckbox"
+          checked={rememberPassword}
+          onChange={(e) => setRememberPassword(e.target.checked)}
+          disabled={loading}
+        />
+        <span>{t('rememberPassword')}</span>
       </label>
 
       {error !== undefined && (

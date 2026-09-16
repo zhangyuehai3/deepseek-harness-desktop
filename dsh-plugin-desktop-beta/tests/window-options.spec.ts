@@ -31,7 +31,7 @@ const spec: DesktopShellSpec = {
     value: Buffer.alloc(32, 8).toString('base64url'),
   },
   productName: 'EZAI Desktop',
-  windowTitle: 'DeepSeek Harness Desktop',
+  windowTitle: '金石易服',
   iconPath: '/tmp/app-icon.png',
   trayIcons: {
     templatePath: '/tmp/tray-iconTemplate.png',
@@ -77,7 +77,7 @@ describe('compatibility BrowserWindow options', () => {
   it('uses an independent Windows frame with native controls on the left-side action layout', () => {
     const options = compatibilityWindowOptions(spec, {} as NativeImage, 'win32', preload)
 
-    expect(options.title).toBe('DeepSeek Harness Desktop')
+    expect(options.title).toBe('金石易服')
     expect(options.backgroundColor).toBe('#202124')
     expect(options.autoHideMenuBar).toBe(true)
     expect(options.titleBarStyle).toBe('hidden')

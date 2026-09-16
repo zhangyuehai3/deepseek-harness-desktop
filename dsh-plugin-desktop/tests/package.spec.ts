@@ -79,7 +79,7 @@ describe('published package surface', () => {
 
   it('runs desktop and community market tests from the root command', () => {
     expect(workspaceManifest.scripts?.test)
-      .toBe('yarn workspace dsh-files test && yarn workspace dsh-ezai-auth test && yarn workspace dsh-plugin-desktop test && yarn workspace dsh-plugin-desktop-beta test && yarn workspace dsh-community-market test')
+      .toBe('yarn workspace dsh-ezai-auth test && yarn workspace dsh-ezai-brand test && yarn workspace dsh-plugin-desktop test && yarn workspace dsh-plugin-desktop-beta test && yarn workspace dsh-community-market test')
   })
 
   it('registers both npm launcher names', () => {
@@ -178,6 +178,7 @@ describe('published package surface', () => {
     expect(readFileSync(new URL('cordis.patch.yml', packageRoot), 'utf8')).toContain('name: dsh-community-market')
     expect(readFileSync(new URL('cordis.patch.yml', packageRoot), 'utf8')).toContain('name: dsh-files')
     expect(readFileSync(new URL('cordis.patch.yml', packageRoot), 'utf8')).toContain('name: dsh-ezai-auth')
+    expect(readFileSync(new URL('cordis.patch.yml', packageRoot), 'utf8')).toContain('name: dsh-ezai-brand')
     expect(readFileSync(new URL('cordis.patch.yml', packageRoot), 'utf8')).toContain('name: dsh-plugin-desktop/terminal')
     expect(readFileSync(new URL('cordis.patch.yml', packageRoot), 'utf8')).toContain('name: dsh-plugin-desktop/pnpm')
     expect(readFileSync(new URL('cordis.patch.yml', packageRoot), 'utf8')).toContain('name: dsh-plugin-desktop/profiles')
@@ -344,6 +345,23 @@ describe('published package surface', () => {
     expect(installedWebPatch).toContain('openBrowser: !!js ctx.webStartup.openBrowser')
     expect(installedWebPatch).not.toContain('openBrowser: false')
     expect(desktopPatch).toMatch(/- id: web-runtime\n  config:\n    openBrowser: false/)
+  })
+
+  it('restores the EZAI hero headline through the conversation patch', () => {
+    const patchPath = './patches/dsh-client-ui-conversation@0.1.5-rc.2.patch'
+    expect(dshResolution('@deepseek-ai/dsh-client-ui-conversation')).toContain(patchPath)
+    const patch = readFileSync(new URL(patchPath, workspaceRoot), 'utf8')
+    const installed = readFileSync(new URL(
+      'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js',
+      packageRoot,
+    ), 'utf8')
+    // Both the zh-CN and en locales carry the 金石易服 hero headline.
+    expect(patch).toMatch(/\+\t+"hero\.headline": "金石易服",/u)
+    expect(patch).toMatch(/-\t+"hero\.headline": "探索未至之境",/u)
+    expect(patch).toMatch(/-\t+"hero\.headline": "Into the Unknown",/u)
+    expect(installed.match(/"hero\.headline": "金石易服"/gu)?.length).toBe(2)
+    expect(installed).not.toContain('探索未至之境')
+    expect(installed).not.toContain('Into the Unknown')
   })
 
   it.runIf(process.platform === 'win32')(
@@ -864,13 +882,13 @@ describe('published package surface', () => {
     expect(manifest.scripts?.['verify:cli']).toBe('node scripts/verify-cli-runtime.mjs')
     expect(manifest.scripts?.check).toContain('yarn run verify:cli')
     expect(workspaceManifest.scripts?.['dist:mac'])
-      .toBe('yarn aa:prepare-release && yarn workspace dsh-files build && yarn workspace dsh-ezai-auth build && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop dist:mac')
+      .toBe('yarn aa:prepare-release && yarn workspace dsh-ezai-auth build && yarn workspace dsh-ezai-brand build && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop dist:mac')
     expect(workspaceManifest.scripts?.['dist:mac-smoke'])
-      .toBe('yarn aa:prepare-release && yarn workspace dsh-files build && yarn workspace dsh-ezai-auth build && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop dist:mac-smoke')
+      .toBe('yarn aa:prepare-release && yarn workspace dsh-ezai-auth build && yarn workspace dsh-ezai-brand build && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop dist:mac-smoke')
     expect(workspaceManifest.scripts?.['dist:win'])
-      .toBe('yarn aa:prepare-release && yarn workspace dsh-files build && yarn workspace dsh-ezai-auth build && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop dist:win')
+      .toBe('yarn aa:prepare-release && yarn workspace dsh-ezai-auth build && yarn workspace dsh-ezai-brand build && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop dist:win')
     expect(workspaceManifest.scripts?.['dist:win-portable'])
-      .toBe('yarn aa:prepare-release && yarn workspace dsh-files build && yarn workspace dsh-ezai-auth build && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop dist:win-portable')
+      .toBe('yarn aa:prepare-release && yarn workspace dsh-ezai-auth build && yarn workspace dsh-ezai-brand build && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop dist:win-portable')
     expect(manifest.build?.afterPack).toBe('./scripts/verify-packaged-runtime.ts')
     expect(manifest.build?.afterAllArtifactBuild).toBe('./scripts/verify-electron-fuses.ts')
     expect(manifest.build?.mac).toEqual(expect.objectContaining({
