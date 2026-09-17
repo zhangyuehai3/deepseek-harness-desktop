@@ -209,7 +209,7 @@ function installModelLockObserver(ctx: ClientContext): void {
     const badges = document.querySelectorAll('span[class*="previewBadge"], span[class*="HeroShell_previewBadge"]')
     for (const badge of badges) {
       const text = badge.textContent?.trim()
-      if (text === '预览版' || text === 'Preview' || (text && /^版本\s*2\./.test(text))) {
+      if (text !== '版本 2.1.0' && (text === '预览版' || text === 'Preview' || (text && /^版本\s*2\./.test(text)))) {
         badge.textContent = '版本 2.1.0'
       }
     }
@@ -236,10 +236,21 @@ function installModelLockObserver(ctx: ClientContext): void {
     cleanUI()
   })
 
-  // Run immediately and observe DOM changes
-  cleanUI()
+  // Run immediately and observe DOM changes with reentrancy protection
+  let isCleaning = false
+  const safeCleanUI = () => {
+    if (isCleaning) return
+    isCleaning = true
+    try {
+      cleanUI()
+    } finally {
+      isCleaning = false
+    }
+  }
+
+  safeCleanUI()
   const observer = new MutationObserver(() => {
-    cleanUI()
+    safeCleanUI()
   })
   observer.observe(document.body, { childList: true, subtree: true })
 }

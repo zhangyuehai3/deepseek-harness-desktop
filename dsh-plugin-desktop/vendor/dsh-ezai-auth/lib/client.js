@@ -1756,7 +1756,7 @@ function installModelLockObserver(ctx) {
     const badges = document.querySelectorAll('span[class*="previewBadge"], span[class*="HeroShell_previewBadge"]');
     for (const badge of badges) {
       const text = badge.textContent?.trim();
-      if (text === "\u9884\u89C8\u7248" || text === "Preview" || text && /^版本\s*2\./.test(text)) {
+      if (text !== "\u7248\u672C 2.1.0" && (text === "\u9884\u89C8\u7248" || text === "Preview" || text && /^版本\s*2\./.test(text))) {
         badge.textContent = "\u7248\u672C 2.1.0";
       }
     }
@@ -1780,9 +1780,19 @@ function installModelLockObserver(ctx) {
     }
     cleanUI2();
   });
-  cleanUI2();
+  let isCleaning = false;
+  const safeCleanUI = () => {
+    if (isCleaning) return;
+    isCleaning = true;
+    try {
+      cleanUI2();
+    } finally {
+      isCleaning = false;
+    }
+  };
+  safeCleanUI();
   const observer = new MutationObserver(() => {
-    cleanUI2();
+    safeCleanUI();
   });
   observer.observe(document.body, { childList: true, subtree: true });
 }
