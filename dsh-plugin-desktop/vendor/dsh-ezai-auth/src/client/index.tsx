@@ -5,7 +5,7 @@ import { showEzaiLoginModal } from './EzaiLoginModal.tsx'
 import { en, NS, zh } from './locales.ts'
 import { injectCss } from './styles.ts'
 
-export const inject = ['slots', 'locale']
+export const inject = ['slots', 'locale', 'remote', 'remote.commands']
 
 let isEzaiLoggedIn = false
 let conversationService: any = null
@@ -249,15 +249,15 @@ export function apply(ctx: ClientContext): void {
   installModelLockObserver(ctx)
 
   // Intercept commandUi to disable and hide /model slash command
-  ctx.inject(['commandUi'], (scope: ClientContext) => {
-    const commandUi = scope.get('commandUi') as any
-    if (!commandUi) return
+  ctx.inject(['commandUi', 'remote', 'remote.commands'], (scope: ClientContext) => {
+    const rawCommandUi = ((scope.get('commandUi') as any)?.[Symbol.for('cordis.original')]) || (scope.get('commandUi') as any)
+    if (!rawCommandUi) return
 
     // 1. Filter out 'model' from command candidates
-    const origCandidates = commandUi.candidates?.bind(commandUi)
+    const origCandidates = rawCommandUi.candidates
     if (origCandidates) {
-      commandUi.candidates = async (...args: any[]) => {
-        const rows = await origCandidates(...args)
+      rawCommandUi.candidates = async function (this: any, ...args: any[]) {
+        const rows = await origCandidates.apply(rawCommandUi, args)
         if (Array.isArray(rows)) {
           return rows.filter((r: any) => r && r.name !== 'model')
         }
@@ -272,24 +272,24 @@ export function apply(ctx: ClientContext): void {
       }
     }
 
-    if (commandUi.live?.contributions) {
-      disableModel(commandUi.live.contributions.get('model'))
+    if (rawCommandUi.live?.contributions) {
+      disableModel(rawCommandUi.live.contributions.get('model'))
     }
 
-    const origRegister = commandUi.register?.bind(commandUi)
+    const origRegister = rawCommandUi.register
     if (origRegister) {
-      commandUi.register = (contribution: any) => {
+      rawCommandUi.register = function (this: any, contribution: any) {
         disableModel(contribution)
-        return origRegister(contribution)
+        return origRegister.call(rawCommandUi, contribution)
       }
     }
 
     // 3. Guard dispatch against 'model'
-    const origDispatch = commandUi.dispatch?.bind(commandUi)
+    const origDispatch = rawCommandUi.dispatch
     if (origDispatch) {
-      commandUi.dispatch = (pick: any) => {
+      rawCommandUi.dispatch = function (this: any, pick: any) {
         if (pick?.candidate?.name === 'model') return
-        return origDispatch(pick)
+        return origDispatch.call(rawCommandUi, pick)
       }
     }
   })

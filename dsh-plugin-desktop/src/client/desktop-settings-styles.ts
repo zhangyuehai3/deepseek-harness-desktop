@@ -33,6 +33,11 @@ const CSS = `
   padding-top: 20px;
   border-top: 1px solid var(--dsw-alias-border-l1);
 }
+.dshDesktopSettingsGroup[aria-labelledby="dsh-desktop-market-title"],
+.dshDesktopSettingsGroup[aria-labelledby="dsh-desktop-aa-title"],
+[data-slot="conversation.chat.assistant-actions"] {
+  display: none !important;
+}
 .dshDesktopSettingsList { display: grid; gap: 8px; }
 .dshDesktopSettingsChoice,
 .dshDesktopSettingsToggleRow {

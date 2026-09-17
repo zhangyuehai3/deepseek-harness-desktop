@@ -472,14 +472,29 @@ export const WHITELIST_ENDPOINT = 'https://ezai.ezsvs.com/whitelist.json'
 export type WhitelistMember = {
   name?: string
   email?: string
+  tokenQuota?: number
   [key: string]: unknown
 }
 
-export type WhitelistData = Record<string, 'all' | WhitelistMember[]>
+function parseQuota(val: unknown): number | undefined {
+  if (typeof val === 'number' && !Number.isNaN(val) && val > 0) return val
+  if (typeof val === 'string' && val.trim() !== '') {
+    const num = Number(val.trim())
+    if (!Number.isNaN(num) && num > 0) return num
+  }
+  return undefined
+}
+
+export type WhitelistData = Record<string, 'all' | WhitelistMember[] | { all?: boolean; tokenQuota?: number; members?: WhitelistMember[] }>
 
 let cachedWhitelist: WhitelistData | null = null
 let cachedWhitelistTime = 0
 const WHITELIST_CACHE_TTL_MS = 60 * 1000 // 1 min memory cache
+
+export function clearWhitelistCache(): void {
+  cachedWhitelist = null
+  cachedWhitelistTime = 0
+}
 
 export type RemoteWhitelistResult =
   | { success: true; data: WhitelistData }
@@ -521,12 +536,14 @@ export interface UserAllowedCheckResult {
   reason?: 'whitelist_fetch_failed' | 'not_whitelisted'
   title?: string
   message?: string
+  tokenQuota?: number
 }
 
 /**
  * Determine whether a user is permitted to use EZAI Desktop based on dynamic remote whitelist:
  * - If whitelist request fails (network error, offline, non-200), return allowed=false with clear prompt for popup dialog;
- * - If user matches department "all" or individual whitelist, return allowed=true;
+ * - If user matches individual member whitelist, return allowed=true and individual tokenQuota if specified;
+ * - If user matches department "all", return allowed=true (and department tokenQuota if configured);
  * - Otherwise return allowed=false with departmental trial notice for popup dialog.
  */
 export async function checkUserAllowed(
@@ -563,8 +580,36 @@ export async function checkUserAllowed(
 
   const department = (personalInfo?.department || '').trim()
 
+  // 1. Check individual member whitelist across departments first
+  // (ensures user-specific overrides such as tokenQuota take precedence)
+  for (const [, config] of Object.entries(whitelist)) {
+    if (Array.isArray(config)) {
+      for (const member of config) {
+        if (!member || typeof member !== 'object') continue
+        const matchesEmail = member.email && candidateEmails.includes(member.email.trim().toLowerCase())
+        const matchesName = member.name && candidateNames.includes(member.name.trim().toLowerCase())
+        if (matchesEmail || matchesName) {
+          const tokenQuota = parseQuota(member.tokenQuota)
+          return { allowed: true, tokenQuota }
+        }
+      }
+    } else if (config && typeof config === 'object' && Array.isArray((config as any).members)) {
+      const deptConfig = config as any
+      const deptQuota = parseQuota(deptConfig.tokenQuota)
+      for (const member of deptConfig.members) {
+        if (!member || typeof member !== 'object') continue
+        const matchesEmail = member.email && candidateEmails.includes(member.email.trim().toLowerCase())
+        const matchesName = member.name && candidateNames.includes(member.name.trim().toLowerCase())
+        if (matchesEmail || matchesName) {
+          const tokenQuota = parseQuota(member.tokenQuota) ?? deptQuota
+          return { allowed: true, tokenQuota }
+        }
+      }
+    }
+  }
+
+  // 2. Check department wide permission: "all"
   for (const [deptName, config] of Object.entries(whitelist)) {
-    // 1. Department wide permission: "all"
     if (config === 'all') {
       if (
         department &&
@@ -572,16 +617,12 @@ export async function checkUserAllowed(
       ) {
         return { allowed: true }
       }
-    } else if (Array.isArray(config)) {
-      // 2. Individual member whitelist
-      for (const member of config) {
-        if (!member || typeof member !== 'object') continue
-        if (member.email && candidateEmails.includes(member.email.trim().toLowerCase())) {
-          return { allowed: true }
-        }
-        if (member.name && candidateNames.includes(member.name.trim().toLowerCase())) {
-          return { allowed: true }
-        }
+    } else if (config && typeof config === 'object' && (config as any).all === true) {
+      if (
+        department &&
+        (department === deptName || department.includes(deptName) || deptName.includes(department))
+      ) {
+        return { allowed: true, tokenQuota: parseQuota((config as any).tokenQuota) }
       }
     }
   }
@@ -592,6 +633,23 @@ export async function checkUserAllowed(
     title: '体验阶段温馨提示',
     message: DISALLOWED_DEPARTMENT_NOTICE,
   }
+}
+
+export async function resolveUserTokenQuota(
+  user?: Partial<EzaiUser>,
+  personalInfo?: Partial<EzaiPersonalInfo>,
+  username?: string,
+  fallbackQuota = 200_000_000,
+): Promise<number> {
+  try {
+    const check = await checkUserAllowed(user, personalInfo, username)
+    if (check.allowed && typeof check.tokenQuota === 'number' && check.tokenQuota > 0) {
+      return check.tokenQuota
+    }
+  } catch {
+    // ignore
+  }
+  return fallbackQuota
 }
 
 export async function isUserAllowed(
@@ -720,6 +778,9 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
             return
           }
 
+          const userQuota = check.tokenQuota ?? (Number(config.tokenQuota) || 200_000_000)
+          await session.setTokenQuota?.(userQuota)
+
           await ensureDefaultModelConfig(ctx, personalInfo?.department)
           finishJson(res, 200, { status_code: 200, message: '登录成功', user, personalInfo })
         } catch (err) {
@@ -803,7 +864,10 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
             await ensureDefaultModelConfig(ctx, personalInfo.department)
           }
 
-          const tokenUsage = await client.fetchTokenUsage()
+          const userQuota = check.tokenQuota ?? (Number(config.tokenQuota) || 200_000_000)
+          await session.setTokenQuota?.(userQuota)
+
+          const tokenUsage = await client.fetchTokenUsage(userQuota)
           const payload: AccountResponse = {
             user: snapshot.user,
             personalInfo,
@@ -942,7 +1006,19 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
 
     const snapshot = await session.getSnapshot()
     const currentUsed = Number(snapshot?.tokenUsed) || 0
-    const quota = Number(config.tokenQuota) || 200_000_000
+    let quota = Number(snapshot?.tokenQuota)
+    if (!quota || quota <= 0) {
+      quota = await resolveUserTokenQuota(
+        snapshot?.user,
+        snapshot?.personalInfo,
+        snapshot?.user?.login_name,
+        Number(config.tokenQuota) || 200_000_000,
+      )
+      await session.setTokenQuota?.(quota)
+    }
+    if (!quota || quota <= 0) {
+      quota = Number(config.tokenQuota) || 200_000_000
+    }
 
     // Strict quota check: block model calls if limit is reached
     if (currentUsed >= quota) {

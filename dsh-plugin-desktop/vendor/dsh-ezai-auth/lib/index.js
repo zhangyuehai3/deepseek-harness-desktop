@@ -438,9 +438,23 @@ async function removeDefaultModelConfig(ctx) {
 }
 const DISALLOWED_DEPARTMENT_NOTICE = '亲爱的同事，您好：\n\n十分感谢您对 EZAI 桌面智能助手的关注与支持！\n目前本体验版本专为特定业务部门与授权白名单开放定向内测，暂未面向您所在的部门或账号开放使用。\n\n研发团队正在紧锣密鼓地推进跨业务线的适配与功能升级，后续更多部门与人员的开放已在紧密排期中，敬请期待！\n\n为保障您的数据安全与系统状态一致，系统已为您安全退出登录并已清除本地配置。感谢您的理解与温暖包容！';
 export const WHITELIST_ENDPOINT = 'https://ezai.ezsvs.com/whitelist.json';
+function parseQuota(val) {
+    if (typeof val === 'number' && !Number.isNaN(val) && val > 0)
+        return val;
+    if (typeof val === 'string' && val.trim() !== '') {
+        const num = Number(val.trim());
+        if (!Number.isNaN(num) && num > 0)
+            return num;
+    }
+    return undefined;
+}
 let cachedWhitelist = null;
 let cachedWhitelistTime = 0;
 const WHITELIST_CACHE_TTL_MS = 60 * 1000; // 1 min memory cache
+export function clearWhitelistCache() {
+    cachedWhitelist = null;
+    cachedWhitelistTime = 0;
+}
 export async function fetchRemoteWhitelist() {
     const now = Date.now();
     if (cachedWhitelist && now - cachedWhitelistTime < WHITELIST_CACHE_TTL_MS) {
@@ -473,7 +487,8 @@ export async function fetchRemoteWhitelist() {
 /**
  * Determine whether a user is permitted to use EZAI Desktop based on dynamic remote whitelist:
  * - If whitelist request fails (network error, offline, non-200), return allowed=false with clear prompt for popup dialog;
- * - If user matches department "all" or individual whitelist, return allowed=true;
+ * - If user matches individual member whitelist, return allowed=true and individual tokenQuota if specified;
+ * - If user matches department "all", return allowed=true (and department tokenQuota if configured);
  * - Otherwise return allowed=false with departmental trial notice for popup dialog.
  */
 export async function checkUserAllowed(user, personalInfo, username) {
@@ -501,25 +516,48 @@ export async function checkUserAllowed(user, personalInfo, username) {
         .filter((v) => typeof v === 'string' && v.trim() !== '')
         .map(v => v.trim().toLowerCase());
     const department = (personalInfo?.department || '').trim();
+    // 1. Check individual member whitelist across departments first
+    // (ensures user-specific overrides such as tokenQuota take precedence)
+    for (const [, config] of Object.entries(whitelist)) {
+        if (Array.isArray(config)) {
+            for (const member of config) {
+                if (!member || typeof member !== 'object')
+                    continue;
+                const matchesEmail = member.email && candidateEmails.includes(member.email.trim().toLowerCase());
+                const matchesName = member.name && candidateNames.includes(member.name.trim().toLowerCase());
+                if (matchesEmail || matchesName) {
+                    const tokenQuota = parseQuota(member.tokenQuota);
+                    return { allowed: true, tokenQuota };
+                }
+            }
+        }
+        else if (config && typeof config === 'object' && Array.isArray(config.members)) {
+            const deptConfig = config;
+            const deptQuota = parseQuota(deptConfig.tokenQuota);
+            for (const member of deptConfig.members) {
+                if (!member || typeof member !== 'object')
+                    continue;
+                const matchesEmail = member.email && candidateEmails.includes(member.email.trim().toLowerCase());
+                const matchesName = member.name && candidateNames.includes(member.name.trim().toLowerCase());
+                if (matchesEmail || matchesName) {
+                    const tokenQuota = parseQuota(member.tokenQuota) ?? deptQuota;
+                    return { allowed: true, tokenQuota };
+                }
+            }
+        }
+    }
+    // 2. Check department wide permission: "all"
     for (const [deptName, config] of Object.entries(whitelist)) {
-        // 1. Department wide permission: "all"
         if (config === 'all') {
             if (department &&
                 (department === deptName || department.includes(deptName) || deptName.includes(department))) {
                 return { allowed: true };
             }
         }
-        else if (Array.isArray(config)) {
-            // 2. Individual member whitelist
-            for (const member of config) {
-                if (!member || typeof member !== 'object')
-                    continue;
-                if (member.email && candidateEmails.includes(member.email.trim().toLowerCase())) {
-                    return { allowed: true };
-                }
-                if (member.name && candidateNames.includes(member.name.trim().toLowerCase())) {
-                    return { allowed: true };
-                }
+        else if (config && typeof config === 'object' && config.all === true) {
+            if (department &&
+                (department === deptName || department.includes(deptName) || deptName.includes(department))) {
+                return { allowed: true, tokenQuota: parseQuota(config.tokenQuota) };
             }
         }
     }
@@ -529,6 +567,18 @@ export async function checkUserAllowed(user, personalInfo, username) {
         title: '体验阶段温馨提示',
         message: DISALLOWED_DEPARTMENT_NOTICE,
     };
+}
+export async function resolveUserTokenQuota(user, personalInfo, username, fallbackQuota = 200_000_000) {
+    try {
+        const check = await checkUserAllowed(user, personalInfo, username);
+        if (check.allowed && typeof check.tokenQuota === 'number' && check.tokenQuota > 0) {
+            return check.tokenQuota;
+        }
+    }
+    catch {
+        // ignore
+    }
+    return fallbackQuota;
 }
 export async function isUserAllowed(user, personalInfo, username) {
     const result = await checkUserAllowed(user, personalInfo, username);
@@ -647,6 +697,8 @@ export function apply(ctx, config) {
                     });
                     return;
                 }
+                const userQuota = check.tokenQuota ?? (Number(config.tokenQuota) || 200_000_000);
+                await session.setTokenQuota?.(userQuota);
                 await ensureDefaultModelConfig(ctx, personalInfo?.department);
                 finishJson(res, 200, { status_code: 200, message: '登录成功', user, personalInfo });
             }
@@ -723,7 +775,9 @@ export function apply(ctx, config) {
                 if (personalInfo?.department && personalInfo.department !== activeDepartment) {
                     await ensureDefaultModelConfig(ctx, personalInfo.department);
                 }
-                const tokenUsage = await client.fetchTokenUsage();
+                const userQuota = check.tokenQuota ?? (Number(config.tokenQuota) || 200_000_000);
+                await session.setTokenQuota?.(userQuota);
+                const tokenUsage = await client.fetchTokenUsage(userQuota);
                 const payload = {
                     user: snapshot.user,
                     personalInfo,
@@ -861,7 +915,14 @@ export function apply(ctx, config) {
         // options passed to llm/stream is deeply frozen by upstream agent-loop; do NOT mutate it.
         const snapshot = await session.getSnapshot();
         const currentUsed = Number(snapshot?.tokenUsed) || 0;
-        const quota = Number(config.tokenQuota) || 200_000_000;
+        let quota = Number(snapshot?.tokenQuota);
+        if (!quota || quota <= 0) {
+            quota = await resolveUserTokenQuota(snapshot?.user, snapshot?.personalInfo, snapshot?.user?.login_name, Number(config.tokenQuota) || 200_000_000);
+            await session.setTokenQuota?.(quota);
+        }
+        if (!quota || quota <= 0) {
+            quota = Number(config.tokenQuota) || 200_000_000;
+        }
         // Strict quota check: block model calls if limit is reached
         if (currentUsed >= quota) {
             yield {

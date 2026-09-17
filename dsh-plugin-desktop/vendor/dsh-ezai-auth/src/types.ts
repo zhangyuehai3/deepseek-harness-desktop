@@ -53,6 +53,8 @@ export interface SessionSnapshot {
   weekKey?: string
   /** Token usage mapping across all accounts on this machine: userId -> AccountWeeklyUsage | number */
   accountTokens?: Record<string, AccountWeeklyUsage | number>
+  /** Individual weekly token quota override from whitelist (if absent, defaults to 200,000,000). */
+  tokenQuota?: number
 }
 
 /** Enriched personal info parsed from /personalDetails. */

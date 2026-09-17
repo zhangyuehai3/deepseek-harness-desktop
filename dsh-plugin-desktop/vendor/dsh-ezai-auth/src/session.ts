@@ -88,6 +88,8 @@ export interface EzaiSessionStore {
   getAccountTokenUsage(userId: string): Promise<number>
   isCurrentPeakHours(): Promise<boolean>
   getTokenRateMultiplier(): Promise<number>
+  getTokenQuota?(): Promise<number | undefined>
+  setTokenQuota?(quota: number): Promise<void>
 }
 
 function parseSnapshot(text: string): SessionSnapshot | undefined {
@@ -225,6 +227,16 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
       const snapshot = await readSnapshot()
       if (snapshot === undefined) return
       snapshot.personalInfo = info
+      await writeSnapshot(snapshot)
+    },
+    async getTokenQuota(): Promise<number | undefined> {
+      const snapshot = await readSnapshot()
+      return snapshot?.tokenQuota
+    },
+    async setTokenQuota(quota: number): Promise<void> {
+      const snapshot = await readSnapshot()
+      if (snapshot === undefined) return
+      snapshot.tokenQuota = quota
       await writeSnapshot(snapshot)
     },
     async clear(): Promise<void> {

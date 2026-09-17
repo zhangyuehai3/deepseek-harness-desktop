@@ -289,7 +289,7 @@ describe('session store', () => {
 
     const { apply } = await import('../src/index.ts')
     const tmpDir = await mkdtemp(join(tmpdir(), 'dsh-ezai-auth-'))
-    apply(mockCtx, { sessionStoreDir: tmpDir, tokenQuota: 200000 })
+    apply(mockCtx, { sessionStoreDir: tmpDir, tokenQuota: 200000 } as any)
 
     assert.ok(agentRequestHandler, 'agent/request hook should be registered')
     assert.ok(llmStreamHandler, 'llm/stream hook should be registered')

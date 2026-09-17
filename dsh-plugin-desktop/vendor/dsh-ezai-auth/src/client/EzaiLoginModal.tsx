@@ -5,7 +5,6 @@ import { createRoot, type Root } from 'react-dom/client'
 import { EzaiAccountTab } from './EzaiAccountTab.tsx'
 import { injectCss } from './styles.ts'
 import { en, NS, zh } from './locales.ts'
-import { EZAI_MARK_DATA_URI } from './artwork.ts'
 
 const MODAL_MOUNT_ID = 'dsh-ezai-auth-login-modal'
 
@@ -75,11 +74,11 @@ export function EzaiLoginModal({ locale, onClose }: EzaiLoginModalProps) {
 
         <div className="dshEzaiAuthHeader">
           <div className="dshEzaiAuthLogo">
-            <img
-              src={EZAI_MARK_DATA_URI}
-              alt="EZAI Logo"
-              className="dshEzaiAuthLogoImg"
-            />
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
+            </svg>
           </div>
           <h2 id="dsh-ezai-auth-login-title" className="dshEzaiAuthTitle">
             {t('loginTitle')}

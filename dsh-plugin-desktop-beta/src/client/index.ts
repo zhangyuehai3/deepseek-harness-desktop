@@ -67,6 +67,11 @@ export type {
   DesktopWindowService,
 } from './contracts.ts'
 
+import { injectRecallStyles } from './session-recall-styles.ts'
+import { installSessionSidebarInteractions } from './session-sidebar-interactions.ts'
+import { installSessionPickerService } from './session-picker-service.ts'
+import { SessionHeaderQuoteAction } from './SessionHeaderQuoteAction.tsx'
+
 /** Services required by Desktop settings and Desktop-owned presentations. */
 export const inject = [
   'slots',
@@ -98,6 +103,33 @@ export function apply(ctx: ClientContext): void {
       'dsh-plugin-desktop: native directory picker bridge',
     )
   }
+
+  // Cross-session recall features (P0 & P1)
+  ctx.effect(() => {
+    injectRecallStyles()
+    return () => {}
+  }, 'dsh-plugin-desktop: session recall styles')
+
+  ctx.effect(
+    () => installSessionSidebarInteractions(ctx),
+    'dsh-plugin-desktop: session sidebar interactions',
+  )
+
+  ctx.effect(
+    () => installSessionPickerService(ctx),
+    'dsh-plugin-desktop: session picker service',
+  )
+
+  ctx.slots.inject(
+    'conversation.session.header.utilities',
+    () => ctx.slots.register({
+      name: 'conversation.session.header.utilities',
+      id: 'session-quote-action',
+      order: 15,
+    }, SessionHeaderQuoteAction),
+  )
+
   if (environment.mode === 'advanced') applyAdvancedShell(ctx, environment)
   if (environment.mode === 'extended') applyExtendedShell(ctx, environment, desktopSettings)
 }
+

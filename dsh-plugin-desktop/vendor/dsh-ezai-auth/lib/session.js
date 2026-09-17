@@ -195,6 +195,17 @@ export function createSessionStore(options = {}) {
             snapshot.personalInfo = info;
             await writeSnapshot(snapshot);
         },
+        async getTokenQuota() {
+            const snapshot = await readSnapshot();
+            return snapshot?.tokenQuota;
+        },
+        async setTokenQuota(quota) {
+            const snapshot = await readSnapshot();
+            if (snapshot === undefined)
+                return;
+            snapshot.tokenQuota = quota;
+            await writeSnapshot(snapshot);
+        },
         async clear() {
             // Clear active session snapshot while safely keeping account_tokens ledger untouched
             await writeSnapshot(undefined);

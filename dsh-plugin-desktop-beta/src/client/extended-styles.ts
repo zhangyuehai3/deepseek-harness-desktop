@@ -317,8 +317,8 @@ body[data-dsh-desktop-mode="extended"]:not([data-dsh-desktop-material="off"]) {
   line-height: 1.35;
 }
 .dshDesktopFrameActions {
+  display: none !important;
   position: relative;
-  display: flex;
   align-items: center;
   min-width: 0;
   -webkit-app-region: no-drag;
