@@ -35,6 +35,7 @@ const CSS = `
 }
 .dshDesktopSettingsGroup[aria-labelledby="dsh-desktop-market-title"],
 .dshDesktopSettingsGroup[aria-labelledby="dsh-desktop-aa-title"],
+.dshDesktopSettingsGroup[aria-labelledby="dsh-desktop-web-title"],
 [data-slot="conversation.chat.assistant-actions"] {
   display: none !important;
 }
