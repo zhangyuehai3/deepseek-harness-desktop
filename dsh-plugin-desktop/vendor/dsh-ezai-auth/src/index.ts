@@ -332,6 +332,8 @@ async function ensureDefaultModelConfig(ctx: any, department?: string): Promise<
         provider: 'deepseek',
         model: 'deepseek-flash',
       }
+      settingsDoc['ui-onboarding'] = settingsDoc['ui-onboarding'] || {}
+      settingsDoc['ui-onboarding'].welcomeNoticeVersion = '2026-08-13.1'
       await fs.writeFile(settingsPath, stringify(settingsDoc), 'utf8')
     } catch {}
 

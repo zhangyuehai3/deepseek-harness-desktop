@@ -455,6 +455,55 @@ export async function migrateDesktopWindowMaterialSettings(
   return true
 }
 
+export const ONBOARDING_SETTINGS_NAMESPACE = 'ui-onboarding'
+export const ONBOARDING_WELCOME_NOTICE_VERSION = '2026-08-13.1'
+
+/**
+ * Ensure the product-wide welcome notice is acknowledged so that first-run
+ * desktop users do not see the upstream internal testing popup.
+ */
+export async function ensureDesktopOnboardingSettings(
+  documentPath: string,
+): Promise<boolean> {
+  const path = settingsPath(documentPath)
+
+  const needsMigration = (loaded: LoadedSettingsDocument): boolean => {
+    const onboarding = section(loaded.root, ONBOARDING_SETTINGS_NAMESPACE)
+    return onboarding.welcomeNoticeVersion !== ONBOARDING_WELCOME_NOTICE_VERSION
+  }
+
+  let initialLoaded: LoadedSettingsDocument
+  try {
+    initialLoaded = loadSettingsDocument(path)
+  } catch {
+    return false
+  }
+
+  if (!needsMigration(initialLoaded)) return false
+
+  ensureDocumentDirectory(path)
+  const loaded = loadSettingsDocument(path)
+  if (!needsMigration(loaded)) return false
+
+  let output: string
+  if (loaded.format === 'yaml') {
+    loaded.yaml!.setIn([ONBOARDING_SETTINGS_NAMESPACE, 'welcomeNoticeVersion'], ONBOARDING_WELCOME_NOTICE_VERSION)
+    output = loaded.yaml!.toString()
+  } else {
+    const root = structuredClone(loaded.root)
+    root[ONBOARDING_SETTINGS_NAMESPACE] = {
+      ...section(root, ONBOARDING_SETTINGS_NAMESPACE),
+      welcomeNoticeVersion: ONBOARDING_WELCOME_NOTICE_VERSION,
+    }
+    output = `${JSON.stringify(root, undefined, 2)}\n`
+  }
+  await writeFileAtomic(path, output, {
+    mode: DOCUMENT_FILE_MODE,
+    dirMode: DOCUMENT_DIRECTORY_MODE,
+  })
+  return true
+}
+
 /** Defaults used when the settings document or both owned sections are absent. */
 export function defaultDesktopSetupWizardSettings(
 ): DesktopSetupWizardSettings {

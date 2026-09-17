@@ -14,6 +14,7 @@ import { parseDocument } from 'yaml'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   defaultDesktopSetupWizardSettings,
+  ensureDesktopOnboardingSettings,
   migrateDesktopBrowserAccessSettings,
   migrateDesktopWindowMaterialSettings,
   readDesktopSetupWizardSettings,
@@ -456,5 +457,25 @@ describe('Desktop Setup Wizard settings document', () => {
       unrelated: { keep: true },
     })
     expect(readdirSync(root)).toEqual(['settings.yaml'])
+  })
+
+  it('atomically ensures ui-onboarding welcome notice acknowledgement is written to settings.yaml', async () => {
+    const root = temporaryDirectory()
+    const path = join(root, 'settings.yaml')
+    writeFileSync(path, [
+      '# preserve comments',
+      'dsh-desktop:',
+      '  mode: compatibility',
+      '',
+    ].join('\n'), { mode: 0o600 })
+
+    await expect(ensureDesktopOnboardingSettings(path)).resolves.toBe(true)
+    await expect(ensureDesktopOnboardingSettings(path)).resolves.toBe(false)
+    const content = readFileSync(path, 'utf8')
+    expect(content).toContain('# preserve comments')
+    expect(parseDocument(content).toJS()).toMatchObject({
+      'dsh-desktop': { mode: 'compatibility' },
+      'ui-onboarding': { welcomeNoticeVersion: '2026-08-13.1' },
+    })
   })
 })

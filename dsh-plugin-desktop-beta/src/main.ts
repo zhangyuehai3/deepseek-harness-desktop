@@ -132,6 +132,7 @@ import {
   readDesktopSetupWizardState,
 } from './setup-wizard-state.ts'
 import {
+  ensureDesktopOnboardingSettings,
   migrateDesktopBrowserAccessSettings,
   migrateDesktopWindowMaterialSettings,
   readDesktopSetupWizardSettings,
@@ -1202,6 +1203,13 @@ async function start(): Promise<void> {
         pluginManagementStatePath,
         marketSelection,
         preparationHooks,
+      )
+    }
+    try {
+      await ensureDesktopOnboardingSettings(prepared.settingsDocument)
+    } catch (cause) {
+      electronLogger.error(
+        `${BIN_NAME}: failed to ensure onboarding notice settings: ${cause instanceof Error ? cause.message : String(cause)}`,
       )
     }
     // Safe Mode must reach the working surface with shipped defaults. Its
