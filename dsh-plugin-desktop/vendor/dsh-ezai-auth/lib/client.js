@@ -1756,8 +1756,8 @@ function installModelLockObserver(ctx) {
     const badges = document.querySelectorAll('span[class*="previewBadge"], span[class*="HeroShell_previewBadge"]');
     for (const badge of badges) {
       const text = badge.textContent?.trim();
-      if (text === "\u9884\u89C8\u7248" || text === "Preview" || text === "\u7248\u672C 2.0.2" || text === "\u7248\u672C 2.0.3" || text === "\u7248\u672C 2.0.4") {
-        badge.textContent = "\u7248\u672C 2.0.5";
+      if (text === "\u9884\u89C8\u7248" || text === "Preview" || text && /^版本\s*2\./.test(text)) {
+        badge.textContent = "\u7248\u672C 2.1.0";
       }
     }
   };

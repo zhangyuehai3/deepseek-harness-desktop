@@ -1225,9 +1225,12 @@ async function start(): Promise<void> {
           aaEnabled: profilePreferences?.aaEnabled === true,
         },
       })
-      let setupResult: DesktopSetupWizardResult
+      let setupResult: DesktopSetupWizardResult = { action: 'skip' }
       try {
-        setupResult = await setupWizardWindow.run()
+        const promptSetupWizard = false
+        if (promptSetupWizard) {
+          setupResult = await setupWizardWindow.run()
+        }
       } finally {
         setupWizardWindow = undefined
       }
