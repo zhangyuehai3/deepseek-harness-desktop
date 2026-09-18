@@ -512,7 +512,7 @@ virtualStoreDirMaxLength: 60
     }))
   })
 
-  it('rejects malformed Web trust config and non-IPv4 launcher addresses', () => {
+  it('normalizes malformed Web trust config and rejects non-IPv4 launcher addresses', () => {
     const malformedHome = temporaryHome()
     writeFileSync(join(malformedHome, 'cordis.patch.yml'), [
       '- id: web-runtime',
@@ -521,9 +521,9 @@ virtualStoreDirMaxLength: 60
       '',
     ].join('\n'))
 
-    expect(() => prepareDesktopProfile(undefined, malformedHome, 'darwin')).toThrow(
-      'web-runtime trustedHosts must be an array of strings',
-    )
+    const prepared = prepareDesktopProfile(undefined, malformedHome, 'darwin')
+    const rows = composeEntries([prepared.patches])
+    expect(rows.find(row => row.id === 'web-runtime')?.config?.trustedHosts).toEqual(['lab.internal'])
 
     const invalidAddressHome = temporaryHome()
     expect(() => prepareDesktopProfile(

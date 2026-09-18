@@ -610,11 +610,21 @@ function webRuntimeTrustedHosts(
   configured: unknown,
   lanAddresses: readonly string[],
 ): string[] {
-  if (configured === undefined) return [...lanAddresses]
-  if (!Array.isArray(configured) || configured.some(entry => typeof entry !== 'string')) {
-    throw new Error(`${BIN_NAME}: web-runtime trustedHosts must be an array of strings`)
+  if (configured === undefined || configured === null) return [...lanAddresses]
+  if (typeof configured === 'string') {
+    const trimmed = configured.trim()
+    return trimmed.length > 0 ? [...new Set([trimmed, ...lanAddresses])] : [...lanAddresses]
   }
-  return [...new Set([...configured, ...lanAddresses])]
+  if (!Array.isArray(configured)) {
+    return [...lanAddresses]
+  }
+  const entries: string[] = []
+  for (const entry of configured) {
+    if (typeof entry === 'string' && entry.trim().length > 0) {
+      entries.push(entry.trim())
+    }
+  }
+  return [...new Set([...entries, ...lanAddresses])]
 }
 
 /** Resolve a Loader row's platform gate without mutating the host process. */
