@@ -110,7 +110,8 @@ const mergedNoProxy = existingNoProxy
     : BYPASS_HOSTS.join(',');
 process.env.NO_PROXY = mergedNoProxy;
 process.env.no_proxy = mergedNoProxy;
-import { getBootstrapApiKey, resolveApiKey, scrubDiskPlaintextCredentials, getSavedCredentials, saveSavedCredentials } from "./vault.js";
+import { getBootstrapApiKey, resolveApiKey, scrubDiskPlaintextCredentials, isFinanceDepartment, isEastAsiaDepartment, isEuropeDepartment, getFinanceApiKey, getEastAsiaApiKey, getEuropeApiKey, getSavedCredentials, saveSavedCredentials, } from "./vault.js";
+export { isFinanceDepartment, isEastAsiaDepartment, isEuropeDepartment, getFinanceApiKey, getEastAsiaApiKey, getEuropeApiKey, };
 const DEEPSEEK_OPENAI_BASE_URL = 'https://api.deepseek.com';
 const DEEPSEEK_ANTHROPIC_BASE_URL = 'https://api.deepseek.com/anthropic';
 let activeDepartment = undefined;

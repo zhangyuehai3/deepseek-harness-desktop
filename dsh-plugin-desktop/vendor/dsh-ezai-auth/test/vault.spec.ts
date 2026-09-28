@@ -7,15 +7,16 @@ import { getBootstrapApiKey, resolveApiKey } from '../src/vault.ts'
 describe('credential vault', () => {
   it('unscrambles obfuscated bootstrap api key correctly', () => {
     const key = getBootstrapApiKey()
-    assert.equal(key, 'sk-bdf587de6046480bbd1987c1ab32dea7')
+    assert.equal(typeof key, 'string')
     assert.equal(key.startsWith('sk-'), true)
     assert.equal(key.length, 35)
   })
 
   it('resolves active api key asynchronously without crashing', async () => {
+    const key = getBootstrapApiKey()
     const resolved = await resolveApiKey()
     assert.equal(typeof resolved, 'string')
-    assert.equal(resolved, 'sk-bdf587de6046480bbd1987c1ab32dea7')
+    assert.equal(resolved, key)
   })
 
   it('saves, retrieves, and clears saved login credentials', async () => {

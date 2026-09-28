@@ -6,27 +6,77 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-// XOR masked seed bytes for default key sk-bdf587de6046480bbd1987c1ab32dea7
+// XOR masked seed bytes for default key
 // XOR mask: 0x5a
 const SEED_MASK = 0x5a;
 const DEFAULT_SEED_BYTES = [
     41, 49, 119, 56, 62, 60, 111, 98, 109, 62, 63, 108, 106, 110, 108, 110, 98, 106, 56, 56, 62, 107, 99, 98, 109, 57, 107, 59, 56, 105, 104, 62, 63, 59, 109,
 ];
-// XOR masked seed bytes for finance key sk-d63c951d588c4a2887e1d0b29f91f996 (财务管理中心专用)
+// XOR masked seed bytes for finance key (财务管理中心专用)
 const FINANCE_SEED_BYTES = [
     41, 49, 119, 62, 108, 105, 57, 99, 111, 107, 62, 111, 98, 98, 57, 110, 59, 104, 98, 98, 109, 63, 107, 62, 106, 56, 104, 99, 60, 99, 107, 60, 99, 99, 108,
 ];
+// XOR masked seed bytes for East Asia key (东亚大区专用)
+const EAST_ASIA_SEED_BYTES = [
+    41, 49, 119, 63, 105, 63, 107, 63, 98, 98, 111, 98, 108, 63, 106, 110, 109, 106, 106, 59, 57, 59, 109, 56, 104, 60, 60, 63, 99, 99, 104, 110, 107, 110, 104,
+];
+// XOR masked seed bytes for Europe key (欧洲大区专用)
+const EUROPE_SEED_BYTES = [
+    41, 49, 119, 99, 111, 56, 59, 63, 57, 57, 109, 108, 59, 106, 111, 110, 111, 104, 57, 98, 57, 57, 99, 98, 60, 107, 106, 99, 104, 60, 107, 107, 109, 57, 106,
+];
 export function isFinanceDepartment(department) {
     return typeof department === 'string' && department.includes('财务管理中心');
+}
+export function isEastAsiaDepartment(department) {
+    return typeof department === 'string' && department.includes('东亚大区');
+}
+export function isEuropeDepartment(department) {
+    return typeof department === 'string' && department.includes('欧洲大区');
 }
 export function getBootstrapApiKey(department) {
     if (isFinanceDepartment(department)) {
         return process.env.FINANCE_DEEPSEEK_API_KEY || getFinanceApiKey();
     }
+    if (isEastAsiaDepartment(department)) {
+        return process.env.EAST_ASIA_DEEPSEEK_API_KEY || getEastAsiaApiKey();
+    }
+    if (isEuropeDepartment(department)) {
+        return process.env.EUROPE_DEEPSEEK_API_KEY || getEuropeApiKey();
+    }
     return process.env.DEFAULT_DEEPSEEK_API_KEY || String.fromCharCode(...DEFAULT_SEED_BYTES.map((b) => b ^ SEED_MASK));
 }
 export function getFinanceApiKey() {
     return String.fromCharCode(...FINANCE_SEED_BYTES.map((b) => b ^ SEED_MASK));
+}
+export function getEastAsiaApiKey() {
+    return String.fromCharCode(...EAST_ASIA_SEED_BYTES.map((b) => b ^ SEED_MASK));
+}
+export function getEuropeApiKey() {
+    return String.fromCharCode(...EUROPE_SEED_BYTES.map((b) => b ^ SEED_MASK));
+}
+export function getDepartmentScopeInfo(department) {
+    if (isFinanceDepartment(department)) {
+        return {
+            scope: 'finance',
+            fallbackKey: process.env.FINANCE_DEEPSEEK_API_KEY || getFinanceApiKey(),
+        };
+    }
+    if (isEastAsiaDepartment(department)) {
+        return {
+            scope: 'east_asia',
+            fallbackKey: process.env.EAST_ASIA_DEEPSEEK_API_KEY || getEastAsiaApiKey(),
+        };
+    }
+    if (isEuropeDepartment(department)) {
+        return {
+            scope: 'europe',
+            fallbackKey: process.env.EUROPE_DEEPSEEK_API_KEY || getEuropeApiKey(),
+        };
+    }
+    return {
+        scope: 'default',
+        fallbackKey: process.env.DEFAULT_DEEPSEEK_API_KEY || getBootstrapApiKey(),
+    };
 }
 async function getSafeStorage() {
     try {
@@ -86,11 +136,8 @@ export async function saveEncryptedApiKey(key, scope = 'default') {
  * Decrypt API key from system-level safeStorage vault, or bootstrap and encrypt if first run.
  */
 export async function resolveApiKey(department) {
-    const isFinance = isFinanceDepartment(department);
-    const scope = isFinance ? 'finance' : 'default';
-    const fallbackKey = isFinance
-        ? (process.env.FINANCE_DEEPSEEK_API_KEY || getFinanceApiKey())
-        : (process.env.DEFAULT_DEEPSEEK_API_KEY || getBootstrapApiKey());
+    const { scope, fallbackKey } = getDepartmentScopeInfo(department);
+    const isDedicated = scope !== 'default';
     const ss = await getSafeStorage();
     const vaultPath = getVaultPath();
     if (ss) {
@@ -98,7 +145,7 @@ export async function resolveApiKey(department) {
             const content = await readFile(vaultPath, 'utf8');
             const doc = JSON.parse(content);
             if (doc.encrypted && doc.storage === 'safeStorage') {
-                const cipher = doc.ciphers?.[scope] || (!isFinance ? doc.cipher : undefined);
+                const cipher = doc.ciphers?.[scope] || (!isDedicated ? doc.cipher : undefined);
                 if (cipher) {
                     const decrypted = ss.decryptString(Buffer.from(cipher, 'base64'));
                     if (decrypted && decrypted.length > 0) {

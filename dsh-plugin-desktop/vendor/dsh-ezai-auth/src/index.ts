@@ -122,7 +122,27 @@ const mergedNoProxy = existingNoProxy
 process.env.NO_PROXY = mergedNoProxy
 process.env.no_proxy = mergedNoProxy
 
-import { getBootstrapApiKey, resolveApiKey, scrubDiskPlaintextCredentials, isFinanceDepartment, getSavedCredentials, saveSavedCredentials } from './vault.ts'
+import {
+  getBootstrapApiKey,
+  resolveApiKey,
+  scrubDiskPlaintextCredentials,
+  isFinanceDepartment,
+  isEastAsiaDepartment,
+  isEuropeDepartment,
+  getFinanceApiKey,
+  getEastAsiaApiKey,
+  getEuropeApiKey,
+  getSavedCredentials,
+  saveSavedCredentials,
+} from './vault.ts'
+export {
+  isFinanceDepartment,
+  isEastAsiaDepartment,
+  isEuropeDepartment,
+  getFinanceApiKey,
+  getEastAsiaApiKey,
+  getEuropeApiKey,
+}
 
 const DEEPSEEK_OPENAI_BASE_URL = 'https://api.deepseek.com'
 const DEEPSEEK_ANTHROPIC_BASE_URL = 'https://api.deepseek.com/anthropic'

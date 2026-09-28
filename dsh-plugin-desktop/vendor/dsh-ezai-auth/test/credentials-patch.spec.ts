@@ -30,7 +30,7 @@ describe('credentials & launchEnvironment patching', () => {
 
     const resolved = await fakeCredentials.resolve('DEEPSEEK_API_KEY')
     assert.deepEqual(resolved, {
-      value: 'sk-bdf587de6046480bbd1987c1ab32dea7',
+      value: getBootstrapApiKey(),
       source: 'env',
     })
 
@@ -76,13 +76,13 @@ describe('credentials & launchEnvironment patching', () => {
 
     const entry = fakeEnv.get('DEEPSEEK_API_KEY')
     assert.deepEqual(entry, {
-      value: 'sk-bdf587de6046480bbd1987c1ab32dea7',
+      value: getBootstrapApiKey(),
       source: 'process',
     })
 
     const entryFrom = fakeEnv.getFrom('DEEPSEEK_API_KEY', ['process'])
     assert.deepEqual(entryFrom, {
-      value: 'sk-bdf587de6046480bbd1987c1ab32dea7',
+      value: getBootstrapApiKey(),
       source: 'process',
     })
   })
