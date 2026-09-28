@@ -14,41 +14,41 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@agents-anywhere/dsh-bridge-next@file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-0.1.0-dev.0.desktop.c7ed3d6bd64fc.rd2c7a8f7.tgz::locator=dsh-plugin-desktop%40workspace%3Adsh-plugin-desktop":
-  version: 0.1.0-dev.0.desktop.c7ed3d6bd64fc.rd2c7a8f7
-  resolution: "@agents-anywhere/dsh-bridge-next@file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-0.1.0-dev.0.desktop.c7ed3d6bd64fc.rd2c7a8f7.tgz#../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-0.1.0-dev.0.desktop.c7ed3d6bd64fc.rd2c7a8f7.tgz::hash=9bfed1&locator=dsh-plugin-desktop%40workspace%3Adsh-plugin-desktop"
+"@agents-anywhere/dsh-bridge-next@file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7.tgz::locator=dsh-plugin-desktop%40workspace%3Adsh-plugin-desktop":
+  version: 2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7
+  resolution: "@agents-anywhere/dsh-bridge-next@file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7.tgz#../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7.tgz::hash=c818b9&locator=dsh-plugin-desktop%40workspace%3Adsh-plugin-desktop"
   dependencies:
     "@dataiku/uv": "npm:0.12.0"
     clsx: "npm:2.1.1"
     lucide-react: "npm:1.41.0"
     qrcode: "npm:1.5.4"
   peerDependencies:
-    "@deepseek-ai/cordis": 4.0.2
+    "@deepseek-ai/cordis": 4.0.4
     "@deepseek-ai/dsh-llm": 0.1.5-rc.2
     "@deepseek-ai/dsh-session": 0.1.5-rc.2
     "@deepseek-ai/dsh-typert-protocol": 0.1.5-rc.2
-    "@deepseek-ai/schemastery": ^3.18.1
+    "@deepseek-ai/schemastery": 3.18.4
     react: ^18.3.1
-  checksum: 10c0/977399455cb6db9cd6800d45f6d3ab2f1de4efa367838fc356ebf34d6201a21ed04aabebf0d757263b671377ffa91e933be8c3a2ae74ee4ce146c09b2827c197
+  checksum: 10c0/2f6324961a18d998a261e9f5d5ae8325566aa56bc17a5169cf600ea1cc0f8fe16995fc0edf4c289f9f462b98fa995673e758573bfe62f4f7997d365e9d7fb5b7
   languageName: node
   linkType: hard
 
-"@agents-anywhere/dsh-bridge-next@file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-0.1.0-dev.0.desktop.c7ed3d6bd64fc.rd2c7a8f7.tgz::locator=dsh-plugin-desktop-beta%40workspace%3Adsh-plugin-desktop-beta":
-  version: 0.1.0-dev.0.desktop.c7ed3d6bd64fc.rd2c7a8f7
-  resolution: "@agents-anywhere/dsh-bridge-next@file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-0.1.0-dev.0.desktop.c7ed3d6bd64fc.rd2c7a8f7.tgz#../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-0.1.0-dev.0.desktop.c7ed3d6bd64fc.rd2c7a8f7.tgz::hash=9bfed1&locator=dsh-plugin-desktop-beta%40workspace%3Adsh-plugin-desktop-beta"
+"@agents-anywhere/dsh-bridge-next@file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7.tgz::locator=dsh-plugin-desktop-beta%40workspace%3Adsh-plugin-desktop-beta":
+  version: 2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7
+  resolution: "@agents-anywhere/dsh-bridge-next@file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7.tgz#../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7.tgz::hash=c818b9&locator=dsh-plugin-desktop-beta%40workspace%3Adsh-plugin-desktop-beta"
   dependencies:
     "@dataiku/uv": "npm:0.12.0"
     clsx: "npm:2.1.1"
     lucide-react: "npm:1.41.0"
     qrcode: "npm:1.5.4"
   peerDependencies:
-    "@deepseek-ai/cordis": 4.0.2
+    "@deepseek-ai/cordis": 4.0.4
     "@deepseek-ai/dsh-llm": 0.1.5-rc.2
     "@deepseek-ai/dsh-session": 0.1.5-rc.2
     "@deepseek-ai/dsh-typert-protocol": 0.1.5-rc.2
-    "@deepseek-ai/schemastery": ^3.18.1
+    "@deepseek-ai/schemastery": 3.18.4
     react: ^18.3.1
-  checksum: 10c0/977399455cb6db9cd6800d45f6d3ab2f1de4efa367838fc356ebf34d6201a21ed04aabebf0d757263b671377ffa91e933be8c3a2ae74ee4ce146c09b2827c197
+  checksum: 10c0/2f6324961a18d998a261e9f5d5ae8325566aa56bc17a5169cf600ea1cc0f8fe16995fc0edf4c289f9f462b98fa995673e758573bfe62f4f7997d365e9d7fb5b7
   languageName: node
   linkType: hard
 
@@ -1127,10 +1127,37 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@deepseek-ai/cordis@npm:4.0.3":
+  version: 4.0.3
+  resolution: "@deepseek-ai/cordis@npm:4.0.3"
+  dependencies:
+    "@deepseek-ai/cosmokit": "npm:^1.8.4"
+    "@standard-schema/spec": "npm:^1.1.0"
+  peerDependencies:
+    "@deepseek-ai/cordis-plugin-include": ^1.0.8
+    "@deepseek-ai/cordis-plugin-loader": ^1.0.4
+  peerDependenciesMeta:
+    "@deepseek-ai/cordis-plugin-include":
+      optional: true
+    "@deepseek-ai/cordis-plugin-loader":
+      optional: true
+  bin:
+    cordis: bin.js
+  checksum: 10c0/72471633b61fafb72cbde02174351a7dcc5810d3de2d200dec49623978bcd5ed6506b8d66376d3961b7b37187f6c599f310a226336575f3e3206666dffcd6e8f
+  languageName: node
+  linkType: hard
+
 "@deepseek-ai/cosmokit@npm:^1.8.3":
   version: 1.8.3
   resolution: "@deepseek-ai/cosmokit@npm:1.8.3"
   checksum: 10c0/fb84c4560d6563ce0d1103489689478f109d0634a9d5393b6eb1a411ac5679c3b8c30e3182325b8385316a53116204a613e214b5f6da4b8c645d871739eb02d0
+  languageName: node
+  linkType: hard
+
+"@deepseek-ai/cosmokit@npm:^1.8.4, @deepseek-ai/cosmokit@npm:~1.8.5":
+  version: 1.8.5
+  resolution: "@deepseek-ai/cosmokit@npm:1.8.5"
+  checksum: 10c0/b7c8c2f1b6c08e3e6ce3bc0804d77ef43035229811afb89a43a680e0c198ed93cd0f2bb1cfbf30c8626ac839e1eaf58f655a31c577c69cd7b0bf3237278e156e
   languageName: node
   linkType: hard
 
@@ -1674,6 +1701,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@deepseek-ai/dsh-brand@npm:^0.1.7-alpha.1":
+  version: 0.1.7-rc.2
+  resolution: "@deepseek-ai/dsh-brand@npm:0.1.7-rc.2"
+  peerDependencies:
+    "@deepseek-ai/cordis": ~4.0.4
+  checksum: 10c0/5d5b18a8e3c614fe6fa21da0dd93cd136f80ee78a8fdf9b7bd72550739b165b4ffe3d8c9d89da4bac7230546a3c727448eaf1b4ae0b35e4caf161a7b14776507
+  languageName: node
+  linkType: hard
+
 "@deepseek-ai/dsh-chunked-list@file:vendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-chunked-list-0.1.5-rc.2.tgz::locator=deepseek-harness-desktop%40workspace%3A.":
   version: 0.1.5-rc.2
   resolution: "@deepseek-ai/dsh-chunked-list@file:vendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-chunked-list-0.1.5-rc.2.tgz#vendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-chunked-list-0.1.5-rc.2.tgz::hash=75387d&locator=deepseek-harness-desktop%40workspace%3A."
@@ -1982,6 +2018,15 @@ __metadata:
   peerDependencies:
     "@deepseek-ai/cordis": ^4.0.2
   checksum: 10c0/18a7e81d4e924df51c87449f0474de0b95c8fb6c2f59c40ee62387eee1e11a9734ae14e863bad52d954fb48a91c46000a046d36036db396167554dc6fd0ff64b
+  languageName: node
+  linkType: hard
+
+"@deepseek-ai/dsh-client-ui-primitives@npm:0.1.7-alpha.1":
+  version: 0.1.7-alpha.1
+  resolution: "@deepseek-ai/dsh-client-ui-primitives@npm:0.1.7-alpha.1"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.3
+  checksum: 10c0/ae176899a2980e3a7d71a622f73d797a051b124d4bced330a5e6560ec25e6745d9885bd2ab669614ffc31c1bf0891037735bc205a5d469c335381415a1ec992f
   languageName: node
   linkType: hard
 
@@ -2498,6 +2543,19 @@ __metadata:
     "@deepseek-ai/dsh-llm": ^0.1.5-rc.2
     "@deepseek-ai/dsh-sandbox": ^0.1.5-rc.2
   checksum: 10c0/c0c8a2ad300041ca5e92b6c13349a1e3fa427bfd3298f32732f0fffb3ba643e024d192c7cddfd9c0f162d7cd4c5146adf7661df6c1f8029e13df4ba2c220bf3d
+  languageName: node
+  linkType: hard
+
+"@deepseek-ai/dsh-fs@npm:0.1.7-alpha.1":
+  version: 0.1.7-alpha.1
+  resolution: "@deepseek-ai/dsh-fs@npm:0.1.7-alpha.1"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.3
+    "@deepseek-ai/dsh-brand": ^0.1.7-alpha.1
+    "@deepseek-ai/dsh-invariants": ^0.1.7-alpha.1
+    "@deepseek-ai/dsh-llm": ^0.1.7-alpha.1
+    "@deepseek-ai/dsh-sandbox": ^0.1.7-alpha.1
+  checksum: 10c0/b6d6273aecf22753389974dc42417bbf0cb9c4e79c1bbdf37883f93aecc08c5f36451b513aa36fe8cd14898e78200eb886cdb4cda1a815b92268d44fa802ab1f
   languageName: node
   linkType: hard
 
@@ -4415,6 +4473,29 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@deepseek-ai/dsh-tools@npm:0.1.7-alpha.1":
+  version: 0.1.7-alpha.1
+  resolution: "@deepseek-ai/dsh-tools@npm:0.1.7-alpha.1"
+  dependencies:
+    "@deepseek-ai/dsh-brand": "npm:^0.1.7-alpha.1"
+    "@deepseek-ai/dsh-util-values": "npm:^0.1.7-alpha.1"
+    "@deepseek-ai/schemastery": "npm:^3.18.3"
+  peerDependencies:
+    "@deepseek-ai/cordis": ^4.0.3
+    "@deepseek-ai/dsh-agent": ^0.1.7-alpha.1
+    "@deepseek-ai/dsh-invariants": ^0.1.7-alpha.1
+    "@deepseek-ai/dsh-llm": ^0.1.7-alpha.1
+    "@deepseek-ai/dsh-ptc-runtime": ^0.1.7-alpha.1
+    "@deepseek-ai/dsh-sandbox": ^0.1.7-alpha.1
+    "@deepseek-ai/dsh-sandbox-policy": ^0.1.7-alpha.1
+    "@deepseek-ai/dsh-scope": ^0.1.7-alpha.1
+    "@deepseek-ai/dsh-session": ^0.1.7-alpha.1
+    "@deepseek-ai/dsh-system-prompt": ^0.1.7-alpha.1
+    "@deepseek-ai/dsh-user-approval": ^0.1.7-alpha.1
+  checksum: 10c0/f48a480fbe2ee57461f095ec14c79782363db737e57ca9683a85621a9eef984dec0cbcafbbbc369815cf5b0a35bff89638f57c3009abc4ae0986506bb30ed4dd
+  languageName: node
+  linkType: hard
+
 "@deepseek-ai/dsh-typert-loader@file:vendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-typert-loader-0.1.5-rc.2.tgz::locator=deepseek-harness-desktop%40workspace%3A.":
   version: 0.1.5-rc.2
   resolution: "@deepseek-ai/dsh-typert-loader@file:vendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-typert-loader-0.1.5-rc.2.tgz#vendor/dsh-runtime/0.1.5-rc.2/deepseek-ai-dsh-typert-loader-0.1.5-rc.2.tgz::hash=4f638f&locator=deepseek-harness-desktop%40workspace%3A."
@@ -4502,6 +4583,15 @@ __metadata:
   peerDependencies:
     "@deepseek-ai/cordis": ^4.0.2
   checksum: 10c0/4759e9b68550bcd6dbdd673b68f3be36490799de36aedd748dd6c60d11655e95cd9cb10fb94c4271b7bfca1e7bd4431f624ad625259daa52ca1d53e1de6c0597
+  languageName: node
+  linkType: hard
+
+"@deepseek-ai/dsh-util-values@npm:^0.1.7-alpha.1":
+  version: 0.1.7-rc.2
+  resolution: "@deepseek-ai/dsh-util-values@npm:0.1.7-rc.2"
+  peerDependencies:
+    "@deepseek-ai/cordis": ~4.0.4
+  checksum: 10c0/e25558854a7b8775a7042bb137948ff7136ed217579f3c98c30a7f6315697da8293923c44a12f310dc6d6da16be9b274347a080090438329e4c04d3538555e03
   languageName: node
   linkType: hard
 
@@ -5076,6 +5166,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@deepseek-ai/schemastery@npm:3.18.3":
+  version: 3.18.3
+  resolution: "@deepseek-ai/schemastery@npm:3.18.3"
+  dependencies:
+    "@deepseek-ai/cosmokit": "npm:^1.8.4"
+    "@standard-schema/spec": "npm:^1.1.0"
+  checksum: 10c0/adc220647c353f06d2775a824ee69399e8ce08e893fd2588cec977835b096478f9863b7e8691088835bd5e9557f5b8adbf14df92b31aa7c86ca5f07004573031
+  languageName: node
+  linkType: hard
+
 "@deepseek-ai/schemastery@npm:^3.18.2":
   version: 3.18.2
   resolution: "@deepseek-ai/schemastery@npm:3.18.2"
@@ -5083,6 +5183,16 @@ __metadata:
     "@deepseek-ai/cosmokit": "npm:^1.8.3"
     "@standard-schema/spec": "npm:^1.1.0"
   checksum: 10c0/699651803c2cec6512ec648c31e0b4fcf07451b0adbf7c6bfb8462b6fa84f97584372b00a31ec8f1248c283f8e91819aa143432c28271347de5568ef9ea46421
+  languageName: node
+  linkType: hard
+
+"@deepseek-ai/schemastery@npm:^3.18.3":
+  version: 3.18.4
+  resolution: "@deepseek-ai/schemastery@npm:3.18.4"
+  dependencies:
+    "@deepseek-ai/cosmokit": "npm:~1.8.5"
+    "@standard-schema/spec": "npm:^1.1.0"
+  checksum: 10c0/eb2afd90404460ea88a510f20bc6751a70f9e9973bac9342279999277928fc827c2aba1bbb37f134a92b6475e261e5dd97c1ddbc6f0ca8588d07d34303ec4a1d
   languageName: node
   linkType: hard
 
@@ -8326,6 +8436,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"buffer-crc32@npm:~0.2.3":
+  version: 0.2.13
+  resolution: "buffer-crc32@npm:0.2.13"
+  checksum: 10c0/cb0a8ddf5cf4f766466db63279e47761eb825693eeba6a5a95ee4ec8cb8f81ede70aa7f9d8aeec083e781d47154290eb5d4d26b3f7a465ec57fb9e7d59c47150
+  languageName: node
+  linkType: hard
+
 "buffer-equal-constant-time@npm:^1.0.1":
   version: 1.0.1
   resolution: "buffer-equal-constant-time@npm:1.0.1"
@@ -9350,22 +9467,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"dsh-files@https://api.github.com/repos/taxueseek/dsh-files/tarball/a814c7b89b0800870d3404d7b51362e9914a8092":
-  version: 0.5.1
-  resolution: "dsh-files@https://api.github.com/repos/taxueseek/dsh-files/tarball/a814c7b89b0800870d3404d7b51362e9914a8092"
+"dsh-files@https://api.github.com/repos/taxueseek/dsh-files/tarball/8f2d0bdf874b3e30ff19b40ab3f19a8a50e168a0":
+  version: 0.5.3
+  resolution: "dsh-files@https://api.github.com/repos/taxueseek/dsh-files/tarball/8f2d0bdf874b3e30ff19b40ab3f19a8a50e168a0"
   dependencies:
+    "@deepseek-ai/cordis": "npm:4.0.3"
+    "@deepseek-ai/dsh-client-ui-primitives": "npm:0.1.7-alpha.1"
+    "@deepseek-ai/dsh-fs": "npm:0.1.7-alpha.1"
+    "@deepseek-ai/dsh-tools": "npm:0.1.7-alpha.1"
+    "@deepseek-ai/schemastery": "npm:3.18.3"
     mammoth: "npm:^1.8.0"
     pdfjs-dist: "npm:^4.10.38"
     read-excel-file: "npm:^5.8.7"
+    word-extractor: "npm:^1.0.4"
   peerDependencies:
     "@deepseek-ai/cordis": "*"
-    "@deepseek-ai/dsh-client-runtime": ^0.1.0-rc.6
-    "@deepseek-ai/dsh-client-ui-primitives": ^0.1.0-rc.6
-    "@deepseek-ai/dsh-fs": ^0.1.0-rc.6
-    "@deepseek-ai/dsh-tools": ^0.1.0-rc.6
-    "@deepseek-ai/schemastery": ^3.18.1
+    "@deepseek-ai/dsh-client-runtime": ^0.1.0-rc.6 || ^0.1.1-rc.2
     react: ^18.2.0
-  checksum: 10c0/60f7ffd58de1b6a2f1ff619f07df62b48b5c1b3cc0837190e5c65df2dc8c6e68c9c8d8e0272034b731ff05777a2e9539e85ac8d12fad4c8c5a6275b9092eb0f2
+  checksum: 10c0/3376774c9569045e852a78f9a0a6f1c4bdd4dcd8cd3594de3a485eb5e7d842cb8e869a9f8e2a15f74d02c9bd135b713aef296336a17266640b89c46da32c5ef3
   languageName: node
   linkType: hard
 
@@ -9373,7 +9492,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "dsh-plugin-desktop-beta@workspace:dsh-plugin-desktop-beta"
   dependencies:
-    "@agents-anywhere/dsh-bridge-next": "file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-0.1.0-dev.0.desktop.c7ed3d6bd64fc.rd2c7a8f7.tgz"
+    "@agents-anywhere/dsh-bridge-next": "file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7.tgz"
     "@base-ui/react": "npm:^1.7.0"
     "@deepseek-ai/cordis": "npm:4.0.2"
     "@deepseek-ai/cordis-plugin-group": "npm:1.0.2"
@@ -9570,7 +9689,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "dsh-plugin-desktop@workspace:dsh-plugin-desktop"
   dependencies:
-    "@agents-anywhere/dsh-bridge-next": "file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-0.1.0-dev.0.desktop.c7ed3d6bd64fc.rd2c7a8f7.tgz"
+    "@agents-anywhere/dsh-bridge-next": "file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7.tgz"
     "@base-ui/react": "npm:^1.7.0"
     "@deepseek-ai/cordis": "npm:4.0.2"
     "@deepseek-ai/cordis-plugin-group": "npm:1.0.2"
@@ -9731,7 +9850,7 @@ __metadata:
     dsh-community-market: "npm:0.1.0-dev.0"
     dsh-ezai-auth: "workspace:^"
     dsh-ezai-brand: "workspace:^"
-    dsh-files: "https://api.github.com/repos/taxueseek/dsh-files/tarball/a814c7b89b0800870d3404d7b51362e9914a8092"
+    dsh-files: "https://api.github.com/repos/taxueseek/dsh-files/tarball/8f2d0bdf874b3e30ff19b40ab3f19a8a50e168a0"
     dsh-session-purge: "workspace:^"
     dshmarket: "npm:1.38.1"
     electron: "npm:43.3.0"
@@ -10388,6 +10507,15 @@ __metadata:
   dependencies:
     reusify: "npm:^1.0.4"
   checksum: 10c0/e5dd725884decb1f11e5c822221d76136f239d0236f176fab80b7b8f9e7619ae57e6b4e5b73defc21e6b9ef99437ee7b545cff8e6c2c337819633712fa9d352e
+  languageName: node
+  linkType: hard
+
+"fd-slicer@npm:~1.1.0":
+  version: 1.1.0
+  resolution: "fd-slicer@npm:1.1.0"
+  dependencies:
+    pend: "npm:~1.2.0"
+  checksum: 10c0/304dd70270298e3ffe3bcc05e6f7ade2511acc278bc52d025f8918b48b6aa3b77f10361bddfadfe2a28163f7af7adbdce96f4d22c31b2f648ba2901f0c5fc20e
   languageName: node
   linkType: hard
 
@@ -12888,6 +13016,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"pend@npm:~1.2.0":
+  version: 1.2.0
+  resolution: "pend@npm:1.2.0"
+  checksum: 10c0/8a87e63f7a4afcfb0f9f77b39bb92374afc723418b9cb716ee4257689224171002e07768eeade4ecd0e86f1fa3d8f022994219fb45634f2dbd78c6803e452458
+  languageName: node
+  linkType: hard
+
 "picocolors@npm:1.1.1, picocolors@npm:^1.1.1":
   version: 1.1.1
   resolution: "picocolors@npm:1.1.1"
@@ -13669,6 +13804,15 @@ __metadata:
   version: 1.6.1
   resolution: "sax@npm:1.6.1"
   checksum: 10c0/c91a71043d60da50fdf1e2cee936fc7ad4c9376afb8d1022aef5655f279433640859ec06b3b49abfcbe578fc7da2828cc1661e45aaedf835f5393496193437fa
+  languageName: node
+  linkType: hard
+
+"saxes@npm:^5.0.1":
+  version: 5.0.1
+  resolution: "saxes@npm:5.0.1"
+  dependencies:
+    xmlchars: "npm:^2.2.0"
+  checksum: 10c0/b7476c41dbe1c3a89907d2546fecfba234de5e66743ef914cde2603f47b19bed09732ab51b528ad0f98b958369d8be72b6f5af5c9cfad69972a73d061f0b3952
   languageName: node
   linkType: hard
 
@@ -15035,6 +15179,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"word-extractor@npm:^1.0.4":
+  version: 1.0.4
+  resolution: "word-extractor@npm:1.0.4"
+  dependencies:
+    saxes: "npm:^5.0.1"
+    yauzl: "npm:^2.10.0"
+  checksum: 10c0/f8c6b4f9278802d0c803479c1441713e351e67f7b0d2f85bd8cbe94b76298d4adb058b5f23ee0a01faa02f3b1f01c507a4a2f44fa39cfcbd498a51769dd9e8e7
+  languageName: node
+  linkType: hard
+
 "wrap-ansi@npm:^6.2.0":
   version: 6.2.0
   resolution: "wrap-ansi@npm:6.2.0"
@@ -15209,6 +15363,16 @@ __metadata:
     y18n: "npm:^5.0.5"
     yargs-parser: "npm:^21.1.1"
   checksum: 10c0/7a28572f7e785a57886e34fdbddb9b28756dec552e1453d5f6e7cdd00ad8721a4e8c4321d33683f5e61cacb36ad43258adbb48396b71ec4ed14abee0fc0d0c1f
+  languageName: node
+  linkType: hard
+
+"yauzl@npm:^2.10.0":
+  version: 2.10.0
+  resolution: "yauzl@npm:2.10.0"
+  dependencies:
+    buffer-crc32: "npm:~0.2.3"
+    fd-slicer: "npm:~1.1.0"
+  checksum: 10c0/f265002af7541b9ec3589a27f5fb8f11cf348b53cc15e2751272e3c062cd73f3e715bc72d43257de71bbaecae446c3f1b14af7559e8ab0261625375541816422
   languageName: node
   linkType: hard
 

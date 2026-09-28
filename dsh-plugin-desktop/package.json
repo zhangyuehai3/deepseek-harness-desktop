@@ -135,7 +135,7 @@
     "prepare:electron-native": "node scripts/prepare-fs-ext.ts"
   },
   "dependencies": {
-    "@agents-anywhere/dsh-bridge-next": "file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-0.1.0-dev.0.desktop.c7ed3d6bd64fc.rd2c7a8f7.tgz",
+    "@agents-anywhere/dsh-bridge-next": "file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7.tgz",
     "@deepseek-ai/cordis": "4.0.2",
     "@deepseek-ai/cordis-plugin-group": "1.0.2",
     "@deepseek-ai/cordis-plugin-include": "1.0.7",
@@ -281,7 +281,7 @@
     "dsh-community-market": "0.1.0-dev.0",
     "dsh-ezai-auth": "workspace:^",
     "dsh-ezai-brand": "workspace:^",
-    "dsh-files": "https://api.github.com/repos/taxueseek/dsh-files/tarball/a814c7b89b0800870d3404d7b51362e9914a8092",
+    "dsh-files": "https://api.github.com/repos/taxueseek/dsh-files/tarball/8f2d0bdf874b3e30ff19b40ab3f19a8a50e168a0",
     "dsh-session-purge": "workspace:^",
     "dshmarket": "1.38.1",
     "fs-ext": "2.1.1",
