@@ -709,16 +709,19 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 6px 8px;
+  width: calc(100% + 4px);
+  margin: 4px -2px 6px;
   padding: 10px 12px;
   background: var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.03));
   border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08));
-  border-radius: 10px;
+  border-radius: 12px;
   box-sizing: border-box;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   user-select: none;
   font-family: inherit;
+  min-width: 0;
+  overflow: hidden;
 }
 .dshEzaiSidebarCard:hover {
   background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.05));
@@ -731,6 +734,7 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  width: 100%;
 }
 
 .dshEzaiSidebarAvatar {
@@ -757,7 +761,9 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
 
 .dshEzaiSidebarUserName {
   display: block;
-  max-width: 140px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   font-size: 13px;
   font-weight: 600;
   line-height: 16px;
@@ -769,7 +775,9 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
 
 .dshEzaiSidebarUserDept {
   display: block;
-  max-width: 140px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   font-size: 11px;
   line-height: 14px;
   color: var(--dsw-alias-label-tertiary, #7a9493);
@@ -2125,6 +2133,9 @@ function ensureSidebarWidgetMounted(ctx) {
     mountPoint = document.createElement("div");
     mountPoint.id = "dsh-ezai-sidebar-mount";
     mountPoint.style.width = "100%";
+    mountPoint.style.minWidth = "0";
+    mountPoint.style.display = "flex";
+    mountPoint.style.flexDirection = "column";
     if (footerActions && !footerActions.contains(mountPoint)) {
       footerActions.appendChild(mountPoint);
     } else if (settingsArea && settingsArea.parentElement) {

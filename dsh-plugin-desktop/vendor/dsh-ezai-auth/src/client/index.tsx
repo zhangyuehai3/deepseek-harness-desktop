@@ -116,6 +116,9 @@ function ensureSidebarWidgetMounted(ctx: ClientContext): void {
     mountPoint = document.createElement('div')
     mountPoint.id = 'dsh-ezai-sidebar-mount'
     mountPoint.style.width = '100%'
+    mountPoint.style.minWidth = '0'
+    mountPoint.style.display = 'flex'
+    mountPoint.style.flexDirection = 'column'
 
     if (footerActions && !footerActions.contains(mountPoint)) {
       footerActions.appendChild(mountPoint)
