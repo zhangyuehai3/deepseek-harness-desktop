@@ -701,8 +701,8 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
 
 .dshEzaiSidebarAvatar {
   flex: none;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: linear-gradient(135deg, rgba(38, 92, 90, 0.18) 0%, rgba(152, 196, 85, 0.28) 100%);
   color: #265C5A;
@@ -715,14 +715,18 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: baseline;
-  gap: 4px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
   overflow: hidden;
 }
 
 .dshEzaiSidebarUserName {
+  display: block;
+  max-width: 140px;
   font-size: 13px;
   font-weight: 600;
+  line-height: 16px;
   color: var(--dsw-alias-label-primary, #112625);
   white-space: nowrap;
   overflow: hidden;
@@ -730,7 +734,10 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
 }
 
 .dshEzaiSidebarUserDept {
+  display: block;
+  max-width: 140px;
   font-size: 11px;
+  line-height: 14px;
   color: var(--dsw-alias-label-tertiary, #7a9493);
   white-space: nowrap;
   overflow: hidden;

@@ -165,7 +165,7 @@ export function EzaiSidebarWidget(props: EzaiSidebarWidgetProps) {
         className="dshEzaiSidebarRailItem"
         data-ezai-sidebar-widget="true"
         onClick={handleCardClick}
-        title={`${fullUserTitle}\n${isZh ? '已消耗' : 'Used'}: ${formatNumber(used)}\n${isZh ? '总额度' : 'Quota'}: ${formatNumber(quota)} Tokens`}
+        title={`${fullUserTitle}\n${isZh ? '已消耗' : 'Used'}: ${formatNumber(used)} Tokens`}
       >
         <div className="dshEzaiSidebarRailAvatar">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -185,21 +185,21 @@ export function EzaiSidebarWidget(props: EzaiSidebarWidgetProps) {
       onClick={handleCardClick}
       title={isLoggedIn ? (isZh ? '点击查看账户详情' : 'Click to view account details') : (isZh ? '点击登录账号' : 'Click to sign in')}
     >
-      {/* 1. User Info Header */}
+      {/* 1. User Info Header (Name and Department stacked vertically) */}
       <div className="dshEzaiSidebarUserRow">
         <div className="dshEzaiSidebarAvatar">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>
         </div>
         <div className="dshEzaiSidebarUserInfo">
-          <span className="dshEzaiSidebarUserName" title={fullUserTitle}>
+          <span className="dshEzaiSidebarUserName" title={userName}>
             {userName}
           </span>
           {department && (
             <span className="dshEzaiSidebarUserDept" title={department}>
-              ({department})
+              {department}
             </span>
           )}
         </div>
@@ -232,13 +232,10 @@ export function EzaiSidebarWidget(props: EzaiSidebarWidgetProps) {
         />
       </div>
 
-      {/* 3. Token Usage Row (Exactly matching user screenshot 2) */}
+      {/* 3. Token Usage Row (Displaying only used tokens without total quota) */}
       <div className="dshEzaiSidebarUsageRow">
         <span className="dshEzaiSidebarUsageUsed">
-          {isZh ? '已消耗' : 'Used'}: <strong>{formatNumber(used)}</strong>
-        </span>
-        <span className="dshEzaiSidebarUsageQuota">
-          {isZh ? '总额度' : 'Quota'}: <strong>{formatNumber(quota)}</strong> Tokens
+          {isZh ? '已消耗' : 'Used'}: <strong>{formatNumber(used)}</strong> Tokens
         </span>
       </div>
     </div>

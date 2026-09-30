@@ -735,8 +735,8 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
 
 .dshEzaiSidebarAvatar {
   flex: none;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: linear-gradient(135deg, rgba(38, 92, 90, 0.18) 0%, rgba(152, 196, 85, 0.28) 100%);
   color: #265C5A;
@@ -749,14 +749,18 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: baseline;
-  gap: 4px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
   overflow: hidden;
 }
 
 .dshEzaiSidebarUserName {
+  display: block;
+  max-width: 140px;
   font-size: 13px;
   font-weight: 600;
+  line-height: 16px;
   color: var(--dsw-alias-label-primary, #112625);
   white-space: nowrap;
   overflow: hidden;
@@ -764,7 +768,10 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
 }
 
 .dshEzaiSidebarUserDept {
+  display: block;
+  max-width: 140px;
   font-size: 11px;
+  line-height: 14px;
   color: var(--dsw-alias-label-tertiary, #7a9493);
   white-space: nowrap;
   overflow: hidden;
@@ -1896,8 +1903,7 @@ function EzaiSidebarWidget(props) {
         "data-ezai-sidebar-widget": "true",
         onClick: handleCardClick,
         title: `${fullUserTitle}
-${isZh ? "\u5DF2\u6D88\u8017" : "Used"}: ${formatNumber2(used)}
-${isZh ? "\u603B\u989D\u5EA6" : "Quota"}: ${formatNumber2(quota)} Tokens`,
+${isZh ? "\u5DF2\u6D88\u8017" : "Used"}: ${formatNumber2(used)} Tokens`,
         children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dshEzaiSidebarRailAvatar", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { width: "15", height: "15", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
           /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" }),
           /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("circle", { cx: "12", cy: "7", r: "4" })
@@ -1914,17 +1920,13 @@ ${isZh ? "\u603B\u989D\u5EA6" : "Quota"}: ${formatNumber2(quota)} Tokens`,
       title: isLoggedIn ? isZh ? "\u70B9\u51FB\u67E5\u770B\u8D26\u6237\u8BE6\u60C5" : "Click to view account details" : isZh ? "\u70B9\u51FB\u767B\u5F55\u8D26\u53F7" : "Click to sign in",
       children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dshEzaiSidebarUserRow", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dshEzaiSidebarAvatar", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { width: "13", height: "13", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dshEzaiSidebarAvatar", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.2", strokeLinecap: "round", strokeLinejoin: "round", children: [
             /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" }),
             /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("circle", { cx: "12", cy: "7", r: "4" })
           ] }) }),
           /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dshEzaiSidebarUserInfo", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dshEzaiSidebarUserName", title: fullUserTitle, children: userName }),
-            department && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "dshEzaiSidebarUserDept", title: department, children: [
-              "(",
-              department,
-              ")"
-            ] })
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dshEzaiSidebarUserName", title: userName, children: userName }),
+            department && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dshEzaiSidebarUserDept", title: department, children: department })
           ] }),
           isLoggedIn && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
             "button",
@@ -1947,19 +1949,12 @@ ${isZh ? "\u603B\u989D\u5EA6" : "Quota"}: ${formatNumber2(quota)} Tokens`,
             }
           }
         ) }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dshEzaiSidebarUsageRow", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "dshEzaiSidebarUsageUsed", children: [
-            isZh ? "\u5DF2\u6D88\u8017" : "Used",
-            ": ",
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("strong", { children: formatNumber2(used) })
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "dshEzaiSidebarUsageQuota", children: [
-            isZh ? "\u603B\u989D\u5EA6" : "Quota",
-            ": ",
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("strong", { children: formatNumber2(quota) }),
-            " Tokens"
-          ] })
-        ] })
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dshEzaiSidebarUsageRow", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "dshEzaiSidebarUsageUsed", children: [
+          isZh ? "\u5DF2\u6D88\u8017" : "Used",
+          ": ",
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("strong", { children: formatNumber2(used) }),
+          " Tokens"
+        ] }) })
       ]
     }
   );
