@@ -675,8 +675,8 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: calc(100% + 4px);
-  margin: 4px -2px 6px;
+  width: calc(100% - 2px);
+  margin: 4px 1px 6px;
   padding: 10px 12px;
   background: var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.03));
   border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08));
