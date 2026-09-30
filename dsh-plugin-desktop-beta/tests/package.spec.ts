@@ -76,7 +76,7 @@ const dshResolution = (name: string): unknown =>
 describe('published package surface', () => {
   it('keeps the private workspace version-neutral and versions the Beta package', () => {
     expect(workspaceManifest.version).toBeUndefined()
-    expect(manifest.version).toBe('2.0.10-beta.1')
+    expect(manifest.version).toBe('2.1.3-beta.1')
   })
 
   it('runs desktop and community market typechecks from the root command', () => {
@@ -86,7 +86,7 @@ describe('published package surface', () => {
 
   it('runs desktop and community market tests from the root command', () => {
     expect(workspaceManifest.scripts?.test)
-      .toBe('yarn workspace dsh-plugin-desktop test && yarn workspace dsh-plugin-desktop-beta test && yarn workspace dsh-community-market test')
+      .toBe('yarn workspace dsh-ezai-auth test && yarn workspace dsh-ezai-brand test && yarn workspace dsh-plugin-desktop test && yarn workspace dsh-plugin-desktop-beta test && yarn workspace dsh-community-market test')
   })
 
   it('registers both npm launcher names', () => {
@@ -839,7 +839,7 @@ describe('published package surface', () => {
 
   it('fixes the installed application identity', () => {
     expect(workspaceManifest.version).toBeUndefined()
-    expect(manifest.version).toBe('2.1.2-beta.1')
+    expect(manifest.version).toBe('2.1.3-beta.1')
     expect(manifest.name).toBe('dsh-plugin-desktop-beta')
     expect(manifest.bin).toEqual({
       'dsh-desktop-beta': 'lib/bin.js',
@@ -881,7 +881,7 @@ describe('published package surface', () => {
       '!node_modules/fs-ext/build/**',
     ])
     expect(manifest.build?.mac?.icon).toBe('build/app-icon-mac.png')
-    expect(manifest.build?.mac?.artifactName).toBe('DSH-Desktop-Beta-${version}-${arch}.${ext}')
+    expect(manifest.build?.mac?.artifactName).toBe('EZAI-Desktop-Beta-${version}-${arch}.${ext}')
     expect(manifest.build?.mac?.mergeASARs).toBe(false)
     expect(manifest.build?.mac?.signIgnore).toEqual(['\\.(?:pak|dat|wasm)$'])
     expect(manifest.build?.win?.compression).toBe('normal')
@@ -890,7 +890,7 @@ describe('published package surface', () => {
       target: 'nsis',
       arch: ['x64'],
     }])
-    expect(manifest.build?.win?.artifactName).toBe('DSH-Desktop-Beta-${version}-${arch}-Portable.${ext}')
+    expect(manifest.build?.win?.artifactName).toBe('EZAI-Desktop-Beta-${version}-${arch}-Portable.${ext}')
     expect(manifest.build?.nsis).toEqual({
       include: 'installer.nsh',
       license: 'THIRD_PARTY_NOTICES.md',
@@ -903,7 +903,7 @@ describe('published package surface', () => {
       differentialPackage: false,
       shortcutName: 'EZAI Desktop Beta',
       useZip: false,
-      artifactName: 'DSH-Desktop-Beta-${version}-${arch}-Setup.${ext}',
+      artifactName: 'EZAI-Desktop-Beta-${version}-${arch}-Setup.${ext}',
     })
     expect(manifest.build?.linux?.icon).toBe('build/app-icon.png')
   })
@@ -950,13 +950,13 @@ describe('published package surface', () => {
     expect(manifest.scripts?.['verify:cli']).toBe('node scripts/verify-cli-runtime.mjs')
     expect(manifest.scripts?.check).toContain('yarn run verify:cli')
     expect(workspaceManifest.scripts?.['dist:mac:beta'])
-      .toBe('yarn aa:prepare-release && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dist:mac')
+      .toBe('yarn aa:prepare-release && yarn workspace dsh-ezai-auth build && yarn workspace dsh-ezai-brand build && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dist:mac')
     expect(workspaceManifest.scripts?.['dist:mac-smoke:beta'])
-      .toBe('yarn aa:prepare-release && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dist:mac-smoke')
+      .toBe('yarn aa:prepare-release && yarn workspace dsh-ezai-auth build && yarn workspace dsh-ezai-brand build && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dist:mac-smoke')
     expect(workspaceManifest.scripts?.['dist:win:beta'])
-      .toBe('yarn aa:prepare-release && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dist:win')
+      .toBe('yarn aa:prepare-release && yarn workspace dsh-ezai-auth build && yarn workspace dsh-ezai-brand build && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dist:win')
     expect(workspaceManifest.scripts?.['dist:win-portable:beta'])
-      .toBe('yarn aa:prepare-release && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dist:win-portable')
+      .toBe('yarn aa:prepare-release && yarn workspace dsh-ezai-auth build && yarn workspace dsh-ezai-brand build && yarn workspace dsh-community-market build && yarn workspace dsh-plugin-desktop-beta dist:win-portable')
     expect(manifest.build?.afterPack).toBe('./scripts/verify-packaged-runtime.ts')
     expect(manifest.build?.afterAllArtifactBuild).toBe('./scripts/verify-electron-fuses.ts')
     expect(manifest.build?.mac).toEqual(expect.objectContaining({
@@ -1030,10 +1030,10 @@ describe('published package surface', () => {
     expect(ciWorkflow).toContain('Documentation-only change; product build and tests are not required.')
   })
 
-  it('keeps one fixed brand-blue tray source for generated native assets', () => {
+  it('keeps one fixed EZAI artwork tray source for generated native assets', () => {
     const source = readFileSync(new URL('build/tray-icon.svg', packageRoot), 'utf8')
 
-    expect(source.match(/#4D6BFE/gu)).toHaveLength(1)
+    expect(source).toContain('data:image/png;base64,')
     expect(source).not.toMatch(/<style\b|prefers-color-scheme/iu)
     for (const filename of [
       'tray-iconTemplate.png',
@@ -1047,12 +1047,12 @@ describe('published package surface', () => {
     }
   })
 
-  it('keeps the fixed inverted Beta source icon', () => {
+  it('keeps the iOS Default source icon unmodified', () => {
     const digest = createHash('sha256')
       .update(readFileSync(new URL('build/app-icon.png', packageRoot)))
       .digest('hex')
 
-    expect(digest).toBe('b661d0982f47b5a35a7e8c3524a7aa6a18e044eb64d2e480e01875b82dd2be7f')
+    expect(digest).toBe('578bc5328c1135e8e089668a3ff118f89805484dee68c4742fe4c497ce4f41e6')
   })
 
   it('generates a centered macOS icon with a 100-pixel visual inset', async () => {
@@ -1075,10 +1075,10 @@ describe('published package surface', () => {
     }))
     expect(metadata.icc).toEqual(source.icc)
     expect(info).toEqual(expect.objectContaining({
-      width: 824,
-      height: 824,
-      trimOffsetLeft: -100,
-      trimOffsetTop: -100,
+      width: 822,
+      height: 645,
+      trimOffsetLeft: -101,
+      trimOffsetTop: -191,
     }))
   })
 
