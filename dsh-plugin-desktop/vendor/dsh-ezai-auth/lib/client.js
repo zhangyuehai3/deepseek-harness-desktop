@@ -25,6 +25,7 @@ __export(index_exports, {
   inject: () => inject
 });
 module.exports = __toCommonJS(index_exports);
+var import_client3 = require("react-dom/client");
 
 // src/client/EzaiAccountTab.tsx
 var import_react2 = require("react");
@@ -697,6 +698,166 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
 [data-composer-card][data-ezai-logged-out="true"] textarea {
   cursor: pointer !important;
   pointer-events: none !important;
+}
+
+/* ==========================================================
+ * EZAI Sidebar User & Token Usage Widget
+ * Positioned right above "Settings" in left navigation sidebar
+ * ========================================================== */
+
+.dshEzaiSidebarCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 8px;
+  padding: 10px 12px;
+  background: var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.03));
+  border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08));
+  border-radius: 10px;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+  font-family: inherit;
+}
+.dshEzaiSidebarCard:hover {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.05));
+  border-color: var(--dsw-alias-border-focus, #3b82f6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.dshEzaiSidebarUserRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dshEzaiSidebarAvatar {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(38, 92, 90, 0.18) 0%, rgba(152, 196, 85, 0.28) 100%);
+  color: #265C5A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dshEzaiSidebarUserInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.dshEzaiSidebarUserName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary, #112625);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dshEzaiSidebarUserDept {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary, #7a9493);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dshEzaiSidebarRefreshBtn {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-tertiary, #7a9493);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.dshEzaiSidebarRefreshBtn:hover {
+  color: var(--dsw-alias-label-primary, #112625);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dshSpinning {
+  animation: dshSpin 0.75s linear infinite;
+}
+@keyframes dshSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Progress bar matching user screenshot 2 */
+.dshEzaiSidebarProgressBar {
+  width: 100%;
+  height: 4px;
+  background: var(--dsw-alias-fill-quaternary, rgba(0, 0, 0, 0.08));
+  border-radius: 999px;
+  overflow: hidden;
+}
+.dshEzaiSidebarProgressFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+/* Exact reproduction of screenshot 2: \u5DF2\u6D88\u8017: 12,960   \u603B\u989D\u5EA6: 200,000,000 Tokens */
+.dshEzaiSidebarUsageRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--dsw-alias-label-secondary, #666666);
+  font-variant-numeric: tabular-nums;
+}
+.dshEzaiSidebarUsageUsed,
+.dshEzaiSidebarUsageQuota {
+  white-space: nowrap;
+}
+.dshEzaiSidebarUsageUsed strong,
+.dshEzaiSidebarUsageQuota strong {
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary, #112625);
+}
+
+/* Rail / Collapsed sidebar mode */
+.dshEzaiSidebarRailItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 4px auto;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--dsw-alias-label-primary, #112625);
+  transition: background 0.15s ease;
+}
+.dshEzaiSidebarRailItem:hover {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.06));
+}
+.dshEzaiSidebarRailAvatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(38, 92, 90, 0.18) 0%, rgba(152, 196, 85, 0.28) 100%);
+  color: #265C5A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 `;
   document.head.appendChild(tag);
@@ -1593,11 +1754,311 @@ function showEzaiLoginModal(locale) {
   return dispose;
 }
 
+// src/client/EzaiSidebarWidget.tsx
+var import_react4 = require("react");
+
+// src/client/number-format.ts
+function formatNumber2(num) {
+  if (typeof num !== "number" || Number.isNaN(num)) return "0";
+  return num.toLocaleString("en-US");
+}
+
+// src/client/EzaiSidebarWidget.tsx
+var import_jsx_runtime4 = require("react/jsx-runtime");
+function openEzaiAccountTab() {
+  const settingsBtn = document.querySelector(
+    'button[aria-label="\u8BBE\u7F6E"], button[aria-label="Settings"], button[class*="trigger"], div[class*="settingsArea"] button'
+  );
+  if (settingsBtn) {
+    settingsBtn.click();
+    setTimeout(() => {
+      const navButtons = document.querySelectorAll(
+        'button[class*="navCell"], button[class*="SettingsRoot_navCell"], button[role="tab"]'
+      );
+      for (const btn of navButtons) {
+        const text = btn.textContent?.trim();
+        if (text === "EZAI \u8D26\u6237" || text === "EZAI Account" || text?.includes("EZAI")) {
+          btn.click();
+          break;
+        }
+      }
+    }, 60);
+  }
+}
+function EzaiSidebarWidget(props) {
+  const [account, setAccount] = (0, import_react4.useState)(() => {
+    if (typeof window !== "undefined" && window.__EZAI_ACCOUNT__) {
+      return window.__EZAI_ACCOUNT__;
+    }
+    return void 0;
+  });
+  const [isLoggedIn, setIsLoggedIn] = (0, import_react4.useState)(() => {
+    if (typeof window !== "undefined" && typeof window.__EZAI_LOGGED_IN__ === "boolean") {
+      return window.__EZAI_LOGGED_IN__;
+    }
+    return false;
+  });
+  const [isRefreshing, setIsRefreshing] = (0, import_react4.useState)(false);
+  const isZh = (props.locale || "zh") === "zh";
+  const wide = props.wide !== false;
+  const refreshAccount = (0, import_react4.useCallback)(async (manual = false) => {
+    if (manual) setIsRefreshing(true);
+    try {
+      const res = await fetch("/api/ezai-auth/account", {
+        headers: { accept: "application/json" },
+        cache: "no-store"
+      });
+      if (res.status === 200) {
+        const payload = await res.json();
+        setAccount(payload);
+        setIsLoggedIn(true);
+        if (typeof window !== "undefined") {
+          window.__EZAI_ACCOUNT__ = payload;
+          window.__EZAI_LOGGED_IN__ = true;
+          window.dispatchEvent(new CustomEvent("ezai-auth:account-updated", { detail: payload }));
+        }
+        return;
+      }
+      if (res.status === 401 || res.status === 403) {
+        setAccount(void 0);
+        setIsLoggedIn(false);
+        if (typeof window !== "undefined") {
+          delete window.__EZAI_ACCOUNT__;
+          window.__EZAI_LOGGED_IN__ = false;
+          window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: false } }));
+        }
+        if (manual) {
+          showEzaiLoginModal(isZh ? "zh" : "en");
+        }
+      }
+    } catch {
+    } finally {
+      if (manual) {
+        setTimeout(() => setIsRefreshing(false), 500);
+      }
+    }
+  }, [isZh]);
+  (0, import_react4.useEffect)(() => {
+    injectCss();
+    const handleAccountUpdate = (e) => {
+      if (e.detail) {
+        setAccount(e.detail);
+        setIsLoggedIn(true);
+      }
+    };
+    const handleStateChange = (e) => {
+      const nextLoggedIn = Boolean(e.detail?.loggedIn);
+      setIsLoggedIn(nextLoggedIn);
+      if (!nextLoggedIn) {
+        setAccount(void 0);
+      } else {
+        void refreshAccount(false);
+      }
+    };
+    window.addEventListener("ezai-auth:account-updated", handleAccountUpdate);
+    window.addEventListener("ezai-auth:state-change", handleStateChange);
+    if (!account) {
+      void refreshAccount(false);
+    }
+    return () => {
+      window.removeEventListener("ezai-auth:account-updated", handleAccountUpdate);
+      window.removeEventListener("ezai-auth:state-change", handleStateChange);
+    };
+  }, [account, refreshAccount]);
+  const handleCardClick = (e) => {
+    if (e.target.closest(".dshEzaiSidebarRefreshBtn")) {
+      return;
+    }
+    if (!isLoggedIn) {
+      showEzaiLoginModal(isZh ? "zh" : "en");
+    } else {
+      openEzaiAccountTab();
+    }
+  };
+  const handleRefreshClick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    void refreshAccount(true);
+  };
+  const userName = account?.personalInfo?.name || account?.user?.name || account?.user?.login_name || (isLoggedIn ? isZh ? "\u5DF2\u767B\u5F55\u7528\u6237" : "User" : isZh ? "\u672A\u767B\u5F55" : "Not signed in");
+  const department = account?.personalInfo?.department?.trim();
+  const fullUserTitle = department ? `${userName} (${department})` : userName;
+  const used = account?.tokenUsage?.used ?? 0;
+  const quota = account?.tokenUsage?.quota ?? 2e8;
+  const percent = quota > 0 ? Math.min(100, Math.max(0, used / quota * 100)) : 0;
+  const isNearLimit = percent >= 85;
+  const isOverQuota = percent >= 100;
+  if (!wide) {
+    return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+      "div",
+      {
+        className: "dshEzaiSidebarRailItem",
+        "data-ezai-sidebar-widget": "true",
+        onClick: handleCardClick,
+        title: `${fullUserTitle}
+${isZh ? "\u5DF2\u6D88\u8017" : "Used"}: ${formatNumber2(used)}
+${isZh ? "\u603B\u989D\u5EA6" : "Quota"}: ${formatNumber2(quota)} Tokens`,
+        children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dshEzaiSidebarRailAvatar", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { width: "15", height: "15", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("circle", { cx: "12", cy: "7", r: "4" })
+        ] }) })
+      }
+    );
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
+    "div",
+    {
+      className: "dshEzaiSidebarCard",
+      "data-ezai-sidebar-widget": "true",
+      onClick: handleCardClick,
+      title: isLoggedIn ? isZh ? "\u70B9\u51FB\u67E5\u770B\u8D26\u6237\u8BE6\u60C5" : "Click to view account details" : isZh ? "\u70B9\u51FB\u767B\u5F55\u8D26\u53F7" : "Click to sign in",
+      children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dshEzaiSidebarUserRow", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dshEzaiSidebarAvatar", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { width: "13", height: "13", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" }),
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("circle", { cx: "12", cy: "7", r: "4" })
+          ] }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dshEzaiSidebarUserInfo", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "dshEzaiSidebarUserName", title: fullUserTitle, children: userName }),
+            department && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "dshEzaiSidebarUserDept", title: department, children: [
+              "(",
+              department,
+              ")"
+            ] })
+          ] }),
+          isLoggedIn && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+            "button",
+            {
+              type: "button",
+              className: `dshEzaiSidebarRefreshBtn ${isRefreshing ? "dshSpinning" : ""}`,
+              title: isZh ? "\u5237\u65B0 Token \u7528\u91CF" : "Refresh token usage",
+              onClick: handleRefreshClick,
+              children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("svg", { width: "12", height: "12", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" }) })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "dshEzaiSidebarProgressBar", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          "div",
+          {
+            className: "dshEzaiSidebarProgressFill",
+            style: {
+              width: `${percent}%`,
+              background: isOverQuota ? "#ef4444" : isNearLimit ? "#f59e0b" : "linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)"
+            }
+          }
+        ) }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "dshEzaiSidebarUsageRow", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "dshEzaiSidebarUsageUsed", children: [
+            isZh ? "\u5DF2\u6D88\u8017" : "Used",
+            ": ",
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("strong", { children: formatNumber2(used) })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "dshEzaiSidebarUsageQuota", children: [
+            isZh ? "\u603B\u989D\u5EA6" : "Quota",
+            ": ",
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("strong", { children: formatNumber2(quota) }),
+            " Tokens"
+          ] })
+        ] })
+      ]
+    }
+  );
+}
+
+// src/client/session-monitor.ts
+var isChecking = false;
+var lastCheckTime = 0;
+var monitorStarted = false;
+var intervalTimer = null;
+async function checkSessionStatus(ctx, force = false, callbacks) {
+  if (isChecking && !force) return null;
+  isChecking = true;
+  try {
+    const res = await fetch("/api/ezai-auth/account", {
+      headers: { accept: "application/json" },
+      cache: "no-store"
+    });
+    if (res.status === 200) {
+      const payload = await res.json();
+      lastCheckTime = Date.now();
+      if (typeof window !== "undefined") {
+        ;
+        window.__EZAI_ACCOUNT__ = payload;
+        window.__EZAI_LOGGED_IN__ = true;
+        window.dispatchEvent(new CustomEvent("ezai-auth:account-updated", { detail: payload }));
+      }
+      return payload;
+    }
+    if (res.status === 401) {
+      if (typeof window !== "undefined") {
+        delete window.__EZAI_ACCOUNT__;
+        window.__EZAI_LOGGED_IN__ = false;
+        window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: false } }));
+      }
+      callbacks?.onSessionExpired?.();
+      return null;
+    }
+    if (res.status === 403) {
+      const payload = await res.json().catch(() => ({}));
+      if (typeof window !== "undefined") {
+        delete window.__EZAI_ACCOUNT__;
+        window.__EZAI_LOGGED_IN__ = false;
+        window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: false } }));
+      }
+      if (payload.departmentDisallowed) {
+        callbacks?.onDisallowedDepartment?.(payload);
+      } else {
+        callbacks?.onSessionExpired?.();
+      }
+      return null;
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    isChecking = false;
+  }
+}
+function startSessionMonitor(ctx, callbacks, intervalMs = 6e4) {
+  if (typeof window === "undefined" || monitorStarted) return;
+  monitorStarted = true;
+  intervalTimer = setInterval(() => {
+    void checkSessionStatus(ctx, false, callbacks);
+  }, intervalMs);
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      const elapsed = Date.now() - lastCheckTime;
+      if (elapsed > 3e4) {
+        void checkSessionStatus(ctx, true, callbacks);
+      }
+    }
+  };
+  const onWindowFocus = () => {
+    const elapsed = Date.now() - lastCheckTime;
+    if (elapsed > 3e4) {
+      void checkSessionStatus(ctx, true, callbacks);
+    }
+  };
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  window.addEventListener("focus", onWindowFocus);
+  window.addEventListener(
+    "beforeunload",
+    () => {
+      if (intervalTimer) clearInterval(intervalTimer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onWindowFocus);
+    },
+    { once: true }
+  );
+}
+
 // src/client/index.tsx
+var import_jsx_runtime5 = require("react/jsx-runtime");
 var inject = ["slots", "locale", "remote", "remote.commands"];
 var isEzaiLoggedIn = false;
 var conversationService = null;
 var authBlockedSessions = /* @__PURE__ */ new Set();
+var domMountRoot = null;
 function unlockAllSessions() {
   if (!conversationService || !conversationService.blocks) return;
   for (const sessionId of authBlockedSessions) {
@@ -1643,9 +2104,50 @@ function getActiveLocale(ctx) {
   const active = typeof snapshot?.active === "string" ? snapshot.active : "en";
   return active === "zh" ? "zh" : "en";
 }
+function ensureSidebarWidgetMounted(ctx) {
+  if (typeof document === "undefined") return;
+  const existing = document.querySelector("[data-ezai-sidebar-widget]");
+  if (existing && document.body.contains(existing)) {
+    return;
+  }
+  const footerActions = document.querySelector(
+    '[data-slot="sidebar.footer.action"], div[class*="footerActions"]'
+  );
+  const settingsArea = document.querySelector(
+    '[data-slot="sidebar.settings"], div[class*="settingsArea"]'
+  );
+  const settingsBtn = document.querySelector(
+    'button[aria-label="\u8BBE\u7F6E"], button[aria-label="Settings"]'
+  );
+  const targetContainer = footerActions || settingsArea?.parentElement || settingsBtn?.closest('div[class*="footArea"]') || settingsBtn?.parentElement;
+  if (!targetContainer) return;
+  const isCollapsed = Boolean(
+    document.querySelector('[class*="collapsed"]') || targetContainer.closest('[class*="collapsed"]') || document.querySelector("[data-sidebar-collapsed]")
+  );
+  const isZh = getActiveLocale(ctx) === "zh";
+  let mountPoint = document.getElementById("dsh-ezai-sidebar-mount");
+  if (!mountPoint) {
+    mountPoint = document.createElement("div");
+    mountPoint.id = "dsh-ezai-sidebar-mount";
+    mountPoint.style.width = "100%";
+    if (footerActions && !footerActions.contains(mountPoint)) {
+      footerActions.appendChild(mountPoint);
+    } else if (settingsArea && settingsArea.parentElement) {
+      settingsArea.parentElement.insertBefore(mountPoint, settingsArea);
+    } else if (settingsBtn && settingsBtn.parentElement) {
+      settingsBtn.parentElement.insertBefore(mountPoint, settingsBtn);
+    } else {
+      targetContainer.appendChild(mountPoint);
+    }
+  }
+  if (!domMountRoot) {
+    domMountRoot = (0, import_client3.createRoot)(mountPoint);
+  }
+  domMountRoot.render(/* @__PURE__ */ (0, import_jsx_runtime5.jsx)(EzaiSidebarWidget, { wide: !isCollapsed, locale: isZh ? "zh" : "en" }));
+}
 function installModelLockObserver(ctx) {
   if (typeof document === "undefined") return;
-  const cleanUI2 = () => {
+  const cleanUI = () => {
     const isZh = getActiveLocale(ctx) === "zh";
     const loginPrompt = isZh ? "\u8BF7\u767B\u5F55\u8D26\u53F7\u540E\u4F7F\u7528" : "Please log in to your account first";
     const navButtons = document.querySelectorAll('button[class*="navCell"], button[class*="SettingsRoot_navCell"]');
@@ -1760,6 +2262,7 @@ function installModelLockObserver(ctx) {
         badge.textContent = "\u7248\u672C 2.1.3";
       }
     }
+    ensureSidebarWidgetMounted(ctx);
   };
   window.addEventListener("ezai-auth:state-change", (event) => {
     const nextLoggedIn = Boolean(event.detail?.loggedIn);
@@ -1778,14 +2281,14 @@ function installModelLockObserver(ctx) {
     } else {
       lockAllSessions(ctx);
     }
-    cleanUI2();
+    cleanUI();
   });
   let isCleaning = false;
   const safeCleanUI = () => {
     if (isCleaning) return;
     isCleaning = true;
     try {
-      cleanUI2();
+      cleanUI();
     } finally {
       isCleaning = false;
     }
@@ -1891,36 +2394,40 @@ function apply(ctx) {
       inject: () => ({})
     }, EzaiAccountTab)
   );
+  ctx.slots.inject(
+    "sidebar.footer.action",
+    () => ctx.slots.register({
+      name: "sidebar.footer.action",
+      id: "ezai-sidebar-user",
+      order: 10,
+      locale: NS,
+      inject: () => ({})
+    }, (props) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(EzaiSidebarWidget, { wide: props.wide !== false, locale: getActiveLocale(ctx) }))
+  );
+  const sessionCallbacks = {
+    onSessionExpired: () => {
+      lockAllSessions(ctx);
+      showEzaiLoginModal(getActiveLocale(ctx));
+    },
+    onDisallowedDepartment: (payload) => {
+      lockAllSessions(ctx);
+      showDepartmentNoticeModal(
+        payload.message,
+        () => showEzaiLoginModal(getActiveLocale(ctx)),
+        payload.title
+      );
+    }
+  };
+  startSessionMonitor(ctx, sessionCallbacks);
   void (async () => {
     try {
-      const response = await fetch("/api/ezai-auth/account", { headers: { accept: "application/json" } });
-      if (response.status === 200) {
+      const account = await checkSessionStatus(ctx, true, sessionCallbacks);
+      if (account) {
         isEzaiLoggedIn = true;
-        if (typeof window !== "undefined") {
-          window.__EZAI_LOGGED_IN__ = true;
-          window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: true } }));
-        }
         unlockAllSessions();
-        cleanUI();
-        return;
-      }
-      isEzaiLoggedIn = false;
-      if (typeof window !== "undefined") {
-        window.__EZAI_LOGGED_IN__ = false;
-        window.dispatchEvent(new CustomEvent("ezai-auth:state-change", { detail: { loggedIn: false } }));
-      }
-      lockAllSessions(ctx);
-      if (response.status === 403) {
-        const payload = await response.json().catch(() => ({}));
-        if (payload.departmentDisallowed) {
-          showDepartmentNoticeModal(payload.message, () => {
-            showEzaiLoginModal(getActiveLocale(ctx));
-          }, payload.title);
-          return;
-        }
-      }
-      if (response.status === 401) {
-        showEzaiLoginModal(getActiveLocale(ctx));
+      } else {
+        isEzaiLoggedIn = false;
+        lockAllSessions(ctx);
       }
     } catch {
     }

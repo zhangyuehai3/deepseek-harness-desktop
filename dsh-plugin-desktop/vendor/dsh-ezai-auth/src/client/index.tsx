@@ -1,7 +1,10 @@
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import { createRoot, type Root } from 'react-dom/client'
 import { EzaiAccountTab } from './EzaiAccountTab.tsx'
 import { showDepartmentNoticeModal } from './DepartmentNoticeModal.tsx'
 import { showEzaiLoginModal } from './EzaiLoginModal.tsx'
+import { EzaiSidebarWidget } from './EzaiSidebarWidget.tsx'
+import { checkSessionStatus, startSessionMonitor } from './session-monitor.ts'
 import { en, NS, zh } from './locales.ts'
 import { injectCss } from './styles.ts'
 
@@ -10,6 +13,7 @@ export const inject = ['slots', 'locale', 'remote', 'remote.commands']
 let isEzaiLoggedIn = false
 let conversationService: any = null
 const authBlockedSessions = new Set<string>()
+let domMountRoot: Root | null = null
 
 function unlockAllSessions(): void {
   if (!conversationService || !conversationService.blocks) return
@@ -70,6 +74,64 @@ function getActiveLocale(ctx: ClientContext): 'zh' | 'en' {
   const snapshot = (ctx.locale as any).getSnapshot?.()
   const active = typeof snapshot?.active === 'string' ? snapshot.active : 'en'
   return active === 'zh' ? 'zh' : 'en'
+}
+
+function ensureSidebarWidgetMounted(ctx: ClientContext): void {
+  if (typeof document === 'undefined') return
+
+  // 1. If an active widget element is already attached in DOM, no-op
+  const existing = document.querySelector('[data-ezai-sidebar-widget]')
+  if (existing && document.body.contains(existing)) {
+    return
+  }
+
+  // 2. Locate footer actions slot, settings area, or settings button in the sidebar foot
+  const footerActions = document.querySelector(
+    '[data-slot="sidebar.footer.action"], div[class*="footerActions"]'
+  ) as HTMLElement | null
+  const settingsArea = document.querySelector(
+    '[data-slot="sidebar.settings"], div[class*="settingsArea"]'
+  ) as HTMLElement | null
+  const settingsBtn = document.querySelector(
+    'button[aria-label="设置"], button[aria-label="Settings"]'
+  ) as HTMLElement | null
+
+  const targetContainer =
+    footerActions ||
+    settingsArea?.parentElement ||
+    settingsBtn?.closest('div[class*="footArea"]') ||
+    settingsBtn?.parentElement
+  if (!targetContainer) return
+
+  // Determine if sidebar is currently in collapsed rail state
+  const isCollapsed = Boolean(
+    document.querySelector('[class*="collapsed"]') ||
+      targetContainer.closest('[class*="collapsed"]') ||
+      document.querySelector('[data-sidebar-collapsed]')
+  )
+  const isZh = getActiveLocale(ctx) === 'zh'
+
+  let mountPoint = document.getElementById('dsh-ezai-sidebar-mount')
+  if (!mountPoint) {
+    mountPoint = document.createElement('div')
+    mountPoint.id = 'dsh-ezai-sidebar-mount'
+    mountPoint.style.width = '100%'
+
+    if (footerActions && !footerActions.contains(mountPoint)) {
+      footerActions.appendChild(mountPoint)
+    } else if (settingsArea && settingsArea.parentElement) {
+      settingsArea.parentElement.insertBefore(mountPoint, settingsArea)
+    } else if (settingsBtn && settingsBtn.parentElement) {
+      settingsBtn.parentElement.insertBefore(mountPoint, settingsBtn)
+    } else {
+      targetContainer.appendChild(mountPoint)
+    }
+  }
+
+  if (!domMountRoot) {
+    domMountRoot = createRoot(mountPoint)
+  }
+  domMountRoot.render(<EzaiSidebarWidget wide={!isCollapsed} locale={isZh ? 'zh' : 'en'} />)
 }
 
 function installModelLockObserver(ctx: ClientContext): void {
@@ -213,6 +275,9 @@ function installModelLockObserver(ctx: ClientContext): void {
         badge.textContent = '版本 2.1.3'
       }
     }
+
+    // 6. Ensure user name & token usage widget is mounted above Settings button
+    ensureSidebarWidgetMounted(ctx)
   }
 
   // Listen for login / logout state changes
@@ -375,37 +440,45 @@ export function apply(ctx: ClientContext): void {
     }, EzaiAccountTab)
   )
 
-  // 2. On startup, check session and sync logged in state
+  // 2. Sidebar action: User Name & Token Usage Widget above Settings button
+  ctx.slots.inject('sidebar.footer.action', () =>
+    ctx.slots.register({
+      name: 'sidebar.footer.action',
+      id: 'ezai-sidebar-user',
+      order: 10,
+      locale: NS,
+      inject: () => ({}),
+    }, (props: any) => <EzaiSidebarWidget wide={props.wide !== false} locale={getActiveLocale(ctx)} />)
+  )
+
+  const sessionCallbacks = {
+    onSessionExpired: () => {
+      lockAllSessions(ctx)
+      showEzaiLoginModal(getActiveLocale(ctx))
+    },
+    onDisallowedDepartment: (payload: any) => {
+      lockAllSessions(ctx)
+      showDepartmentNoticeModal(
+        payload.message,
+        () => showEzaiLoginModal(getActiveLocale(ctx)),
+        payload.title,
+      )
+    },
+  }
+
+  // 3. Start periodic session monitor & visibility listener to prevent expired accounts from continuing usage
+  startSessionMonitor(ctx, sessionCallbacks)
+
+  // 4. On startup, check session and sync logged in state
   void (async () => {
     try {
-      const response = await fetch('/api/ezai-auth/account', { headers: { accept: 'application/json' } })
-      if (response.status === 200) {
+      const account = await checkSessionStatus(ctx, true, sessionCallbacks)
+      if (account) {
         isEzaiLoggedIn = true
-        if (typeof window !== 'undefined') {
-          (window as any).__EZAI_LOGGED_IN__ = true
-          window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: true } }))
-        }
         unlockAllSessions()
-        cleanUI()
-        return
-      }
-      isEzaiLoggedIn = false
-      if (typeof window !== 'undefined') {
-        (window as any).__EZAI_LOGGED_IN__ = false
-        window.dispatchEvent(new CustomEvent('ezai-auth:state-change', { detail: { loggedIn: false } }))
-      }
-      lockAllSessions(ctx)
-      if (response.status === 403) {
-        const payload = (await response.json().catch(() => ({}))) as any
-        if (payload.departmentDisallowed) {
-          showDepartmentNoticeModal(payload.message, () => {
-            showEzaiLoginModal(getActiveLocale(ctx))
-          }, payload.title)
-          return
-        }
-      }
-      if (response.status === 401) {
-        showEzaiLoginModal(getActiveLocale(ctx))
+      } else {
+        isEzaiLoggedIn = false
+        lockAllSessions(ctx)
       }
     } catch {
       // Ignore transient network errors on startup

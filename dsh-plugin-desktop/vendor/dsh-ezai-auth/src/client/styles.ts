@@ -665,6 +665,166 @@ button[class*="navCell"]:has(svg path[d*="M12.0997 8.54554"]) {
   cursor: pointer !important;
   pointer-events: none !important;
 }
+
+/* ==========================================================
+ * EZAI Sidebar User & Token Usage Widget
+ * Positioned right above "Settings" in left navigation sidebar
+ * ========================================================== */
+
+.dshEzaiSidebarCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 8px;
+  padding: 10px 12px;
+  background: var(--dsw-alias-bg-layer-2, rgba(0, 0, 0, 0.03));
+  border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.08));
+  border-radius: 10px;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+  font-family: inherit;
+}
+.dshEzaiSidebarCard:hover {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.05));
+  border-color: var(--dsw-alias-border-focus, #3b82f6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.dshEzaiSidebarUserRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dshEzaiSidebarAvatar {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(38, 92, 90, 0.18) 0%, rgba(152, 196, 85, 0.28) 100%);
+  color: #265C5A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dshEzaiSidebarUserInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.dshEzaiSidebarUserName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary, #112625);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dshEzaiSidebarUserDept {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary, #7a9493);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dshEzaiSidebarRefreshBtn {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-tertiary, #7a9493);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.dshEzaiSidebarRefreshBtn:hover {
+  color: var(--dsw-alias-label-primary, #112625);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dshSpinning {
+  animation: dshSpin 0.75s linear infinite;
+}
+@keyframes dshSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Progress bar matching user screenshot 2 */
+.dshEzaiSidebarProgressBar {
+  width: 100%;
+  height: 4px;
+  background: var(--dsw-alias-fill-quaternary, rgba(0, 0, 0, 0.08));
+  border-radius: 999px;
+  overflow: hidden;
+}
+.dshEzaiSidebarProgressFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+/* Exact reproduction of screenshot 2: 已消耗: 12,960   总额度: 200,000,000 Tokens */
+.dshEzaiSidebarUsageRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--dsw-alias-label-secondary, #666666);
+  font-variant-numeric: tabular-nums;
+}
+.dshEzaiSidebarUsageUsed,
+.dshEzaiSidebarUsageQuota {
+  white-space: nowrap;
+}
+.dshEzaiSidebarUsageUsed strong,
+.dshEzaiSidebarUsageQuota strong {
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary, #112625);
+}
+
+/* Rail / Collapsed sidebar mode */
+.dshEzaiSidebarRailItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 4px auto;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--dsw-alias-label-primary, #112625);
+  transition: background 0.15s ease;
+}
+.dshEzaiSidebarRailItem:hover {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.06));
+}
+.dshEzaiSidebarRailAvatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(38, 92, 90, 0.18) 0%, rgba(152, 196, 85, 0.28) 100%);
+  color: #265C5A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 `
   document.head.appendChild(tag)
 }
