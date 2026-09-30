@@ -164,15 +164,42 @@ describe('desktop update Host plugin', () => {
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
 
     await harness.trays[1]!.invoke()
-    expect(harness.confirmDownload).toHaveBeenCalledWith('2.0.4', 'stable')
+    expect(harness.confirmDownload).toHaveBeenCalledWith('2.0.4', expect.objectContaining({
+      channel: 'stable',
+      forceUpdate: false,
+    }))
     expect(harness.downloadAndOpen).toHaveBeenCalledWith(
       '2.0.4',
       expect.any(AbortSignal),
-      'stable',
+      expect.objectContaining({ channel: 'stable' }),
     )
     const channels = request.mock.calls.map(([, init]) => new Headers(init.headers).get(DESKTOP_RELEASE_CHANNEL_HEADER))
     expect(channels).toContain('beta')
     expect(channels).toContain('stable')
+    await harness.dispose()
+  })
+
+  it('passes force-update and platform URL to the adapter and prompts immediately on background check', async () => {
+    vi.useFakeTimers()
+    const request = vi.fn(async () => Response.json({
+      version: '2.1.0',
+      forceUpdate: true,
+      mac: 'https://example.test/mac.dmg',
+      windows: 'https://example.test/win.exe',
+    }))
+    const harness = await createHarness({ request, confirmDownload: async () => true })
+
+    await vi.advanceTimersByTimeAsync(testConfig.initialDelayMs)
+    await vi.waitFor(() => { expect(harness.downloadAndOpen).toHaveBeenCalledOnce() })
+    expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0', expect.objectContaining({
+      forceUpdate: true,
+      downloadUrl: 'https://example.test/mac.dmg',
+    }))
+    const [version, signal, options] = harness.downloadAndOpen.mock.calls[0] as [string, AbortSignal, any]
+    expect(version).toBe('2.1.0')
+    expect(signal).toBeInstanceOf(AbortSignal)
+    expect(options).toEqual(expect.objectContaining({ url: 'https://example.test/mac.dmg' }))
+
     await harness.dispose()
   })
 
@@ -241,6 +268,8 @@ describe('desktop update Host plugin', () => {
       status: 'up-to-date',
       currentVersion: '2.0.0',
       latestVersion: '2.0.0',
+      forceUpdate: false,
+      urls: undefined,
     })
     expect(res.statusCode).toBe(200)
     expect(JSON.parse(body)).toEqual({ accepted: true })
@@ -276,6 +305,8 @@ describe('desktop update Host plugin', () => {
       status: 'up-to-date',
       currentVersion: '2.0.0',
       latestVersion: '2.0.0',
+      forceUpdate: false,
+      urls: undefined,
     })
     expect(harness.confirmDownload).not.toHaveBeenCalled()
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
@@ -376,7 +407,9 @@ describe('desktop update Host plugin', () => {
     await harness.tray.invoke()
 
     expect(request).toHaveBeenCalledTimes(2)
-    expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0')
+    expect(harness.confirmDownload).toHaveBeenCalledWith('2.1.0', expect.objectContaining({
+      forceUpdate: false,
+    }))
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
     expect(harness.showManualCheckResult).not.toHaveBeenCalled()
     expect(harness.tray.label()).toBe('EZAI Desktop 2.2.0 Available')
@@ -400,10 +433,10 @@ describe('desktop update Host plugin', () => {
 
   it.each([
     ['same version', async () => versionResponse('2.0.0'), {
-      status: 'up-to-date', currentVersion: '2.0.0', latestVersion: '2.0.0',
+      status: 'up-to-date', currentVersion: '2.0.0', latestVersion: '2.0.0', forceUpdate: false, urls: undefined,
     }],
     ['older version', async () => versionResponse('1.9.9'), {
-      status: 'up-to-date', currentVersion: '2.0.0', latestVersion: '1.9.9',
+      status: 'up-to-date', currentVersion: '2.0.0', latestVersion: '1.9.9', forceUpdate: false, urls: undefined,
     }],
     ['invalid version', async () => versionResponse('v2.1.0'), null],
     ['service unavailable', async () => new Response('unavailable', { status: 503 }), null],
@@ -485,6 +518,8 @@ describe('desktop update Host plugin', () => {
       status: 'update-available',
       currentVersion: '2.0.0',
       latestVersion: '2.1.0',
+      forceUpdate: false,
+      urls: undefined,
     })
     expect(harness.downloadAndOpen).not.toHaveBeenCalled()
     expect(harness.notifications).toEqual([])

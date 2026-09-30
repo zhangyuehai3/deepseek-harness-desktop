@@ -30,6 +30,8 @@ import type {
   DesktopTrayItemGroup,
   DesktopTrayItemRegistration,
   DesktopUpdateAdapter,
+  UpdateConfirmationDetails,
+  UpdateDownloadAndOpenOptions,
 } from './runtime.ts'
 import type { RendererBootReport } from './renderer-boot-contract.ts'
 import {
@@ -147,9 +149,9 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       get statePath() { return join(app.getPath('userData'), 'updates', 'state.json') },
       ...(installationId === undefined ? {} : { installationId }),
       request: (url, init) => net.fetch(url, init),
-      confirmDownload: (version, channel) => this.confirmUpdateDownload(version, channel),
+      confirmDownload: (version, details) => this.confirmUpdateDownload(version, details),
       showManualCheckResult: result => this.showManualUpdateCheckResult(result),
-      downloadAndOpen: (version, signal, channel) => this.downloadAndOpenUpdate(version, signal, channel),
+      downloadAndOpen: (version, signal, options) => this.downloadAndOpenUpdate(version, signal, options),
       notify: notification => { this.showNotification(notification) },
     }
   }
@@ -629,9 +631,37 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
   /** Ask before making the fixed download endpoint's counted request. */
   private async confirmUpdateDownload(
     version: string,
-    channel: DesktopReleaseChannel = 'stable',
+    details?: DesktopReleaseChannel | UpdateConfirmationDetails,
   ): Promise<boolean> {
+    const channel = typeof details === 'string'
+      ? details
+      : details?.channel ?? 'stable'
+    const forceUpdate = typeof details === 'object' && details !== null
+      ? details.forceUpdate === true
+      : false
     const copy = desktopNativeCopy(this.currentLocale)
+    const zh = this.currentLocale === 'zh'
+
+    if (forceUpdate) {
+      const result = await this.showUpdateMessageBox({
+        type: 'warning',
+        title: zh ? 'EZAIGC Desktop 需要更新' : 'EZAIGC Desktop Update Required',
+        message: zh
+          ? `请更新到 EZAIGC Desktop ${version}。`
+          : `EZAIGC Desktop ${version} is required.`,
+        detail: zh
+          ? '当前版本已停止使用，必须更新后才能继续使用。'
+          : 'This version is no longer supported. You must update to continue.',
+        buttons: zh ? ['立即更新', '退出'] : ['Update Now', 'Quit'],
+        defaultId: 0,
+        cancelId: 1,
+        noLink: true,
+      })
+      if (result.response === 0) return true
+      this.quitForUpdate()
+      return false
+    }
+
     const result = await this.showUpdateMessageBox({
       type: 'info',
       title: copy.updateAvailableTitle,
@@ -645,6 +675,17 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       noLink: true,
     })
     return result.response === 0
+  }
+
+  /** Exit the application when a forced update is declined. */
+  private quitForUpdate(): void {
+    this.quitting = true
+    const spec = this.scheduled
+    if (spec !== undefined) {
+      spec.requestQuit(0)
+    } else {
+      app.quit()
+    }
   }
 
   /** Report one user-triggered check without exposing network or response details. */
@@ -691,8 +732,12 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
   private async downloadAndOpenUpdate(
     version: string,
     signal: AbortSignal,
-    channel: DesktopReleaseChannel = 'stable',
+    options?: DesktopReleaseChannel | UpdateDownloadAndOpenOptions,
   ): Promise<void> {
+    const channel = typeof options === 'string'
+      ? options
+      : options?.channel ?? 'stable'
+    const url = typeof options === 'object' ? options?.url : undefined
     const copy = desktopNativeCopy(this.currentLocale)
     const platform = this.platformStrategy.updateDownloadPlatform
     if (platform === undefined) {
@@ -706,6 +751,7 @@ export class ElectronDesktopRuntime implements DesktopRuntime {
       version,
       ...(channel === 'stable' ? {} : { channel }),
       destinationPath,
+      ...(url === undefined ? {} : { url }),
       request: (url, init) => net.fetch(url, init),
       signal,
     })

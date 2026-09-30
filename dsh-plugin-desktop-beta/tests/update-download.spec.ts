@@ -82,7 +82,7 @@ describe('desktop update installer download', () => {
   it('pins a Beta artifact request to its channel and target version', async () => {
     const directory = await temporaryDirectory()
     const artifact = dmgArtifact()
-    const destination = join(directory, 'DSH-Desktop-Beta-2.0.6-beta.1-mac.dmg')
+    const destination = join(directory, 'EZAI-Desktop-Beta-2.0.6-beta.1-mac.dmg')
     const result = await downloadDesktopUpdate({
       platform: 'darwin',
       version: '2.0.6-beta.1',
@@ -100,7 +100,7 @@ describe('desktop update installer download', () => {
     })
     expect(result).toBe(destination)
     expect(desktopUpdateFilename('darwin', '2.0.6-beta.1', 'beta'))
-      .toBe('DSH-Desktop-Beta-2.0.6-beta.1-mac.dmg')
+      .toBe('EZAI-Desktop-Beta-2.0.6-beta.1-mac.dmg')
   })
 
   it('accepts a Beta artifact without response identity headers', async () => {
@@ -109,10 +109,10 @@ describe('desktop update installer download', () => {
       platform: 'darwin',
       version: '2.0.6-beta.1',
       channel: 'beta',
-      destinationPath: join(directory, 'DSH-Desktop-Beta-2.0.6-beta.1-mac.dmg'),
+      destinationPath: join(directory, 'EZAI-Desktop-Beta-2.0.6-beta.1-mac.dmg'),
       request: async () => chunkedResponse([dmgArtifact()]),
     })
-    expect(result).toBe(join(directory, 'DSH-Desktop-Beta-2.0.6-beta.1-mac.dmg'))
+    expect(result).toBe(join(directory, 'EZAI-Desktop-Beta-2.0.6-beta.1-mac.dmg'))
   })
 
   it('streams a macOS DMG from only the fixed endpoint and atomically completes it', async () => {
@@ -131,10 +131,35 @@ describe('desktop update installer download', () => {
       request,
     })
 
-    expect(result).toBe(join(directory, 'DSH-Desktop-2.1.0-mac.dmg'))
+    expect(result).toBe(join(directory, 'EZAI-Desktop-2.1.0-mac.dmg'))
     expect(await readFile(result)).toEqual(Buffer.from(artifact))
     expect(calls).toHaveLength(1)
     expect(calls[0]?.url).toBe(DESKTOP_DOWNLOAD_URLS.darwin)
+    expect(calls[0]?.init).toMatchObject({ method: 'GET', cache: 'no-store', redirect: 'follow' })
+    await expectNoPartialFiles(directory)
+  })
+
+  it('streams a macOS DMG from an explicit URL when one is supplied', async () => {
+    const directory = await temporaryDirectory()
+    const artifact = dmgArtifact()
+    const calls: Array<{ url: string; init: RequestInit }> = []
+    const request: UpdateArtifactRequest = async (url, init) => {
+      calls.push({ url, init })
+      return chunkedResponse([artifact.subarray(0, 333), artifact.subarray(333)])
+    }
+
+    const result = await downloadDesktopUpdate({
+      platform: 'darwin',
+      version: '2.1.0',
+      url: 'https://example.test/EZAI-Desktop-2.1.0-mac.dmg',
+      destinationPath: destinationPath(directory, 'darwin', '2.1.0'),
+      request,
+    })
+
+    expect(result).toBe(join(directory, 'EZAI-Desktop-2.1.0-mac.dmg'))
+    expect(await readFile(result)).toEqual(Buffer.from(artifact))
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.url).toBe('https://example.test/EZAI-Desktop-2.1.0-mac.dmg')
     expect(calls[0]?.init).toMatchObject({ method: 'GET', cache: 'no-store', redirect: 'follow' })
     await expectNoPartialFiles(directory)
   })
@@ -152,7 +177,7 @@ describe('desktop update installer download', () => {
       },
     })
 
-    expect(result).toBe(join(directory, 'DSH-Desktop-2.2.0-windows.exe'))
+    expect(result).toBe(join(directory, 'EZAI-Desktop-2.2.0-windows.exe'))
     expect(await readFile(result)).toEqual(Buffer.from(artifact))
     await expectNoPartialFiles(directory)
   })
@@ -168,7 +193,7 @@ describe('desktop update installer download', () => {
 
     expect(result).toBe(join(
       directory,
-      'DSH-Desktop-2.8.0+build-mac.dmg',
+      'EZAI-Desktop-2.8.0+build-mac.dmg',
     ))
   })
 

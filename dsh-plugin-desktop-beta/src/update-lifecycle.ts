@@ -12,8 +12,10 @@ import type {
 import { desktopTrayLabel } from './tray-locale.ts'
 import {
   checkForDesktopUpdate,
+  downloadUrlForPlatform,
   parseSemVer,
   type DesktopReleaseChannel,
+  type DesktopUpdateUrls,
   type UpdateCheckResult,
 } from './update-checker.ts'
 
@@ -66,6 +68,8 @@ class DesktopUpdateLifecycleOwner implements DesktopUpdateLifecycle {
   private disposeTask: Promise<void> | undefined
   private checking = false
   private availableVersion: string | undefined
+  private availableForceUpdate = false
+  private availableUrls: DesktopUpdateUrls | undefined
   private downloadingVersion: string | undefined
   private state: UpdateStateV3 = EMPTY_STATE
   private pollTimer: ReturnType<typeof setTimeout> | undefined
@@ -217,7 +221,10 @@ class DesktopUpdateLifecycleOwner implements DesktopUpdateLifecycle {
 
   private observeResult(result: UpdateCheckResult | null): string | undefined {
     if (this.disposed || result === null) return undefined
-    this.availableVersion = result.status === 'update-available' && this.options.adapter.canDownload
+    const newer = result.status === 'update-available'
+    this.availableForceUpdate = newer && result.forceUpdate === true
+    this.availableUrls = newer ? result.urls : undefined
+    this.availableVersion = newer && this.options.adapter.canDownload
       ? result.latestVersion
       : undefined
     this.registration.refresh()
@@ -232,10 +239,13 @@ class DesktopUpdateLifecycleOwner implements DesktopUpdateLifecycle {
     if (this.downloadTask !== undefined) return this.downloadTask
     const task = (async () => {
       let confirmed: boolean
+      const downloadUrl = downloadUrlForPlatform(this.availableUrls, process.platform)
       try {
-        confirmed = this.options.adapter.releaseChannel === undefined && channel === 'stable'
-          ? await this.options.adapter.confirmDownload(version)
-          : await this.options.adapter.confirmDownload(version, channel)
+        confirmed = await this.options.adapter.confirmDownload(version, {
+          channel,
+          forceUpdate: this.availableForceUpdate,
+          ...(downloadUrl === undefined ? {} : { downloadUrl }),
+        })
       } catch {
         return
       }
@@ -248,16 +258,17 @@ class DesktopUpdateLifecycleOwner implements DesktopUpdateLifecycle {
       if (channel === (this.options.adapter.releaseChannel ?? 'stable')) this.observeResult(confirmedResult)
       if (confirmedVersion !== version || this.disposed) return
 
+      const latestDownloadUrl = downloadUrlForPlatform(confirmedResult?.urls, process.platform) ?? downloadUrl
+
       const controller = new AbortController()
       this.downloadController = controller
       this.downloadingVersion = version
       this.registration.refresh()
       try {
-        if (this.options.adapter.releaseChannel === undefined && channel === 'stable') {
-          await this.options.adapter.downloadAndOpen(version, controller.signal)
-        } else {
-          await this.options.adapter.downloadAndOpen(version, controller.signal, channel)
-        }
+        await this.options.adapter.downloadAndOpen(version, controller.signal, {
+          channel,
+          ...(latestDownloadUrl === undefined ? {} : { url: latestDownloadUrl }),
+        })
       } catch {
         // Network, filesystem, and installer-opening failures are deliberately silent.
       } finally {
@@ -301,7 +312,13 @@ class DesktopUpdateLifecycleOwner implements DesktopUpdateLifecycle {
     if (this.checkTask !== undefined || this.disposed) return
     try {
       const version = this.observeResult(await this.startCheck())
-      if (version !== undefined) await this.announceBackgroundUpdate(version)
+      if (version !== undefined) {
+        if (this.availableForceUpdate) {
+          await this.offerDownload(version)
+        } else {
+          await this.announceBackgroundUpdate(version)
+        }
+      }
     } catch {
       // Scheduled checks never surface failures to the user or the application log.
     }

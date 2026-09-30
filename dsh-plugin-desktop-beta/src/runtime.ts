@@ -98,6 +98,24 @@ export interface DesktopNotification {
   body: string
 }
 
+/** Details and constraints for an update download confirmation prompt. */
+export interface UpdateConfirmationDetails {
+  /** Target release stream being confirmed. */
+  readonly channel?: DesktopReleaseChannel
+  /** Whether the service requires this update before the application can continue. */
+  readonly forceUpdate?: boolean
+  /** Direct installer URL returned by the version check service. */
+  readonly downloadUrl?: string
+}
+
+/** Options for downloading and launching an update installer. */
+export interface UpdateDownloadAndOpenOptions {
+  /** Target release stream. */
+  readonly channel?: DesktopReleaseChannel
+  /** Direct installer URL. */
+  readonly url?: string
+}
+
 /** Electron capabilities used by the headless update plugin. */
 export interface DesktopUpdateAdapter {
   /** Whether the running executable came from an Electron package. */
@@ -115,11 +133,18 @@ export interface DesktopUpdateAdapter {
   /** Request adapter backed by Electron's native network session. */
   readonly request: UpdateRequest
   /** Ask whether one strictly newer version may be downloaded. */
-  confirmDownload(version: string, channel?: DesktopReleaseChannel): Promise<boolean>
+  confirmDownload(
+    version: string,
+    details?: DesktopReleaseChannel | UpdateConfirmationDetails,
+  ): Promise<boolean>
   /** Present the outcome of a user-triggered version check. */
   showManualCheckResult(result: UpdateCheckResult | null): Promise<void>
   /** Download and hand one confirmed update to the platform installer. */
-  downloadAndOpen(version: string, signal: AbortSignal, channel?: DesktopReleaseChannel): Promise<void>
+  downloadAndOpen(
+    version: string,
+    signal: AbortSignal,
+    options?: DesktopReleaseChannel | UpdateDownloadAndOpenOptions,
+  ): Promise<void>
   /** Present a native status notification without blocking the Host tree. */
   notify(notification: DesktopNotification): void
 }

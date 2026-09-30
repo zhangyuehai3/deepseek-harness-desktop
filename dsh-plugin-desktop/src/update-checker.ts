@@ -58,6 +58,20 @@ export interface UpdateCheckOptions {
   readonly installationId?: DesktopInstallationId
 }
 
+/** Direct installer URLs returned by the version service. */
+export interface DesktopUpdateUrls {
+  /** Direct installer URL for macOS. */
+  readonly mac?: string
+  /** Architecture-specific installer URL for Apple Silicon macOS. */
+  readonly macArm64?: string
+  /** Universal installer URL for macOS. */
+  readonly macUniversal?: string
+  /** Architecture-specific installer URL for Intel macOS. */
+  readonly macX64?: string
+  /** Direct installer URL for Windows. */
+  readonly windows?: string
+}
+
 /** Successful comparison returned by the stable version service. */
 export type UpdateCheckResult = {
   /** Whether the service reports a version newer than the installed application. */
@@ -66,6 +80,10 @@ export type UpdateCheckResult = {
   readonly currentVersion: string
   /** Canonical latest stable version returned by the service. */
   readonly latestVersion: string
+  /** Whether the service requires this update before the application can continue. */
+  readonly forceUpdate?: boolean | undefined
+  /** Platform download URLs for the latest version, when the service supplies them. */
+  readonly urls?: DesktopUpdateUrls | undefined
 }
 
 const SEMVER_PATTERN =
@@ -154,13 +172,15 @@ export async function checkForDesktopUpdate(
 
   const latest = parseVersionResponse(body, options.channel)
   if (latest === null) return null
-  const comparison = compareParsedSemVer(latest, current)
+  const comparison = compareParsedSemVer(latest.version, current)
   return {
     status: comparison > 0 || (options.allowDowngrade === true && comparison !== 0)
       ? 'update-available'
       : 'up-to-date',
     currentVersion: current.version,
-    latestVersion: latest.version,
+    latestVersion: latest.version.version,
+    forceUpdate: latest.forceUpdate,
+    urls: latest.urls,
   }
 }
 
@@ -230,7 +250,10 @@ async function readLimitedBody(response: Response): Promise<string> {
   }
 }
 
-function parseVersionResponse(body: string, expectedChannel: DesktopReleaseChannel): ParsedSemVer | null {
+function parseVersionResponse(
+  body: string,
+  expectedChannel: DesktopReleaseChannel,
+): { version: ParsedSemVer; forceUpdate: boolean; urls?: DesktopUpdateUrls | undefined } | null {
   let value: unknown
   try {
     value = JSON.parse(body)
@@ -240,7 +263,48 @@ function parseVersionResponse(body: string, expectedChannel: DesktopReleaseChann
   if (!isRecord(value) || typeof value.version !== 'string') return null
   if (expectedChannel === 'beta' && value.channel !== 'beta') return null
   if (value.channel !== undefined && value.channel !== expectedChannel) return null
-  return parseCanonicalChannelVersion(value.version, expectedChannel)
+  const version = parseCanonicalChannelVersion(value.version, expectedChannel)
+  if (version === null) return null
+  return {
+    version,
+    forceUpdate: value.forceUpdate === true,
+    urls: parseUpdateUrls(value),
+  }
+}
+
+function parseUpdateUrls(value: Record<string, unknown>): DesktopUpdateUrls | undefined {
+  const mac = typeof value.mac === 'string' ? value.mac : undefined
+  const macArm64 = typeof value.macArm64 === 'string' ? value.macArm64 : undefined
+  const macUniversal = typeof value.macUniversal === 'string' ? value.macUniversal : undefined
+  const macX64 = typeof value.macX64 === 'string' ? value.macX64 : undefined
+  const windows = typeof value.windows === 'string' ? value.windows : undefined
+  if (mac === undefined && macArm64 === undefined && macUniversal === undefined && macX64 === undefined && windows === undefined) {
+    return undefined
+  }
+  return {
+    ...(mac === undefined ? {} : { mac }),
+    ...(macArm64 === undefined ? {} : { macArm64 }),
+    ...(macUniversal === undefined ? {} : { macUniversal }),
+    ...(macX64 === undefined ? {} : { macX64 }),
+    ...(windows === undefined ? {} : { windows }),
+  }
+}
+
+/** Pick the most appropriate installer URL for the current platform and architecture. */
+export function downloadUrlForPlatform(
+  urls: DesktopUpdateUrls | undefined,
+  platform: 'darwin' | 'win32' | string,
+  arch: string = process.arch,
+): string | undefined {
+  if (urls === undefined) return undefined
+  if (platform === 'darwin') {
+    if (arch === 'arm64') {
+      return urls.macArm64 ?? urls.mac ?? urls.macUniversal
+    }
+    return urls.macX64 ?? urls.macUniversal ?? urls.mac
+  }
+  if (platform === 'win32') return urls.windows
+  return undefined
 }
 
 function parseCanonicalChannelVersion(

@@ -53,6 +53,8 @@ export interface DownloadDesktopUpdateOptions {
   readonly request: UpdateArtifactRequest
   /** Optional cancellation signal owned by the update coordinator. */
   readonly signal?: AbortSignal
+  /** Optional direct installer URL, e.g. from the version check endpoint. */
+  readonly url?: string
 }
 
 /** Typed failure from installer request, validation, or cancellation. */
@@ -119,14 +121,19 @@ export async function downloadDesktopUpdate(options: DownloadDesktopUpdateOption
   const paths = await prepareDownloadPaths(destinationPath)
   throwIfAborted(options.signal)
 
+  const endpoint = options.url ?? DESKTOP_DOWNLOAD_URLS[platform]
+  const isCustomUrl = options.url !== undefined
+
   let response: Response
   try {
-    response = await options.request(DESKTOP_DOWNLOAD_URLS[platform], {
+    response = await options.request(endpoint, {
       method: 'GET',
-      headers: {
-        [DESKTOP_RELEASE_CHANNEL_HEADER]: channel,
-        [DESKTOP_TARGET_VERSION_HEADER]: options.version,
-      },
+      ...(isCustomUrl ? {} : {
+        headers: {
+          [DESKTOP_RELEASE_CHANNEL_HEADER]: channel,
+          [DESKTOP_TARGET_VERSION_HEADER]: options.version,
+        },
+      }),
       cache: 'no-store',
       redirect: 'follow',
       ...(options.signal === undefined ? {} : { signal: options.signal }),
