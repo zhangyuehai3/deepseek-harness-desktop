@@ -90,6 +90,8 @@ export interface EzaiSessionStore {
   getTokenRateMultiplier(): Promise<number>
   getTokenQuota?(): Promise<number | undefined>
   setTokenQuota?(quota: number): Promise<void>
+  getWhitelistDepartment?(): Promise<string | undefined>
+  setWhitelistDepartment?(dept: string): Promise<void>
 }
 
 function parseSnapshot(text: string): SessionSnapshot | undefined {
@@ -237,6 +239,16 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
       const snapshot = await readSnapshot()
       if (snapshot === undefined) return
       snapshot.tokenQuota = quota
+      await writeSnapshot(snapshot)
+    },
+    async getWhitelistDepartment(): Promise<string | undefined> {
+      const snapshot = await readSnapshot()
+      return snapshot?.whitelistDepartment
+    },
+    async setWhitelistDepartment(dept: string): Promise<void> {
+      const snapshot = await readSnapshot()
+      if (snapshot === undefined) return
+      snapshot.whitelistDepartment = dept
       await writeSnapshot(snapshot)
     },
     async clear(): Promise<void> {

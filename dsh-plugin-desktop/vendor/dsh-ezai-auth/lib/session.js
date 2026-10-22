@@ -206,6 +206,17 @@ export function createSessionStore(options = {}) {
             snapshot.tokenQuota = quota;
             await writeSnapshot(snapshot);
         },
+        async getWhitelistDepartment() {
+            const snapshot = await readSnapshot();
+            return snapshot?.whitelistDepartment;
+        },
+        async setWhitelistDepartment(dept) {
+            const snapshot = await readSnapshot();
+            if (snapshot === undefined)
+                return;
+            snapshot.whitelistDepartment = dept;
+            await writeSnapshot(snapshot);
+        },
         async clear() {
             // Clear active session snapshot while safely keeping account_tokens ledger untouched
             await writeSnapshot(undefined);

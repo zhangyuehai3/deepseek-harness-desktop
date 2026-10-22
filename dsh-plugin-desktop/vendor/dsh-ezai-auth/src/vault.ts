@@ -39,7 +39,13 @@ export function isEastAsiaDepartment(department?: string): boolean {
 }
 
 export function isEuropeDepartment(department?: string): boolean {
-  return typeof department === 'string' && department.includes('欧洲大区')
+  if (typeof department !== 'string') return false
+  return (
+    department.includes('欧洲大区') ||
+    department.includes('欧洲') ||
+    department.toLowerCase().includes('zhangyin@ezaigc.com') ||
+    department.toLowerCase().includes('zhangyin@ezsvs.com')
+  )
 }
 
 export function getBootstrapApiKey(department?: string): string {

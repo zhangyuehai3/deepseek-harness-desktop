@@ -34,6 +34,8 @@ describe('Finance, East Asia & Europe Departments dedicated DeepSeek API Keys', 
 
     assert.equal(isEuropeDepartment('欧洲大区'), true)
     assert.equal(isEuropeDepartment('公司/欧洲大区/商务组'), true)
+    assert.equal(isEuropeDepartment('zhangyin@ezaigc.com'), true)
+    assert.equal(isEuropeDepartment('zhangyin@ezsvs.com'), true)
     assert.equal(isEuropeDepartment('财务管理中心'), false)
     assert.equal(isEuropeDepartment('东亚大区'), false)
     assert.equal(isEuropeDepartment(undefined), false)

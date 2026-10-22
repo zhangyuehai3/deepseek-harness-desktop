@@ -55,6 +55,8 @@ export interface SessionSnapshot {
   accountTokens?: Record<string, AccountWeeklyUsage | number>
   /** Individual weekly token quota override from whitelist (if absent, defaults to 200,000,000). */
   tokenQuota?: number
+  /** Whitelist department override if matched in whitelist (e.g. 欧洲大区). */
+  whitelistDepartment?: string
 }
 
 /** Enriched personal info parsed from /personalDetails. */

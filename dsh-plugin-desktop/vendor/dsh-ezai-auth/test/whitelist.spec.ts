@@ -131,5 +131,38 @@ describe('dynamic whitelist verification', () => {
     )
     assert.equal(quotaDefault, 200_000_000)
   })
+
+  it('correctly maps whitelist department for regional member (e.g. Europe department)', async () => {
+    const whitelistWithEurope = {
+      ...FIXTURE_WHITELIST,
+      欧洲大区: [
+        { name: '陆依晨', email: 'luyichen@ezsvs.com' },
+        { name: '张寅', email: 'zhangyin@ezaigc.com' },
+      ],
+    }
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => whitelistWithEurope,
+    } as any)
+    clearWhitelistCache()
+
+    // When 张寅 logs in, even if his SSO personalInfo.department is "其他部门" or missing
+    const check1 = await checkUserAllowed(
+      { name: '张寅', email: 'zhangyin@ezaigc.com' },
+      { department: '其他部门' },
+    )
+    assert.equal(check1.allowed, true)
+    assert.equal(check1.department, '欧洲大区')
+
+    // Match by login_name username without @
+    const check2 = await checkUserAllowed(
+      { name: '张寅', login_name: 'zhangyin' },
+      undefined,
+      'zhangyin',
+    )
+    assert.equal(check2.allowed, true)
+    assert.equal(check2.department, '欧洲大区')
+  })
 })
 

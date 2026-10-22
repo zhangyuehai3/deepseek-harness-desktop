@@ -559,6 +559,7 @@ export interface UserAllowedCheckResult {
   title?: string
   message?: string
   tokenQuota?: number
+  department?: string
 }
 
 /**
@@ -589,6 +590,11 @@ export async function checkUserAllowed(
     user?.email,
     personalInfo?.email,
     username && username.includes('@') ? username : undefined,
+    user?.login_name && user.login_name.includes('@') ? user.login_name : undefined,
+    user?.login_name ? `${user.login_name}@ezaigc.com` : undefined,
+    user?.login_name ? `${user.login_name}@ezsvs.com` : undefined,
+    username && !username.includes('@') ? `${username}@ezaigc.com` : undefined,
+    username && !username.includes('@') ? `${username}@ezsvs.com` : undefined,
   ]
     .filter((v): v is string => typeof v === 'string' && v.trim() !== '')
     .map(v => v.trim().toLowerCase())
@@ -604,7 +610,7 @@ export async function checkUserAllowed(
 
   // 1. Check individual member whitelist across departments first
   // (ensures user-specific overrides such as tokenQuota take precedence)
-  for (const [, config] of Object.entries(whitelist)) {
+  for (const [deptName, config] of Object.entries(whitelist)) {
     if (Array.isArray(config)) {
       for (const member of config) {
         if (!member || typeof member !== 'object') continue
@@ -612,7 +618,10 @@ export async function checkUserAllowed(
         const matchesName = member.name && candidateNames.includes(member.name.trim().toLowerCase())
         if (matchesEmail || matchesName) {
           const tokenQuota = parseQuota(member.tokenQuota)
-          return { allowed: true, tokenQuota }
+          const matchedDepartment = (typeof member.department === 'string' && member.department.trim())
+            ? member.department.trim()
+            : deptName
+          return { allowed: true, tokenQuota, department: matchedDepartment }
         }
       }
     } else if (config && typeof config === 'object' && Array.isArray((config as any).members)) {
@@ -624,7 +633,10 @@ export async function checkUserAllowed(
         const matchesName = member.name && candidateNames.includes(member.name.trim().toLowerCase())
         if (matchesEmail || matchesName) {
           const tokenQuota = parseQuota(member.tokenQuota) ?? deptQuota
-          return { allowed: true, tokenQuota }
+          const matchedDepartment = (typeof member.department === 'string' && member.department.trim())
+            ? member.department.trim()
+            : deptName
+          return { allowed: true, tokenQuota, department: matchedDepartment }
         }
       }
     }
@@ -637,14 +649,14 @@ export async function checkUserAllowed(
         department &&
         (department === deptName || department.includes(deptName) || deptName.includes(department))
       ) {
-        return { allowed: true }
+        return { allowed: true, department: deptName }
       }
     } else if (config && typeof config === 'object' && (config as any).all === true) {
       if (
         department &&
         (department === deptName || department.includes(deptName) || deptName.includes(department))
       ) {
-        return { allowed: true, tokenQuota: parseQuota((config as any).tokenQuota) }
+        return { allowed: true, tokenQuota: parseQuota((config as any).tokenQuota), department: deptName }
       }
     }
   }
@@ -709,13 +721,18 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
   void (async () => {
     try {
       const snapshot = await session.getSnapshot()
-      if (snapshot?.user && snapshot.cookies && (await isUserAllowed(snapshot.user, snapshot.personalInfo))) {
-        await ensureDefaultModelConfig(ctx, snapshot.personalInfo?.department)
-      } else {
-        if (snapshot?.user && !(await isUserAllowed(snapshot.user, snapshot.personalInfo))) {
+      if (snapshot?.user && snapshot.cookies) {
+        const check = await checkUserAllowed(snapshot.user, snapshot.personalInfo, snapshot.user.login_name)
+        if (check.allowed) {
+          if (check.department && session.setWhitelistDepartment) {
+            await session.setWhitelistDepartment(check.department)
+          }
+          const effectiveDept = check.department || snapshot.whitelistDepartment || snapshot.personalInfo?.department
+          await ensureDefaultModelConfig(ctx, effectiveDept)
+        } else {
           await session.clear()
+          await removeDefaultModelConfig(ctx)
         }
-        await removeDefaultModelConfig(ctx)
       }
     } catch {
       // ignore
@@ -802,8 +819,12 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
 
           const userQuota = check.tokenQuota ?? (Number(config.tokenQuota) || 200_000_000)
           await session.setTokenQuota?.(userQuota)
+          if (check.department && session.setWhitelistDepartment) {
+            await session.setWhitelistDepartment(check.department)
+          }
 
-          await ensureDefaultModelConfig(ctx, personalInfo?.department)
+          const effectiveDept = check.department || personalInfo?.department
+          await ensureDefaultModelConfig(ctx, effectiveDept)
           finishJson(res, 200, { status_code: 200, message: '登录成功', user, personalInfo })
         } catch (err) {
           const msg = err instanceof Error ? err.message : '登录失败'
@@ -882,8 +903,13 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
             return
           }
 
-          if (personalInfo?.department && personalInfo.department !== activeDepartment) {
-            await ensureDefaultModelConfig(ctx, personalInfo.department)
+          if (check.department && session.setWhitelistDepartment) {
+            await session.setWhitelistDepartment(check.department)
+          }
+
+          const effectiveDept = check.department || snapshot.whitelistDepartment || personalInfo?.department
+          if (effectiveDept && effectiveDept !== activeDepartment) {
+            await ensureDefaultModelConfig(ctx, effectiveDept)
           }
 
           const userQuota = check.tokenQuota ?? (Number(config.tokenQuota) || 200_000_000)
