@@ -1007,14 +1007,22 @@ function DepartmentNoticeModal({ title, message, onClose }) {
     }
   );
 }
+var activeNoticeModalDisposer = null;
+function isDepartmentNoticeModalOpen() {
+  if (typeof document === "undefined") return false;
+  return Boolean(document.getElementById(NOTICE_MODAL_MOUNT_ID));
+}
 function showDepartmentNoticeModal(message, onConfirm, title) {
-  const existing = document.getElementById(NOTICE_MODAL_MOUNT_ID);
-  if (existing && existing.parentNode) {
-    existing.parentNode.removeChild(existing);
+  if (typeof document === "undefined") return () => {
+  };
+  if (isDepartmentNoticeModalOpen()) {
+    return activeNoticeModalDisposer || (() => {
+    });
   }
   let root;
   let container;
   const dispose = () => {
+    activeNoticeModalDisposer = null;
     if (root !== void 0) {
       root.unmount();
       root = void 0;
@@ -1025,6 +1033,7 @@ function showDepartmentNoticeModal(message, onConfirm, title) {
     }
     onConfirm?.();
   };
+  activeNoticeModalDisposer = dispose;
   container = document.createElement("div");
   container.id = NOTICE_MODAL_MOUNT_ID;
   document.body.appendChild(container);
@@ -1748,10 +1757,24 @@ function EzaiLoginModal({ locale, onClose }) {
     }
   );
 }
+var activeLoginModalDisposer = null;
+function isEzaiLoginModalOpen() {
+  if (typeof document === "undefined") return false;
+  return Boolean(
+    document.getElementById(MODAL_MOUNT_ID) || document.getElementById("dsh-ezai-auth-department-notice-modal")
+  );
+}
 function showEzaiLoginModal(locale) {
+  if (typeof document === "undefined") return () => {
+  };
+  if (isEzaiLoginModalOpen()) {
+    return activeLoginModalDisposer || (() => {
+    });
+  }
   let root;
   let container;
   const dispose = () => {
+    activeLoginModalDisposer = null;
     if (root !== void 0) {
       root.unmount();
       root = void 0;
@@ -1761,6 +1784,7 @@ function showEzaiLoginModal(locale) {
       container = void 0;
     }
   };
+  activeLoginModalDisposer = dispose;
   container = document.createElement("div");
   container.id = MODAL_MOUNT_ID;
   document.body.appendChild(container);
@@ -2264,8 +2288,8 @@ function installModelLockObserver(ctx) {
     const badges = document.querySelectorAll('span[class*="previewBadge"], span[class*="HeroShell_previewBadge"]');
     for (const badge of badges) {
       const text = badge.textContent?.trim();
-      if (text !== "\u7248\u672C 2.1.3" && (text === "\u9884\u89C8\u7248" || text === "Preview" || text && /^版本\s*2\./.test(text))) {
-        badge.textContent = "\u7248\u672C 2.1.3";
+      if (text !== "\u7248\u672C 2.1.4" && (text === "\u9884\u89C8\u7248" || text === "Preview" || text && /^版本\s*2\./.test(text))) {
+        badge.textContent = "\u7248\u672C 2.1.4";
       }
     }
     ensureSidebarWidgetMounted(ctx);

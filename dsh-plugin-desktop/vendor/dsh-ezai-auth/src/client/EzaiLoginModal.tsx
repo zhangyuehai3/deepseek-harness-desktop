@@ -94,12 +94,31 @@ export function EzaiLoginModal({ locale, onClose }: EzaiLoginModalProps) {
   )
 }
 
+let activeLoginModalDisposer: (() => void) | null = null
+
+/** Checks if the EZAI login modal or notice modal is currently open. */
+export function isEzaiLoginModalOpen(): boolean {
+  if (typeof document === 'undefined') return false
+  return Boolean(
+    document.getElementById(MODAL_MOUNT_ID) ||
+    document.getElementById('dsh-ezai-auth-department-notice-modal'),
+  )
+}
+
 /** Bootstrap a mandatory login modal. Returns a disposer that unmounts it. */
 export function showEzaiLoginModal(locale: 'zh' | 'en'): () => void {
+  if (typeof document === 'undefined') return () => {}
+
+  // If already open, do not open duplicate modals
+  if (isEzaiLoginModalOpen()) {
+    return activeLoginModalDisposer || (() => {})
+  }
+
   let root: Root | undefined
   let container: HTMLElement | undefined
 
   const dispose = () => {
+    activeLoginModalDisposer = null
     if (root !== undefined) {
       root.unmount()
       root = undefined
@@ -109,6 +128,8 @@ export function showEzaiLoginModal(locale: 'zh' | 'en'): () => void {
       container = undefined
     }
   }
+
+  activeLoginModalDisposer = dispose
 
   container = document.createElement('div')
   container.id = MODAL_MOUNT_ID

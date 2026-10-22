@@ -144,18 +144,28 @@ export function DepartmentNoticeModal({ title, message, onClose }: DepartmentNot
   )
 }
 
+let activeNoticeModalDisposer: (() => void) | null = null
+
+/** Checks if the department notice modal is currently open. */
+export function isDepartmentNoticeModalOpen(): boolean {
+  if (typeof document === 'undefined') return false
+  return Boolean(document.getElementById(NOTICE_MODAL_MOUNT_ID))
+}
+
 /** Show the department restriction notice modal dynamically. */
 export function showDepartmentNoticeModal(message?: string, onConfirm?: () => void, title?: string): () => void {
-  // Remove any existing one first
-  const existing = document.getElementById(NOTICE_MODAL_MOUNT_ID)
-  if (existing && existing.parentNode) {
-    existing.parentNode.removeChild(existing)
+  if (typeof document === 'undefined') return () => {}
+
+  // If already open, do not open duplicate modals
+  if (isDepartmentNoticeModalOpen()) {
+    return activeNoticeModalDisposer || (() => {})
   }
 
   let root: Root | undefined
   let container: HTMLElement | undefined
 
   const dispose = () => {
+    activeNoticeModalDisposer = null
     if (root !== undefined) {
       root.unmount()
       root = undefined
@@ -166,6 +176,8 @@ export function showDepartmentNoticeModal(message?: string, onConfirm?: () => vo
     }
     onConfirm?.()
   }
+
+  activeNoticeModalDisposer = dispose
 
   container = document.createElement('div')
   container.id = NOTICE_MODAL_MOUNT_ID
