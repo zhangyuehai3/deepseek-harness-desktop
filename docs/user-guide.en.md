@@ -2,9 +2,20 @@
 
 ## Installation and first launch
 
-Download the macOS or Windows installer from the product download page. DSH Desktop includes Electron, Node, and its pinned DSH dependencies, so normal users do not need to install Node.js or pnpm separately.
+Download the macOS or Windows installer from the product download page; Linux deb, AppImage, and tar.gz packages are on [GitHub Releases](https://github.com/anywhere-labs/dsh-desktop/releases/latest), and [Linux installation in the README](../README.en.md#linux) explains which to pick and how to install it. DSH Desktop includes Electron, Node, and its pinned DSH dependencies, so normal users do not need to install Node.js or pnpm separately.
 
 On first launch, the application prepares the default profile and starts the official DSH Web surface locally. Closing the window normally hides it; use **Quit** from the tray when you want to stop the application and Host process.
+
+## Launching with a folder
+
+Besides choosing a directory inside the interface, you can name a folder when the application starts. The folder is registered as a workspace and opened. A folder that is already a workspace is simply opened again; nothing is duplicated.
+
+- **Windows drag and drop**: drop the folder onto the **DSH Desktop** desktop shortcut or its Start menu entry. A stopped application starts first; a running one comes to the front and opens the workspace.
+- **Command line**: stable uses `dsh-desktop <folder>` and Beta uses `dsh-desktop-beta <folder>`. Relative paths resolve against the current directory. The installed EXE accepts one folder argument as well.
+
+When the path does not exist, names a file, or lives on unsupported storage such as exFAT, FAT32, or a network drive, the application shows a native message and registers nothing. Launching with a folder is one-shot: a later restart triggered from settings does not reopen it.
+
+Known limits: a DSH Desktop icon pinned to the Windows taskbar does not accept drops yet (that needs a folder association, planned separately); Linux supports the command line only; macOS supports neither route yet.
 
 ## Profiles
 
@@ -20,7 +31,7 @@ Switching profiles does not silently copy plugins from the old profile into the 
 - **Extended window** installs the Desktop-owned layout and sidebar surface, then hosts the official sidebar, conversation, and details occupants inside it. The 36-pixel top frame and left sidebar surface form one inverted-L material region with a rounded inner corner.
 - **Enhanced mode** retains its dedicated root registration and compact internal captions: macOS uses a 20-pixel content inset with a 32-pixel drag region, while Windows uses a 32-pixel caption row. It does not reuse the independent extended frame.
 
-macOS custom-window modes can turn the transparent material on or off. Windows can turn material off; Mica appears only when supported on Windows 11 build 22621 or newer. A legacy Windows Acrylic preference is safely treated as off and migrated when its settings file is writable. Changing mode or material restarts the application; it does not hot-swap root slots or native materials in a live renderer. Linux provides compatibility mode only.
+macOS custom-window modes can turn the transparent material on or off. Windows has no material choice and always uses an opaque window. Legacy Windows Acrylic and Mica preferences are safely treated as off; Acrylic is also migrated when its settings file is writable. Changing mode or material restarts the application; it does not hot-swap root slots or native materials in a live renderer. Linux provides compatibility mode only.
 
 ## Local Web port
 
@@ -68,6 +79,8 @@ Packaged macOS and Windows applications check `https://www.dshdesktop.cn/api/des
 **Check for Updates…** in the tray checks the current release channel: stable receives only stable updates, while Beta receives only Beta updates. It shows a result even when the installed version is current and reports a retry message when the check fails. Beta also provides **Install Stable Edition…**, which installs stable alongside Beta. Cancelling never requests the counted download endpoint.
 
 After confirmation, the app first opens the native **Save Update Installer** dialog, defaulting to the Downloads directory. You can choose another directory and filename; cancelling the dialog does not start a download. After the destination is confirmed, the app requests the fixed platform download URL and remembers the installer location. macOS opens the DMG for the user to replace the application in Applications; Windows prepares the NSIS installer and then asks whether to quit and start installation. After the upgrade completes and the app starts again, it asks whether to delete the installer to free disk space or keep it. Download or installer failures do not damage the current version, and the tray operation can be retried.
+
+Packaged Linux applications also check for new versions in the background and notify once per version, but never download or install them in the app. The new-version item in the tray, **Open download page** in Settings, and the prompt that follows a notification click all open that version's GitHub release page; download the package that matches your installation and update manually: install a newer deb over the old one with `sudo apt install ./<file>.deb`, or replace the AppImage file. Linux version checks do not send the installation UUID.
 
 ## Troubleshooting
 

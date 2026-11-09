@@ -1,358 +1,138 @@
+import { expect, it, vi } from 'vitest'
 import type { Context } from '@deepseek-ai/cordis'
-import type { JobId, JobSnapshot } from '@deepseek-ai/dsh-jobs'
-import type { Session, SessionEvent, SessionId } from '@deepseek-ai/dsh-session'
-import { describe, expect, it, vi } from 'vitest'
-import {
-  apply,
-  DESKTOP_NOTIFICATIONS_SETTINGS_NAMESPACE,
-  DesktopNotificationSettingsSchema,
-  inject,
-  name,
-  type DesktopNotificationSettings,
-} from '../src/notifications.ts'
-import type { DesktopRuntime } from '../src/runtime.ts'
+import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
+import { DEFAULT_PREFERENCES } from '../src/desktop-contract.ts'
+import { installNotifications, isDesktopNotification, notificationCopy, notificationEnabled, TurnAttention } from '../src/notifications.ts'
 
-type OptionalService = 'jobs' | 'sessions' | 'settings'
+const session = { header: { id: 'main' } } as Session
+const event = (type: string, data: object) => ({ type, data }) as SessionEvent
+const text = (value: string) => ({ type: 'text', text: value })
+const user = (message: string, kind = 'user') => event('user/message', { source: { kind }, content: [text(message)] })
+const assistant = (turn: number, message: string) => event('assistant/message', { turn, message: { content: [text(message)] } })
+const end = (turn: number, kind = 'completed') => event('turn/end', { turn, reason: { kind } })
 
-interface NotificationHarness {
-  readonly notifyAttention: ReturnType<typeof vi.fn>
-  readonly registerSettings: ReturnType<typeof vi.fn>
-  readonly stopJobs: ReturnType<typeof vi.fn>
-  readonly stopSessions: ReturnType<typeof vi.fn>
-  jobDone(snapshot: JobSnapshot): Promise<void>
-  sessionEvent(session: Session, event: SessionEvent): Promise<void>
-  sessionDisposed(session: Session): Promise<void>
-  updateSettings(settings: DesktopNotificationSettings): Promise<void>
-  teardownSessions(): void
-  reattachSessions(): void
-  dispose(): void
-}
+it('notifies for the initiating user turn, not subagents, unknown automation, or duplicate endings', () => {
+  const notify = vi.fn()
+  const tracker = new TurnAttention(notify)
+  tracker.event(session, event('turn/start', { turn: 1 }))
+  tracker.event(session, user('Check my code'))
+  tracker.event(session, assistant(1, 'Fixed the issue.'))
+  tracker.event(session, event('turn/end', { turn: 1, reason: { kind: 'completed' } }))
+  tracker.event(session, event('turn/end', { turn: 1, reason: { kind: 'completed' } }))
+  tracker.event(session, event('turn/start', { turn: 2 }))
+  tracker.event(session, event('turn/end', { turn: 2, reason: { kind: 'completed' } }))
+  const child = { header: { id: 'child', origin: 'subagent' } } as unknown as Session
+  tracker.event(child, event('turn/start', { turn: 1 }))
+  tracker.event(child, user('Subagent work'))
+  tracker.event(child, event('turn/end', { turn: 1, reason: { kind: 'error' } }))
+  expect(notify.mock.calls).toEqual([[{ outcome: 'turn-completed', userMessage: 'Check my code', assistantMessage: 'Fixed the issue.' }]])
+  expect(notificationEnabled({ ...DEFAULT_PREFERENCES, notifications: false }, 'turn-completed')).toBe(false)
+  expect(notificationEnabled({ ...DEFAULT_PREFERENCES, turnFailed: false }, 'turn-failed')).toBe(false)
+  expect(notificationEnabled({ ...DEFAULT_PREFERENCES }, 'turn-completed')).toBe(true)
+})
 
-function createHarness(available: readonly OptionalService[] = ['jobs', 'sessions', 'settings']): NotificationHarness {
-  const notifyAttention = vi.fn()
-  const stopJobs = vi.fn()
-  const stopSessions = vi.fn()
-  const enabled = new Set(available)
-  const injections = new Map<OptionalService, (ctx: Context) => void>()
-  const disposers = new Map<OptionalService, Array<() => void>>()
-  let activeService: OptionalService | undefined
-  let jobListener: ((snapshot: JobSnapshot) => void | PromiseLike<void>) | undefined
-  let sessionListener: ((session: Session, event: SessionEvent) => void | PromiseLike<void>) | undefined
-  let sessionDisposedListener: ((session: Session) => void | PromiseLike<void>) | undefined
-  let settingsWatcher:
-    | ((next: DesktopNotificationSettings, previous: DesktopNotificationSettings) => void | Promise<void>)
-    | undefined
-  let currentSettings = DesktopNotificationSettingsSchema({} as DesktopNotificationSettings)
+it('notifies for scheduled turn outcomes without exposing the reminder or reply', () => {
+  const notify = vi.fn()
+  const tracker = new TurnAttention(notify)
+  tracker.event(session, event('turn/start', { turn: 1 }))
+  tracker.event(session, user('Private reminder', 'schedule'))
+  tracker.event(session, assistant(1, 'Private result'))
+  tracker.event(session, end(1))
+  tracker.event(session, end(1))
+  tracker.event(session, event('turn/start', { turn: 2 }))
+  tracker.event(session, user('Another private reminder', 'schedule'))
+  tracker.event(session, end(2, 'error'))
+  expect(notify.mock.calls.map(([value]) => value)).toEqual([
+    { outcome: 'schedule-completed' }, { outcome: 'schedule-failed' },
+  ])
+  expect(notificationCopy({ outcome: 'schedule-completed' }, 'zh')).toEqual({ title: '自动化任务完成', body: '一个自动化任务已完成。' })
+  expect(notificationEnabled({ ...DEFAULT_PREFERENCES, scheduleCompleted: false }, 'schedule-completed')).toBe(false)
+  expect(notificationEnabled({ ...DEFAULT_PREFERENCES, scheduleFailed: false }, 'schedule-failed')).toBe(false)
+  expect(isDesktopNotification({ outcome: 'schedule-completed' })).toBe(true)
+  expect(isDesktopNotification({ outcome: 'schedule-failed' })).toBe(true)
+})
 
-  const runtime = {
-    platform: 'darwin',
-    locale: 'en',
-    notifyAttention,
-  } as unknown as DesktopRuntime
+it('uses the actual user prompt and final visible assistant reply from the same turn', () => {
+  const notify = vi.fn()
+  const tracker = new TurnAttention(notify)
+  tracker.event(session, event('turn/start', { turn: 1 }))
+  tracker.event(session, user('帮我检查\n这段代码'))
+  tracker.event(session, assistant(1, '正在检查'))
+  tracker.event(session, user('plugin context', 'plugin'))
+  tracker.event(session, event('assistant/message', { turn: 1, message: { content: [
+    { type: 'reasoning', text: 'private reasoning' }, text('检查完成。'), text('已经修复。'),
+    { type: 'tool-call', name: 'shell', arguments: 'private command' },
+  ] } }))
+  tracker.event(session, assistant(0, 'stale reply'))
+  tracker.event(session, end(0))
+  tracker.event(session, end(1))
+  expect(notify.mock.calls).toEqual([[{ outcome: 'turn-completed', userMessage: '帮我检查 这段代码', assistantMessage: '检查完成。 已经修复。' }]])
+  expect(notificationCopy(notify.mock.calls[0]![0], 'zh')).toEqual({ title: '帮我检查 这段代码', body: '检查完成。 已经修复。' })
+})
 
-  const registerSettings = vi.fn(() => ({
-    get: () => currentSettings,
-    watch: (watcher: typeof settingsWatcher) => {
-      settingsWatcher = watcher
-      return () => { settingsWatcher = undefined }
-    },
-    update: vi.fn(async () => {}),
-    replace: vi.fn(async () => {}),
-  }))
+it('projects Markdown previews to plain text before sending native notifications', () => {
+  const notify = vi.fn()
+  const tracker = new TurnAttention(notify)
+  tracker.event(session, event('turn/start', { turn: 1 }))
+  tracker.event(session, user('**Check** [docs](https://example.com)'))
+  tracker.event(session, assistant(1, '# Result\n\n- **Done**\n- `code`'))
+  tracker.event(session, end(1))
+  expect(notify).toHaveBeenCalledWith({
+    outcome: 'turn-completed', userMessage: 'Check docs', assistantMessage: 'Result Done code',
+  })
+  expect(notificationCopy(notify.mock.calls[0]![0], 'en')).toEqual({ title: 'Check docs', body: 'Result Done code' })
+})
 
-  const ctx = {
-    desktopRuntime: runtime,
-    settings: { register: registerSettings },
-    jobs: {
-      onJobDone: (listener: typeof jobListener) => {
-        jobListener = listener
-        return () => {
-          jobListener = undefined
-          stopJobs()
-        }
-      },
-    },
-    on: (event: string, listener: typeof sessionListener | typeof sessionDisposedListener) => {
-      if (event === 'session/event') sessionListener = listener as typeof sessionListener
-      else if (event === 'session/disposed') sessionDisposedListener = listener as typeof sessionDisposedListener
-      else return () => {}
-      return () => {
-        if (event === 'session/event') sessionListener = undefined
-        else sessionDisposedListener = undefined
-        stopSessions()
-      }
-    },
-    inject: (services: OptionalService[], callback: (child: Context) => void) => {
-      const service = services[0]
-      if (service === undefined) return
-      injections.set(service, callback)
-      if (!enabled.has(service)) return
-      activeService = service
-      callback(ctx as unknown as Context)
-      activeService = undefined
-    },
-    effect: (register: () => void | (() => void)) => {
-      const dispose = register()
-      if (activeService !== undefined && typeof dispose === 'function') {
-        disposers.set(activeService, [...(disposers.get(activeService) ?? []), dispose])
-      }
-      return dispose
-    },
-  } as unknown as Context
-
-  const teardown = (service: OptionalService): void => {
-    for (const dispose of [...(disposers.get(service) ?? [])].reverse()) dispose()
-    disposers.delete(service)
+it('keeps sessions and turns separate and sends generic failures', () => {
+  const notify = vi.fn()
+  const tracker = new TurnAttention(notify)
+  const other = { header: { id: 'other' } } as Session
+  for (const target of [session, other]) {
+    tracker.event(target, event('turn/start', { turn: 1 }))
+    tracker.event(target, user(String(target.header.id)))
+    tracker.event(target, assistant(1, `reply ${target.header.id}`))
   }
+  tracker.event(other, end(1))
+  tracker.event(session, end(1))
+  tracker.event(session, event('turn/start', { turn: 2 }))
+  tracker.event(session, user(''))
+  tracker.event(session, end(2))
+  tracker.event(session, event('turn/start', { turn: 3 }))
+  tracker.event(session, user('failed prompt'))
+  tracker.event(session, end(3, 'error'))
+  tracker.event(session, event('turn/start', { turn: 4 }))
+  tracker.event(session, user('disposed prompt'))
+  tracker.dispose(session)
+  tracker.event(session, end(4))
+  expect(notify.mock.calls.map(([value]) => value)).toEqual([
+    { outcome: 'turn-completed', userMessage: 'other', assistantMessage: 'reply other' },
+    { outcome: 'turn-completed', userMessage: 'main', assistantMessage: 'reply main' },
+    { outcome: 'turn-completed', userMessage: '', assistantMessage: '' },
+    { outcome: 'turn-failed' },
+  ])
+  expect(notificationCopy(notify.mock.calls[2]![0], 'en')).toEqual({ title: 'Turn completed', body: 'A turn you started has finished.' })
+})
 
-  apply(ctx)
-
-  return {
-    notifyAttention,
-    registerSettings,
-    stopJobs,
-    stopSessions,
-    async jobDone(snapshot) { await jobListener?.(snapshot) },
-    async sessionEvent(session, event) { await sessionListener?.(session, event) },
-    async sessionDisposed(session) { await sessionDisposedListener?.(session) },
-    async updateSettings(next) {
-      const previous = currentSettings
-      currentSettings = next
-      await settingsWatcher?.(next, previous)
-    },
-    teardownSessions() { teardown('sessions') },
-    reattachSessions() {
-      activeService = 'sessions'
-      injections.get('sessions')?.(ctx)
-      activeService = undefined
-    },
-    dispose() {
-      teardown('sessions')
-      teardown('jobs')
-      teardown('settings')
-    },
+it('bounds notification previews and validates the IPC payload', () => {
+  const notify = vi.fn()
+  const tracker = new TurnAttention(notify)
+  tracker.event(session, event('turn/start', { turn: 1 }))
+  tracker.event(session, user('😀'.repeat(200)))
+  tracker.event(session, assistant(1, '答'.repeat(2000)))
+  tracker.event(session, end(1))
+  const notification = notify.mock.calls[0]![0]
+  expect(notification.userMessage.length).toBeLessThanOrEqual(160)
+  expect(notification.userMessage).toMatch(/😀…$/u)
+  expect(notification.assistantMessage).toHaveLength(1000)
+  expect(isDesktopNotification(notification)).toBe(true)
+  for (const value of [null, { outcome: 'job-completed' }, { outcome: 'job-failed' }, { outcome: 'turn-completed' },
+    { ...notification, userMessage: 1 }, { ...notification, assistantMessage: 'x'.repeat(1001) }]) {
+    expect(isDesktopNotification(value)).toBe(false)
   }
-}
+})
 
-function session(id: string, origin?: 'subagent'): Session {
-  return {
-    header: {
-      id: id as SessionId,
-      version: 0,
-      createdAt: 1,
-      ...(origin === undefined ? {} : { origin }),
-    },
-  } as unknown as Session
-}
-
-function event<T extends SessionEvent['type']>(
-  type: T,
-  data: Extract<SessionEvent, { type: T }>['data'],
-  seq: number,
-): Extract<SessionEvent, { type: T }> {
-  return { type, data, seq, time: seq } as Extract<SessionEvent, { type: T }>
-}
-
-function userMessage(source: 'user' | 'plugin', seq: number): SessionEvent<'user/message'> {
-  return event('user/message', {
-    id: `message-${String(seq)}` as never,
-    role: 'user',
-    content: [{ type: 'text', text: 'secret /Users/example session-123' }] as never,
-    source: source === 'user'
-      ? { kind: 'user' }
-      : { kind: 'plugin', plugin: 'test', form: 'notice', summary: 'continuation' },
-  } as never, seq)
-}
-
-describe('desktop notifications Host plugin', () => {
-  it('registers live notification settings with the global switch enabled by default', () => {
-    const harness = createHarness(['settings'])
-
-    expect(name).toBe('desktop-notifications')
-    expect(inject).toEqual(['desktopRuntime'])
-    expect(String(DESKTOP_NOTIFICATIONS_SETTINGS_NAMESPACE)).toBe('dsh-desktop-notifications')
-    expect(DesktopNotificationSettingsSchema({} as DesktopNotificationSettings)).toEqual({
-      enabled: true,
-      notifyOnTurnCompletion: true,
-      notifyOnTurnFailure: true,
-      notifyOnJobCompletion: true,
-      notifyOnJobFailure: true,
-    })
-    expect(harness.registerSettings).toHaveBeenCalledWith(
-      DESKTOP_NOTIFICATIONS_SETTINGS_NAMESPACE,
-      DesktopNotificationSettingsSchema,
-      { applies: 'live' },
-    )
-  })
-
-  it('notifies for completed and failed jobs without exposing job details', async () => {
-    const harness = createHarness(['jobs', 'settings'])
-    const snapshot = {
-      id: 'bash-1' as JobId,
-      kind: 'bash',
-      label: 'node /Users/example/private.js --token secret',
-      status: 'completed',
-      detail: 'session-123',
-      output: 'private output',
-      startedAt: 1,
-      finishedAt: 2,
-      reported: false,
-    } satisfies JobSnapshot & { output: string }
-
-    await harness.jobDone(snapshot)
-    await harness.jobDone({ ...snapshot, status: 'failed' })
-    await harness.jobDone({ ...snapshot, status: 'killed' })
-
-    expect(harness.notifyAttention.mock.calls).toEqual([
-      [{ title: 'Background Job Completed', body: 'A background job has finished.' }],
-      [{ title: 'Background Job Failed', body: 'A background job could not finish. Open EZAI Desktop for details.' }],
-    ])
-    expect(JSON.stringify(harness.notifyAttention.mock.calls)).not.toMatch(/Users|private|secret|session-123/u)
-  })
-
-  it('applies live settings independently to successful and failed outcomes', async () => {
-    const harness = createHarness()
-    const snapshot = {
-      id: 'bash-2' as JobId,
-      kind: 'bash',
-      label: 'build',
-      status: 'completed',
-      startedAt: 1,
-      finishedAt: 2,
-      reported: false,
-    } satisfies JobSnapshot
-
-    await harness.updateSettings({
-      enabled: true,
-      notifyOnTurnCompletion: false,
-      notifyOnTurnFailure: true,
-      notifyOnJobCompletion: false,
-      notifyOnJobFailure: true,
-    })
-    await harness.jobDone(snapshot)
-    await harness.jobDone({ ...snapshot, status: 'failed' })
-
-    const active = session('session-1')
-    await harness.sessionEvent(active, event('turn/start', { turn: 1 }, 1))
-    await harness.sessionEvent(active, userMessage('user', 2))
-    await harness.sessionEvent(active, event('turn/end', { turn: 1, reason: { kind: 'completed' } }, 3))
-    await harness.sessionEvent(active, event('turn/start', { turn: 2 }, 4))
-    await harness.sessionEvent(active, userMessage('user', 5))
-    await harness.sessionEvent(active, event('turn/end', {
-      turn: 2,
-      reason: { kind: 'error', error: { code: 'UNKNOWN', message: 'private error' } },
-    }, 6))
-
-    expect(harness.notifyAttention.mock.calls).toEqual([
-      [{ title: 'Background Job Failed', body: 'A background job could not finish. Open EZAI Desktop for details.' }],
-      [{ title: 'User Turn Failed', body: 'A user-initiated turn could not finish. Open EZAI Desktop for details.' }],
-    ])
-  })
-
-  it('keeps fine-grained choices while the live global switch is disabled', async () => {
-    const harness = createHarness()
-    const snapshot = {
-      id: 'bash-disabled' as JobId,
-      kind: 'bash',
-      label: 'build',
-      status: 'completed',
-      startedAt: 1,
-      finishedAt: 2,
-      reported: false,
-    } satisfies JobSnapshot
-
-    await harness.updateSettings({
-      enabled: false,
-      notifyOnTurnCompletion: true,
-      notifyOnTurnFailure: true,
-      notifyOnJobCompletion: true,
-      notifyOnJobFailure: true,
-    })
-    await harness.jobDone(snapshot)
-
-    const active = session('disabled')
-    await harness.sessionEvent(active, event('turn/start', { turn: 1 }, 1))
-    await harness.sessionEvent(active, userMessage('user', 2))
-    await harness.sessionEvent(active, event('turn/end', { turn: 1, reason: { kind: 'completed' } }, 3))
-
-    expect(harness.notifyAttention).not.toHaveBeenCalled()
-  })
-
-  it('notifies only matching direct-user turn endings', async () => {
-    const harness = createHarness(['sessions'])
-    const direct = session('direct')
-    const plugin = session('plugin')
-    const subagent = session('subagent', 'subagent')
-
-    await harness.sessionEvent(direct, event('turn/start', { turn: 7 }, 1))
-    await harness.sessionEvent(direct, userMessage('user', 2))
-    await harness.sessionEvent(direct, event('turn/end', { turn: 8, reason: { kind: 'completed' } }, 3))
-    await harness.sessionEvent(direct, event('turn/end', { turn: 7, reason: { kind: 'completed' } }, 4))
-
-    await harness.sessionEvent(plugin, event('turn/start', { turn: 1 }, 5))
-    await harness.sessionEvent(plugin, userMessage('plugin', 6))
-    await harness.sessionEvent(plugin, event('turn/end', { turn: 1, reason: { kind: 'completed' } }, 7))
-
-    await harness.sessionEvent(subagent, event('turn/start', { turn: 1 }, 8))
-    await harness.sessionEvent(subagent, userMessage('user', 9))
-    await harness.sessionEvent(subagent, event('turn/end', { turn: 1, reason: { kind: 'completed' } }, 10))
-
-    expect(harness.notifyAttention).toHaveBeenCalledOnce()
-    expect(harness.notifyAttention).toHaveBeenCalledWith({
-      title: 'User Turn Completed',
-      body: 'A user-initiated turn has finished.',
-    })
-  })
-
-  it('treats max-tokens as a failure and keeps non-failure endings silent', async () => {
-    const harness = createHarness(['sessions'])
-    const active = session('direct')
-    const endings: Array<Extract<SessionEvent, { type: 'turn/end' }>['data']['reason']> = [
-      { kind: 'max-tokens' },
-      { kind: 'aborted', reason: { kind: 'user' } },
-      { kind: 'blocked' },
-      { kind: 'interrupted' },
-    ]
-
-    for (const [index, reason] of endings.entries()) {
-      const turn = index + 1
-      await harness.sessionEvent(active, event('turn/start', { turn }, turn * 3))
-      await harness.sessionEvent(active, userMessage('user', turn * 3 + 1))
-      await harness.sessionEvent(active, event('turn/end', { turn, reason } as never, turn * 3 + 2))
-    }
-
-    expect(harness.notifyAttention).toHaveBeenCalledOnce()
-    expect(harness.notifyAttention).toHaveBeenCalledWith({
-      title: 'User Turn Failed',
-      body: 'A user-initiated turn could not finish. Open EZAI Desktop for details.',
-    })
-  })
-
-  it('drops open turn state when sessions detach and disposes optional observers', async () => {
-    const harness = createHarness()
-    const active = session('session-1')
-    await harness.sessionEvent(active, event('turn/start', { turn: 1 }, 1))
-    await harness.sessionEvent(active, userMessage('user', 2))
-
-    harness.teardownSessions()
-    harness.reattachSessions()
-    await harness.sessionEvent(active, event('turn/end', { turn: 1, reason: { kind: 'completed' } }, 3))
-
-    expect(harness.notifyAttention).not.toHaveBeenCalled()
-    expect(harness.stopSessions).toHaveBeenCalledTimes(2)
-    harness.dispose()
-    expect(harness.stopSessions).toHaveBeenCalledTimes(4)
-    expect(harness.stopJobs).toHaveBeenCalledOnce()
-  })
-
-  it('drops an unfinished turn when its session is disposed', async () => {
-    const harness = createHarness(['sessions'])
-    const active = session('session-1')
-    await harness.sessionEvent(active, event('turn/start', { turn: 1 }, 1))
-    await harness.sessionEvent(active, userMessage('user', 2))
-    await harness.sessionDisposed(active)
-    await harness.sessionEvent(active, event('turn/end', { turn: 1, reason: { kind: 'completed' } }, 3))
-
-    expect(harness.notifyAttention).not.toHaveBeenCalled()
-  })
+it('subscribes only to sessions', () => {
+  const inject = vi.fn()
+  installNotifications({ inject } as unknown as Context, vi.fn())
+  expect(inject.mock.calls.map(([dependencies]) => dependencies)).toEqual([['sessions']])
 })

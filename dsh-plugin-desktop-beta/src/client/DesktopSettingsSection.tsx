@@ -3,26 +3,33 @@
 import {
   useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode,
 } from 'react'
-import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
+import { IconChevronDownOutlineRegular, Menu } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { DesktopSettingsForm } from '../../../dsh-plugin-desktop/src/client/settings-bridge.ts'
+import { Check, Copy } from 'lucide-react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
   DesktopMarketProvider, DesktopProfileView, DesktopSettingsApi, DesktopSettingsView,
-} from './desktop-settings-api.ts'
-import type { DesktopSettingsLocaleKey } from './desktop-settings-locales.ts'
-import type { DesktopClientPlatform } from './environment.ts'
+} from '../../../dsh-plugin-desktop/src/client/desktop-settings-api.ts'
+import type { DesktopSettingsLocaleKey } from '../../../dsh-plugin-desktop/src/client/desktop-settings-locales.ts'
+import type { DesktopClientPlatform } from '../../../dsh-plugin-desktop/src/client/environment.ts'
 import {
   desktopBrowserAccessAvailable,
   desktopBrowserAccessEnabled,
-} from '../desktop-network.ts'
+} from '../../../dsh-plugin-desktop/src/desktop-network.ts'
 
 /** Browser view of the Host `dsh-desktop` settings namespace. */
 export interface DesktopShellSettings {
   readonly mode: 'compatibility' | 'extended' | 'advanced'
   readonly macosMaterial: 'off' | 'transparent'
+  readonly linuxMaterial: 'off' | 'transparent'
+  /** Legacy Windows value; Windows has no selectable material and renders opaque. */
   readonly windowsMaterial: 'off' | 'acrylic' | 'mica'
   readonly port: number
   readonly openBrowser: boolean
   readonly networkExposure: 'loopback' | 'lan'
+  readonly developerLogging?: boolean
+  readonly sidebarFooterCompat?: boolean
+  readonly sidebarFooterBalanced?: boolean
   readonly logLevel: 'debug' | 'info' | 'warn' | 'error'
 }
 
@@ -33,17 +40,36 @@ export interface DesktopNotificationSettings {
   readonly notifyOnTurnFailure: boolean
   readonly notifyOnJobCompletion: boolean
   readonly notifyOnJobFailure: boolean
+  readonly notifyOnScheduleCompletion: boolean
+  readonly notifyOnScheduleFailure: boolean
 }
 
 /** Registration-side business face for the Desktop settings section. */
 export interface DesktopSettingsSectionInjected {
   readonly api: DesktopSettingsApi
   readonly platform: DesktopClientPlatform
+  /** Installed Desktop product version rendered by the update section. */
+  readonly version: string
   readonly initialMode: DesktopShellSettings['mode']
-  readonly micaSupported: boolean
   readonly setMode: (mode: DesktopShellSettings['mode']) => Promise<void>
-  readonly desktopSettings: SettingsScope<DesktopShellSettings>
-  readonly notificationSettings: SettingsScope<DesktopNotificationSettings>
+  readonly desktopSettings: Pick<DesktopSettingsForm<DesktopShellSettings>, 'getSnapshot' | 'subscribe' | 'set'>
+  readonly notificationSettings: Pick<DesktopSettingsForm<DesktopNotificationSettings>, 'getSnapshot' | 'subscribe' | 'set'>
+  /** Hosts can omit unsupported features while sharing the existing page. */
+  readonly capabilities?: {
+    readonly pluginSelectors?: boolean
+    readonly windowModes?: boolean
+    readonly featuresReadOnly?: boolean
+    readonly markets?: readonly DesktopMarketProvider[]
+    readonly materialRequiresRestart?: boolean
+    readonly nativeLanConfirmation?: boolean
+    readonly jobNotifications?: boolean
+    readonly updates?: boolean
+    readonly logging?: boolean
+  }
+  readonly openPlugins?: () => void
+  readonly introNotice?: ReactNode
+  readonly browserActions?: ReactNode
+  readonly extraSections?: ReactNode
 }
 
 /** Renderer-composed props for the official settings section entry. */
@@ -53,7 +79,7 @@ export type DesktopSettingsSectionProps =
   & InjectFace<DesktopSettingsSectionInjected>
 
 type Translate = DesktopSettingsSectionProps['t']
-type BusyOperation = 'load' | 'create-profile' | 'select-profile' | 'delete-profile' | 'select-aa' | 'select-market' | 'mode' | 'material' | 'web' | 'notification'
+type BusyOperation = 'load' | 'create-profile' | 'select-profile' | 'delete-profile' | 'select-aa' | 'select-market' | 'mode' | 'material' | 'web' | 'notification' | 'logging'
 type RestartState = 'none' | 'restarting' | 'required'
 type LanPollWait = (signal: AbortSignal) => Promise<void>
 
@@ -110,7 +136,7 @@ export async function readDesktopSettingsUntilLanSettled(
 
 /** Persist ordinary-browser permission and refresh the already-running edge. */
 export async function persistDesktopBrowserAccessHot(
-  settings: Pick<SettingsScope<DesktopShellSettings>, 'set'>,
+  settings: Pick<DesktopSettingsForm<DesktopShellSettings>, 'set'>,
   checked: boolean,
   currentExposure: DesktopShellSettings['networkExposure'],
   refresh: () => Promise<DesktopSettingsView>,
@@ -124,7 +150,7 @@ export async function persistDesktopBrowserAccessHot(
 
 /** Persist LAN intent and refresh its hot HTTPS ingress state. */
 export async function persistDesktopNetworkExposureHot(
-  settings: Pick<SettingsScope<DesktopShellSettings>, 'set'>,
+  settings: Pick<DesktopSettingsForm<DesktopShellSettings>, 'set'>,
   exposure: DesktopShellSettings['networkExposure'],
   refresh: () => Promise<DesktopSettingsView>,
 ): Promise<DesktopSettingsView> {
@@ -150,13 +176,13 @@ export function resolveDesktopLanConfirmation(
   if (confirmed) enableLan()
 }
 
-function useScope<T>(scope: SettingsScope<T>) {
+function useScope<T>(scope: Pick<DesktopSettingsForm<T>, 'getSnapshot' | 'subscribe'>) {
   const subscribe = useCallback((listener: () => void) => scope.subscribe(listener), [scope])
   const snapshot = useCallback(() => scope.getSnapshot(), [scope])
   return useSyncExternalStore(subscribe, snapshot)
 }
 
-function Choice({
+export function Choice({
   title,
   body,
   aside,
@@ -224,37 +250,116 @@ function RepositoryLink({ href, children }: { href: string; children: ReactNode 
   )
 }
 
-function ToggleRow({
+export interface DesktopSettingsToggleExpander {
+  readonly open: boolean
+  readonly controls: string
+  readonly label: string
+  readonly onToggle: () => void
+}
+
+export function DesktopSettingsSelect<T extends string>({
+  value,
+  options,
+  disabled,
+  ariaLabel,
+  onChange,
+}: {
+  value: T
+  options: readonly { readonly value: T; readonly label: ReactNode }[]
+  disabled?: boolean
+  ariaLabel?: string
+  onChange: (value: T) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const selected = options.find(option => option.value === value) ?? options[0]
+  return (
+    <Menu
+      open={open}
+      onClose={() => { setOpen(false) }}
+      items={options.map(option => ({ id: option.value, label: option.label }))}
+      selectedId={value}
+      onSelect={(id) => {
+        setOpen(false)
+        if (id !== value) onChange(id as T)
+      }}
+      align="end"
+      portal
+      anchor={(
+        <button
+          type="button"
+          className="dshDesktopSettingsSelect"
+          aria-label={ariaLabel}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          disabled={disabled}
+          onClick={() => { setOpen(current => !current) }}
+        >
+          <span>{selected?.label ?? value}</span>
+          <IconChevronDownOutlineRegular className="dshDesktopSettingsSelectChevron" />
+        </button>
+      )}
+    />
+  )
+}
+
+export function DesktopSettingsToggleRow({
   label,
+  description,
+  titleId,
   badge,
   checked,
   disabled,
   onChange,
+  expander,
 }: {
   label: ReactNode
+  description?: ReactNode
+  titleId?: string
   badge?: ReactNode
   checked: boolean
   disabled: boolean
   onChange: (checked: boolean) => void
+  expander?: DesktopSettingsToggleExpander
 }) {
-  const labelId = useId()
+  const generatedId = useId()
+  const labelId = titleId ?? generatedId
   return (
     <div className="dshDesktopSettingsToggleRow">
-      <span className="dshDesktopSettingsToggleLabel" id={labelId}>
-        {label}
-        {badge !== undefined && <span className="dshDesktopSettingsBadge">{badge}</span>}
+      <span className="dshDesktopSettingsToggleCopy">
+        <span className="dshDesktopSettingsToggleLabel" id={labelId}>
+          {label}
+          {badge !== undefined && <span className="dshDesktopSettingsBadge">{badge}</span>}
+        </span>
+        {description !== undefined && (
+          <span className="dshDesktopSettingsToggleDescription">{description}</span>
+        )}
       </span>
-      <button
-        type="button"
-        role="switch"
-        className="dshDesktopSettingsToggle"
-        aria-checked={checked}
-        aria-labelledby={labelId}
-        disabled={disabled}
-        onClick={() => { onChange(!checked) }}
-      >
-        <span className="dshDesktopSettingsToggleKnob" aria-hidden="true" />
-      </button>
+      <div className="dshDesktopSettingsToggleControl">
+        <button
+          type="button"
+          role="switch"
+          className="dshDesktopSettingsToggle"
+          aria-checked={checked}
+          aria-labelledby={labelId}
+          disabled={disabled}
+          onClick={() => { onChange(!checked) }}
+        >
+          <span className="dshDesktopSettingsToggleKnob" aria-hidden="true" />
+        </button>
+        {expander !== undefined && (
+          <button
+            type="button"
+            className="dshDesktopSettingsExpander"
+            aria-label={expander.label}
+            title={expander.label}
+            aria-expanded={expander.open}
+            aria-controls={expander.controls}
+            onClick={expander.onToggle}
+          >
+            <IconChevronDownOutlineRegular size={12} />
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -264,7 +369,7 @@ function profileState(profile: DesktopProfileView, t: Translate): string {
   return t('profileReady')
 }
 
-const MARKET_OPTIONS: readonly {
+export const MARKET_OPTIONS: readonly {
   id: DesktopMarketProvider
   title: DesktopSettingsLocaleKey
   body: DesktopSettingsLocaleKey
@@ -278,7 +383,7 @@ const COMMUNITY_MARKET_URL = 'https://github.com/anywhere-labs/deepseek-harness-
 const DSH_MARKET_URL = 'https://github.com/dsh-market/dsh-market'
 const AWESOME_DSH_PLUGIN_URL = 'https://github.com/awesome-dsh-plugin/awesome-dsh-plugin'
 
-function marketTitle(option: (typeof MARKET_OPTIONS)[number], t: Translate): ReactNode {
+export function marketTitle(option: (typeof MARKET_OPTIONS)[number], t: Translate): ReactNode {
   if (option.id === 'community-market') {
     return <RepositoryLink href={COMMUNITY_MARKET_URL}>{t(option.title)}</RepositoryLink>
   }
@@ -288,7 +393,7 @@ function marketTitle(option: (typeof MARKET_OPTIONS)[number], t: Translate): Rea
   return t(option.title)
 }
 
-function marketBody(option: (typeof MARKET_OPTIONS)[number], t: Translate): ReactNode {
+export function marketBody(option: (typeof MARKET_OPTIONS)[number], t: Translate): ReactNode {
   if (option.id !== 'dsh-market') return t(option.body)
   return (
     <>
@@ -298,17 +403,56 @@ function marketBody(option: (typeof MARKET_OPTIONS)[number], t: Translate): Reac
   )
 }
 
+function DesktopBrowserUrl({ url, api, t, onOpen }: {
+  url: string
+  api: DesktopSettingsApi
+  t: Translate
+  onOpen: React.MouseEventHandler<HTMLAnchorElement>
+}) {
+  const [busy, setBusy] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [failed, setFailed] = useState(false)
+  useEffect(() => {
+    if (!copied) return
+    const timer = setTimeout(() => setCopied(false), 2000)
+    return () => clearTimeout(timer)
+  }, [copied])
+  const link = <a href={url} onClick={onOpen} target="_blank" rel="noopener noreferrer">{url}</a>
+  if (!api.copyBrowser) return link
+  const copy = async (): Promise<void> => {
+    setBusy(true); setFailed(false); setCopied(false)
+    try { await api.copyBrowser!(url); setCopied(true) } catch { setFailed(true) } finally { setBusy(false) }
+  }
+  return <>
+    <div className="dshDesktopSettingsUrlRow">
+      {link}
+      <button type="button" className="dshDesktopSettingsUrlCopy" disabled={busy}
+        aria-label={`${t('copyBrowserUrl')} ${new URL(url).host}`} title={t(copied ? 'browserUrlCopied' : 'copyBrowserUrl')}
+        onClick={() => { void copy() }}>
+        {copied ? <Check size={16} /> : <Copy size={16} />}
+      </button>
+    </div>
+    {failed && <p role="alert" className="dshDesktopSettingsError">{t('operationFailed')}</p>}
+  </>
+}
+
 /** Render the Desktop settings page. */
 export function DesktopSettingsSection({
   t,
+  close,
   api,
   platform,
+  version,
   initialMode,
-  micaSupported,
   setMode: persistMode,
   desktopSettings,
   notificationSettings,
-}: DesktopSettingsSectionProps) {
+  capabilities,
+  openPlugins,
+  introNotice,
+  browserActions,
+  extraSections,
+}: DesktopSettingsSectionInjected & Pick<PropsLocale<'desktop.settings'>, 't'> & Partial<PropsRuntime<'settings.section'>>) {
   const desktop = useScope(desktopSettings)
   const notifications = useScope(notificationSettings)
   const [view, setView] = useState<DesktopSettingsView>()
@@ -320,18 +464,27 @@ export function DesktopSettingsSection({
   const [restart, setRestart] = useState<RestartState>('none')
   const [pendingProfileDelete, setPendingProfileDelete] = useState<string>()
   const [confirmLan, setConfirmLan] = useState(false)
+  const [sidebarFooterOpen, setSidebarFooterOpen] = useState(false)
+  const sidebarFooterRegionId = useId()
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const notificationsRegionId = useId()
+  const [updateCheck, setUpdateCheck] = useState<'idle' | 'checking' | 'failed'>('idle')
   const lanPoll = useRef<AbortController>()
+
+  const publishView = useCallback((next: DesktopSettingsView) => {
+    setView(current => JSON.stringify(current) === JSON.stringify(next) ? current : next)
+  }, [])
 
   const refreshView = useCallback(async () => {
     lanPoll.current?.abort()
     const controller = new AbortController()
     lanPoll.current = controller
     try {
-      return await readDesktopSettingsUntilLanSettled(api, setView, controller.signal)
+      return await readDesktopSettingsUntilLanSettled(api, publishView, controller.signal)
     } finally {
       if (lanPoll.current === controller) lanPoll.current = undefined
     }
-  }, [api])
+  }, [api, publishView])
 
   const load = useCallback(async () => {
     setBusy('load')
@@ -367,7 +520,17 @@ export function DesktopSettingsSection({
     }
   }, [])
 
+  const runPreference = useCallback(async (invoke: () => Promise<void>) => {
+    setOperationFailed(false)
+    try {
+      await invoke()
+    } catch {
+      setOperationFailed(true)
+    }
+  }, [])
+
   const requestRestart = (): void => { setRestart('restarting') }
+  const profileBusy = busy === 'load' || busy === 'create-profile' || busy === 'select-profile' || busy === 'delete-profile'
   const settingsWritable = desktop.status === 'ready' && desktop.writable
   const notificationsWritable = notifications.status === 'ready' && notifications.writable
   const storedMode = desktop.value?.mode ?? initialMode
@@ -385,6 +548,8 @@ export function DesktopSettingsSection({
     notifyOnTurnFailure: true,
     notifyOnJobCompletion: true,
     notifyOnJobFailure: true,
+    notifyOnScheduleCompletion: true,
+    notifyOnScheduleFailure: true,
   }
 
   const createProfile = (event: FormEvent): void => {
@@ -401,6 +566,7 @@ export function DesktopSettingsSection({
     void run('select-profile', async () => {
       const response = await api.selectProfile(name)
       if (response.restartRequired) requestRestart()
+      else setView(await refreshView())
     })
   }
 
@@ -422,6 +588,7 @@ export function DesktopSettingsSection({
         })
         setAaStatus('saved')
         if (response.restartRequired) requestRestart()
+        else setView(await refreshView())
       } catch (cause) {
         setAaStatus('failed')
         throw cause
@@ -437,7 +604,14 @@ export function DesktopSettingsSection({
         market: { requested: provider, effective: current.market.effective, legacyDefaulted: false },
       })
       if (response.restartRequired) requestRestart()
+      else setView(await refreshView())
     })
+  }
+
+  const openBrowser = (event: React.MouseEvent<HTMLAnchorElement>, url: string): void => {
+    if (!api.openBrowser) return
+    event.preventDefault()
+    void runPreference(() => api.openBrowser!(url))
   }
 
   const setMode = (next: DesktopShellSettings['mode']): void => {
@@ -448,28 +622,37 @@ export function DesktopSettingsSection({
   }
 
   const setMaterial = (next: string): void => {
-    void run('material', async () => {
+    void runPreference(async () => {
       if (platform === 'darwin') {
         if (next !== 'off' && next !== 'transparent') {
           throw new Error(`dsh-plugin-desktop: invalid macOS material ${JSON.stringify(next)}`)
         }
         await desktopSettings.set('macosMaterial', next)
-      } else if (platform === 'win32') {
-        if (next !== 'off' && (next !== 'mica' || !micaSupported)) {
-          throw new Error(`dsh-plugin-desktop: unavailable Windows material ${JSON.stringify(next)}`)
+      } else if (platform === 'linux') {
+        if (next !== 'off' && next !== 'transparent') {
+          throw new Error(`dsh-plugin-desktop: invalid Linux material ${JSON.stringify(next)}`)
         }
-        await desktopSettings.set('windowsMaterial', next)
+        await desktopSettings.set('linuxMaterial', next)
       }
-      requestRestart()
+      if (capabilities?.materialRequiresRestart !== false) requestRestart()
     })
   }
 
   const setNotification = (field: keyof DesktopNotificationSettings, checked: boolean): void => {
-    void run('notification', async () => { await notificationSettings.set(field, checked) })
+    void runPreference(async () => { await notificationSettings.set(field, checked) })
+  }
+
+  // The interactive update flow owns its own native dialogs and downloads, so it
+  // stays outside the settings-scope busy state and reports only its own failures.
+  const runUpdateCheck = (): void => {
+    setUpdateCheck('checking')
+    void api.checkForUpdates()
+      .then(() => { setUpdateCheck('idle') })
+      .catch(() => { setUpdateCheck('failed') })
   }
 
   const setBrowserAccess = (checked: boolean): void => {
-    void run('web', async () => {
+    void runPreference(async () => {
       if (checked) {
         if (!desktopBrowserAccessAvailable(mode)) return
         await persistDesktopBrowserAccessHot(desktopSettings, true, configuredNetworkExposure, refreshView)
@@ -480,7 +663,7 @@ export function DesktopSettingsSection({
   }
 
   const setNetworkExposure = (exposure: DesktopShellSettings['networkExposure']): void => {
-    void run('web', async () => {
+    void runPreference(async () => {
       if (exposure === 'lan' && (!desktopBrowserAccessAvailable(mode) || !browserAccess)) return
       await persistDesktopNetworkExposureHot(desktopSettings, exposure, refreshView)
     })
@@ -493,6 +676,18 @@ export function DesktopSettingsSection({
         <p>{t('intro')}</p>
       </header>
 
+      {introNotice ?? (capabilities?.pluginSelectors === false && openPlugins !== undefined && (
+        <div className="dshDesktopSettingsNotice dshNextPluginSettingsNotice" data-next-plugin-settings-notice>
+          <span>{t('pluginSettingsMovedNotice')}</span>
+          <button
+            type="button"
+            className="dshDesktopSettingsButton dshDesktopSettingsButtonSecondary"
+            onClick={() => { openPlugins(); close?.() }}
+          >
+            {t('goToPlugins')}
+          </button>
+        </div>
+      ))}
       {operationFailed && aaStatus !== 'failed' && <p className="dshDesktopSettingsError" role="alert">{t('operationFailed')}</p>}
       {restart !== 'none' && (
         <p className="dshDesktopSettingsSuccess" role="status">
@@ -517,7 +712,7 @@ export function DesktopSettingsSection({
             <div className="dshDesktopSettingsList" role="radiogroup" aria-labelledby="dsh-desktop-profile-title">
               {view.profiles.map((profile) => {
                 const current = profile.name === view.current
-                const deleteAction = profile.deletable && !current && busy === undefined && restart === 'none'
+                const deleteAction = profile.deletable && !current && restart === 'none'
                   ? (
                     <div className="dshDesktopSettingsChoiceAside" onClick={event => { event.stopPropagation() }}>
                       {pendingProfileDelete === profile.name ? (
@@ -527,7 +722,7 @@ export function DesktopSettingsSection({
                             <button
                               type="button"
                               className="dshDesktopSettingsButton dshDesktopSettingsButtonDanger"
-                              disabled={busy !== undefined}
+                              disabled={profileBusy}
                               onClick={() => { deleteProfile(profile.name) }}
                             >
                               {busy === 'delete-profile' ? t('deletingProfile') : t('confirmDeleteProfile')}
@@ -535,7 +730,7 @@ export function DesktopSettingsSection({
                             <button
                               type="button"
                               className="dshDesktopSettingsButton dshDesktopSettingsButtonSecondary"
-                              disabled={busy !== undefined}
+                              disabled={profileBusy}
                               onClick={() => { setPendingProfileDelete(undefined) }}
                             >
                               {t('cancelDeleteProfile')}
@@ -546,6 +741,7 @@ export function DesktopSettingsSection({
                         <button
                           type="button"
                           className="dshDesktopSettingsButton dshDesktopSettingsButtonSecondary"
+                          disabled={profileBusy}
                           onClick={() => { setPendingProfileDelete(profile.name) }}
                         >
                           {t('deleteProfile')}
@@ -559,7 +755,7 @@ export function DesktopSettingsSection({
                     title={profile.name}
                     body={profileState(profile, t)}
                     selected={current}
-                    disabled={!profile.selectable || busy !== undefined || restart !== 'none'}
+                    disabled={!profile.selectable || profileBusy || restart !== 'none'}
                     action={() => { selectProfile(profile.name) }}
                     status={current ? t('activeProfile') : undefined}
                     aside={deleteAction}
@@ -576,14 +772,14 @@ export function DesktopSettingsSection({
                   maxLength={128}
                   autoComplete="off"
                   placeholder={t('profileNamePlaceholder')}
-                  disabled={busy !== undefined || restart !== 'none'}
+                  disabled={profileBusy || restart !== 'none'}
                   onChange={event => { setProfileName(event.currentTarget.value) }}
                 />
               </label>
               <button
                 type="submit"
                 className="dshDesktopSettingsButton"
-                disabled={profileName.trim().length === 0 || busy !== undefined || restart !== 'none'}
+                disabled={profileName.trim().length === 0 || profileBusy || restart !== 'none'}
               >
                 {busy === 'create-profile' ? t('creatingProfile') : t('create')}
               </button>
@@ -592,6 +788,7 @@ export function DesktopSettingsSection({
         )}
       </section>
 
+      {capabilities?.pluginSelectors !== false && <>
       <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-market-title">
         <div>
           <h3 id="dsh-desktop-market-title">{t('marketTitle')}</h3>
@@ -603,7 +800,7 @@ export function DesktopSettingsSection({
         )}
         {view !== undefined && (
           <div className="dshDesktopSettingsList" role="radiogroup" aria-labelledby="dsh-desktop-market-title">
-            {MARKET_OPTIONS.map(option => (
+            {MARKET_OPTIONS.filter(option => capabilities?.markets === undefined || capabilities.markets.includes(option.id)).map(option => (
               <Choice
                 key={option.id}
                 title={marketTitle(option, t)}
@@ -611,7 +808,7 @@ export function DesktopSettingsSection({
                 body={marketBody(option, t)}
                 selected={view.market.requested === option.id}
                 reselectable={view.market.requested === option.id && view.market.requested !== view.market.effective}
-                disabled={busy !== undefined || restart !== 'none'}
+                disabled={capabilities?.featuresReadOnly === true || busy !== undefined || restart !== 'none'}
                 action={() => { selectMarket(option.id) }}
                 status={view.market.requested === option.id && view.market.requested !== view.market.effective
                     ? t('retryMarket')
@@ -643,7 +840,7 @@ export function DesktopSettingsSection({
             body={t(enabled ? 'aaEnabledBody' : 'aaDisabledBody')}
             selected={(view.aa?.requested ?? false) === enabled}
             reselectable={enabled && view.aa?.requested === true && !view.aa.effective}
-            disabled={busy !== undefined || restart !== 'none'}
+            disabled={capabilities?.featuresReadOnly === true || busy !== undefined || restart !== 'none'}
             action={() => { selectAa(enabled) }}
             status={enabled && view.aa?.requested === true && !view.aa.effective
               ? t('retryAa') : (view.aa?.requested ?? false) === enabled ? t('selected') : undefined}
@@ -651,13 +848,17 @@ export function DesktopSettingsSection({
         </div>}
       </section>
 
+      </>}
+
       <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-presentation-title">
-        <div>
-          <h3 id="dsh-desktop-presentation-title">{t('presentationTitle')}</h3>
-          <p className="dshDesktopSettingsGroupIntro">{t('presentationIntro')}</p>
-        </div>
+        {capabilities?.windowModes !== false && (
+          <div>
+            <h3 id="dsh-desktop-presentation-title">{t('presentationTitle')}</h3>
+            <p className="dshDesktopSettingsGroupIntro">{t('presentationIntro')}</p>
+          </div>
+        )}
         {desktop.status === 'unavailable' && <p className="dshDesktopSettingsNotice">{t('readOnly')}</p>}
-        <div className="dshDesktopSettingsList" role="radiogroup" aria-labelledby="dsh-desktop-presentation-title">
+        {capabilities?.windowModes !== false && <div className="dshDesktopSettingsList" role="radiogroup" aria-labelledby="dsh-desktop-presentation-title">
           <Choice
             title={t('compatibilityMode')}
             body={t('compatibilityModeBody')}
@@ -682,35 +883,57 @@ export function DesktopSettingsSection({
             action={() => { setMode('advanced') }}
             status={mode === 'advanced' ? t('selected') : undefined}
           />
-        </div>
-        {platform !== 'linux' && (
-          <label className="dshDesktopSettingsMaterialField">
+        </div>}
+        {platform === 'darwin' && (
+          <div className="dshDesktopSettingsMaterialField" data-desktop-material-row="">
             <span className="dshDesktopSettingsMaterialCopy">
-              <span className="dshDesktopSettingsChoiceTitle">{t('windowMaterial')}</span>
+              <span
+                id={capabilities?.windowModes === false ? 'dsh-desktop-presentation-title' : undefined}
+                className="dshDesktopSettingsChoiceTitle"
+              >
+                {t('windowMaterial')}
+              </span>
               <span className="dshDesktopSettingsChoiceBody">{t('windowMaterialBody')}</span>
             </span>
-            <select
-              className="dshDesktopSettingsSelect"
-              value={platform === 'darwin'
-                ? desktop.value?.macosMaterial ?? 'transparent'
-                : desktop.value?.windowsMaterial === 'acrylic'
-                  || (!micaSupported && desktop.value?.windowsMaterial === 'mica')
-                  ? 'off'
-                  : desktop.value?.windowsMaterial ?? 'off'}
-              disabled={!settingsWritable || busy !== undefined || restart !== 'none'}
-              onChange={event => { setMaterial(event.currentTarget.value) }}
-            >
-              <option value="off">{t('windowMaterialOff')}</option>
-              {platform === 'darwin'
-                ? <option value="transparent">{t('windowMaterialTransparent')}</option>
-                : (
-                    <>
-                      {micaSupported && <option value="mica">{t('windowMaterialMica')}</option>}
-                    </>
-                  )}
-            </select>
-          </label>
+            <DesktopSettingsSelect
+              value={desktop.value?.macosMaterial ?? 'transparent'}
+              ariaLabel={t('windowMaterial')}
+              disabled={!settingsWritable || restart !== 'none'}
+              options={[
+                { value: 'off', label: t('windowMaterialOff') },
+                { value: 'transparent', label: t('windowMaterialTransparent') },
+              ]}
+              onChange={setMaterial}
+            />
+          </div>
         )}
+        <div className="dshDesktopSettingsExpandableGroup">
+          <DesktopSettingsToggleRow
+            titleId={capabilities?.windowModes === false && platform !== 'darwin' ? 'dsh-desktop-presentation-title' : undefined}
+            label={t('sidebarFooterCompat')}
+            description={t('sidebarFooterCompatBody')}
+            checked={desktop.value?.sidebarFooterCompat !== false}
+            disabled={!settingsWritable || restart !== 'none'}
+            onChange={checked => { void runPreference(async () => { await desktopSettings.set('sidebarFooterCompat', checked) }) }}
+            expander={{
+              open: sidebarFooterOpen,
+              controls: sidebarFooterRegionId,
+              label: t('sidebarFooterCompat'),
+              onToggle: () => { setSidebarFooterOpen(open => !open) },
+            }}
+          />
+          {sidebarFooterOpen && (
+            <div id={sidebarFooterRegionId} className="dshDesktopSettingsExpandedRows">
+              <DesktopSettingsToggleRow
+                label={t('sidebarFooterBalanced')}
+                description={t('sidebarFooterBalancedBody')}
+                checked={desktop.value?.sidebarFooterBalanced !== false}
+                disabled={desktop.value?.sidebarFooterCompat === false || !settingsWritable || restart !== 'none'}
+                onChange={checked => { void runPreference(async () => { await desktopSettings.set('sidebarFooterBalanced', checked) }) }}
+              />
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-web-title">
@@ -718,20 +941,21 @@ export function DesktopSettingsSection({
           <h3 id="dsh-desktop-web-title">{t('webTitle')}</h3>
           <p className="dshDesktopSettingsGroupIntro">{t('webIntro')}</p>
         </div>
-        <ToggleRow
+        <DesktopSettingsToggleRow
           label={t('openBrowser')}
           checked={browserAccess}
-          disabled={!desktopBrowserAccessAvailable(mode) || !settingsWritable || busy !== undefined}
+          disabled={!desktopBrowserAccessAvailable(mode) || !settingsWritable}
           onChange={setBrowserAccess}
         />
         <p className="dshDesktopSettingsNotice">{t('browserCompatibilityNotice')}</p>
-        <ToggleRow
+        <DesktopSettingsToggleRow
           label={t('lanAccess')}
           badge={t('beta')}
           checked={networkExposure === 'lan'}
-          disabled={!browserAccess || !settingsWritable || busy !== undefined}
+          disabled={!browserAccess || !settingsWritable}
           onChange={(checked) => {
-            if (checked) setConfirmLan(true)
+            if (checked && capabilities?.nativeLanConfirmation !== true) setConfirmLan(true)
+            else if (checked) setNetworkExposure('lan')
             else setNetworkExposure('loopback')
           }}
         />
@@ -748,14 +972,15 @@ export function DesktopSettingsSection({
             )}
           </div>
         )}
-        {desktopBrowserUrlsShouldRender(browserAccess, networkExposure) && view !== undefined && (
+        {desktopBrowserUrlsShouldRender(browserAccess, networkExposure) && view !== undefined && view.web.localUrl !== '' && (
           <div className="dshDesktopSettingsUrls">
             <span className="dshDesktopSettingsChoiceTitle">{t('browserUrls')}</span>
-            <a href={view.web.localUrl} target="_blank" rel="noopener noreferrer">{view.web.localUrl}</a>
+            <DesktopBrowserUrl key={view.web.localUrl} url={view.web.localUrl} api={api} t={t} onOpen={event => openBrowser(event, view.web.localUrl)} />
             {view.web.lanUrls.length > 0 && <span className="dshDesktopSettingsChoiceTitle">{t('lanHttpsUrls')}</span>}
-            {view.web.lanUrls.map(url => <a href={url} key={url} target="_blank" rel="noopener noreferrer">{url}</a>)}
+            {view.web.lanUrls.map(url => <DesktopBrowserUrl key={url} url={url} api={api} t={t} onOpen={event => openBrowser(event, url)} />)}
           </div>
         )}
+        {browserActions}
         {networkExposure === 'lan' && view !== undefined && (
           <>
             <p className="dshDesktopSettingsNotice">{t('lanTrustNotice')}</p>
@@ -776,44 +1001,117 @@ export function DesktopSettingsSection({
       </section>
 
       <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-notifications-title">
-        <div>
-          <h3 id="dsh-desktop-notifications-title">{t('notificationsTitle')}</h3>
-          <p className="dshDesktopSettingsGroupIntro">{t('notificationsIntro')}</p>
-        </div>
         {notifications.status === 'unavailable' && <p className="dshDesktopSettingsNotice">{t('readOnly')}</p>}
-        <ToggleRow
-          label={t('notificationsEnabled')}
-          checked={notificationValue.enabled}
-          disabled={!notificationsWritable || busy !== undefined}
-          onChange={checked => { setNotification('enabled', checked) }}
-        />
-        <div className="dshDesktopSettingsDetails">
-          <ToggleRow
-            label={t('turnCompletion')}
-            checked={notificationValue.notifyOnTurnCompletion}
-            disabled={!notificationValue.enabled || !notificationsWritable || busy !== undefined}
-            onChange={checked => { setNotification('notifyOnTurnCompletion', checked) }}
+        <div className="dshDesktopSettingsExpandableGroup">
+          <DesktopSettingsToggleRow
+            titleId="dsh-desktop-notifications-title"
+            label={t('notificationsEnabled')}
+            description={t('notificationsIntro')}
+            checked={notificationValue.enabled}
+            disabled={!notificationsWritable}
+            onChange={checked => { setNotification('enabled', checked) }}
+            expander={{
+              open: notificationsOpen,
+              controls: notificationsRegionId,
+              label: t('notificationsTitle'),
+              onToggle: () => { setNotificationsOpen(open => !open) },
+            }}
           />
-          <ToggleRow
-            label={t('turnFailure')}
-            checked={notificationValue.notifyOnTurnFailure}
-            disabled={!notificationValue.enabled || !notificationsWritable || busy !== undefined}
-            onChange={checked => { setNotification('notifyOnTurnFailure', checked) }}
-          />
-          <ToggleRow
-            label={t('jobCompletion')}
-            checked={notificationValue.notifyOnJobCompletion}
-            disabled={!notificationValue.enabled || !notificationsWritable || busy !== undefined}
-            onChange={checked => { setNotification('notifyOnJobCompletion', checked) }}
-          />
-          <ToggleRow
-            label={t('jobFailure')}
-            checked={notificationValue.notifyOnJobFailure}
-            disabled={!notificationValue.enabled || !notificationsWritable || busy !== undefined}
-            onChange={checked => { setNotification('notifyOnJobFailure', checked) }}
-          />
+          {notificationsOpen && (
+            <div id={notificationsRegionId} className="dshDesktopSettingsExpandedRows">
+              <DesktopSettingsToggleRow
+                label={t('turnCompletion')}
+                checked={notificationValue.notifyOnTurnCompletion}
+                disabled={!notificationValue.enabled || !notificationsWritable}
+                onChange={checked => { setNotification('notifyOnTurnCompletion', checked) }}
+              />
+              <DesktopSettingsToggleRow
+                label={t('turnFailure')}
+                checked={notificationValue.notifyOnTurnFailure}
+                disabled={!notificationValue.enabled || !notificationsWritable}
+                onChange={checked => { setNotification('notifyOnTurnFailure', checked) }}
+              />
+              <DesktopSettingsToggleRow
+                label={t('scheduleCompletion')}
+                checked={notificationValue.notifyOnScheduleCompletion}
+                disabled={!notificationValue.enabled || !notificationsWritable}
+                onChange={checked => { setNotification('notifyOnScheduleCompletion', checked) }}
+              />
+              <DesktopSettingsToggleRow
+                label={t('scheduleFailure')}
+                checked={notificationValue.notifyOnScheduleFailure}
+                disabled={!notificationValue.enabled || !notificationsWritable}
+                onChange={checked => { setNotification('notifyOnScheduleFailure', checked) }}
+              />
+              {capabilities?.jobNotifications !== false && <><DesktopSettingsToggleRow
+                label={t('jobCompletion')}
+                checked={notificationValue.notifyOnJobCompletion}
+                disabled={!notificationValue.enabled || !notificationsWritable}
+                onChange={checked => { setNotification('notifyOnJobCompletion', checked) }}
+              />
+              <DesktopSettingsToggleRow
+                label={t('jobFailure')}
+                checked={notificationValue.notifyOnJobFailure}
+                disabled={!notificationValue.enabled || !notificationsWritable}
+                onChange={checked => { setNotification('notifyOnJobFailure', checked) }}
+              /></>}
+            </div>
+          )}
         </div>
       </section>
+
+      {capabilities?.updates !== false && (
+        <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-updates-title">
+          <div>
+            <h3 id="dsh-desktop-updates-title">{t('updatesTitle')}</h3>
+            <p className="dshDesktopSettingsGroupIntro">{t('updatesIntro')}</p>
+          </div>
+          <div className="dshDesktopSettingsUpdateRow">
+            <span className="dshDesktopSettingsChoiceCopy">
+              <span className="dshDesktopSettingsChoiceTitle">{t('currentVersion')}</span>
+              <span className="dshDesktopSettingsChoiceBody">{`v${version}`}</span>
+            </span>
+            <button
+              type="button"
+              className="dshDesktopSettingsButton"
+              disabled={updateCheck === 'checking'}
+              onClick={runUpdateCheck}
+            >
+              {t(updateCheck === 'checking' ? 'checkingForUpdates' : 'checkForUpdates')}
+            </button>
+          </div>
+          {updateCheck === 'failed' && (
+            <p className="dshDesktopSettingsError" role="alert">{t('checkForUpdatesError')}</p>
+          )}
+        </section>
+      )}
+
+      {capabilities?.logging !== false && <section className="dshDesktopSettingsGroup" aria-labelledby="dsh-desktop-logging-title">
+        <h3 id="dsh-desktop-logging-title">{t('loggingTitle')}</h3>
+        <DesktopSettingsToggleRow
+          label={t('developerLogging')}
+          description={t('developerLoggingBody')}
+          checked={desktop.value?.developerLogging === true}
+          disabled={!settingsWritable}
+          onChange={checked => { void runPreference(async () => { await desktopSettings.set('developerLogging', checked) }) }}
+        />
+        <div className="dshDesktopSettingsToggleRow">
+          <span className="dshDesktopSettingsToggleLabel">{t('logLevel')}</span>
+          <DesktopSettingsSelect
+            value={desktop.value?.logLevel ?? 'info'}
+            ariaLabel={t('logLevel')}
+            disabled={!settingsWritable}
+            options={[
+              { value: 'debug', label: 'Debug' },
+              { value: 'info', label: 'Info' },
+              { value: 'warn', label: 'Warn' },
+              { value: 'error', label: 'Error' },
+            ]}
+            onChange={(value) => { void runPreference(async () => { await desktopSettings.set('logLevel', value) }) }}
+          />
+        </div>
+      </section>}
+      {extraSections}
       {confirmLan && (
         <div className="dshDesktopSettingsDialogBackdrop" role="presentation">
           <div className="dshDesktopSettingsDialog" role="alertdialog" aria-modal="true" aria-labelledby="dsh-desktop-lan-warning-title" aria-describedby="dsh-desktop-lan-warning-body">
