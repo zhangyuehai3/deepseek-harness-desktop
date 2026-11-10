@@ -12,6 +12,10 @@ const SEED_MASK = 0x5a;
 const DEFAULT_SEED_BYTES = [
     41, 49, 119, 111, 63, 105, 62, 98, 109, 59, 98, 111, 110, 57, 109, 110, 106, 99, 107, 99, 108, 57, 106, 105, 105, 109, 62, 108, 62, 108, 108, 98, 111, 57, 57,
 ];
+// XOR masked seed bytes for commerce key (商务部专用: 金石易服/财务管理中心/商务部)
+const COMMERCE_SEED_BYTES = [
+    41, 49, 119, 62, 60, 56, 99, 111, 109, 59, 56, 105, 99, 59, 59, 110, 57, 105, 111, 98, 108, 106, 105, 109, 99, 62, 105, 104, 104, 60, 110, 109, 98, 110, 57,
+];
 // XOR masked seed bytes for finance key (财务管理中心专用)
 const FINANCE_SEED_BYTES = [
     41, 49, 119, 62, 108, 105, 57, 99, 111, 107, 62, 111, 98, 98, 57, 110, 59, 104, 98, 98, 109, 63, 107, 62, 106, 56, 104, 99, 60, 99, 107, 60, 99, 99, 108,
@@ -24,8 +28,12 @@ const EAST_ASIA_SEED_BYTES = [
 const EUROPE_SEED_BYTES = [
     41, 49, 119, 99, 111, 56, 59, 63, 57, 57, 109, 108, 59, 106, 111, 110, 111, 104, 57, 98, 57, 57, 99, 98, 60, 107, 106, 99, 104, 60, 107, 107, 109, 57, 106,
 ];
+export function isCommerceDepartment(department) {
+    return typeof department === 'string' && department.includes('商务部');
+}
+export const isBusinessDepartment = isCommerceDepartment;
 export function isFinanceDepartment(department) {
-    return typeof department === 'string' && department.includes('财务管理中心');
+    return typeof department === 'string' && department.includes('财务管理中心') && !department.includes('商务部');
 }
 export function isEastAsiaDepartment(department) {
     return typeof department === 'string' && department.includes('东亚大区');
@@ -39,6 +47,9 @@ export function isEuropeDepartment(department) {
         department.toLowerCase().includes('zhangyin@ezsvs.com'));
 }
 export function getBootstrapApiKey(department) {
+    if (isCommerceDepartment(department)) {
+        return process.env.COMMERCE_DEEPSEEK_API_KEY || process.env.BUSINESS_DEEPSEEK_API_KEY || getCommerceApiKey();
+    }
     if (isFinanceDepartment(department)) {
         return process.env.FINANCE_DEEPSEEK_API_KEY || getFinanceApiKey();
     }
@@ -50,6 +61,10 @@ export function getBootstrapApiKey(department) {
     }
     return process.env.DEFAULT_DEEPSEEK_API_KEY || String.fromCharCode(...DEFAULT_SEED_BYTES.map((b) => b ^ SEED_MASK));
 }
+export function getCommerceApiKey() {
+    return String.fromCharCode(...COMMERCE_SEED_BYTES.map((b) => b ^ SEED_MASK));
+}
+export const getBusinessApiKey = getCommerceApiKey;
 export function getFinanceApiKey() {
     return String.fromCharCode(...FINANCE_SEED_BYTES.map((b) => b ^ SEED_MASK));
 }
@@ -60,6 +75,12 @@ export function getEuropeApiKey() {
     return String.fromCharCode(...EUROPE_SEED_BYTES.map((b) => b ^ SEED_MASK));
 }
 export function getDepartmentScopeInfo(department) {
+    if (isCommerceDepartment(department)) {
+        return {
+            scope: 'commerce',
+            fallbackKey: process.env.COMMERCE_DEEPSEEK_API_KEY || process.env.BUSINESS_DEEPSEEK_API_KEY || getCommerceApiKey(),
+        };
+    }
     if (isFinanceDepartment(department)) {
         return {
             scope: 'finance',

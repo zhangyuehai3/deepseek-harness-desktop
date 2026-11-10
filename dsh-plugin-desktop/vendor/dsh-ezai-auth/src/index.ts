@@ -126,9 +126,13 @@ import {
   getBootstrapApiKey,
   resolveApiKey,
   scrubDiskPlaintextCredentials,
+  isCommerceDepartment,
+  isBusinessDepartment,
   isFinanceDepartment,
   isEastAsiaDepartment,
   isEuropeDepartment,
+  getCommerceApiKey,
+  getBusinessApiKey,
   getFinanceApiKey,
   getEastAsiaApiKey,
   getEuropeApiKey,
@@ -136,9 +140,13 @@ import {
   saveSavedCredentials,
 } from './vault.ts'
 export {
+  isCommerceDepartment,
+  isBusinessDepartment,
   isFinanceDepartment,
   isEastAsiaDepartment,
   isEuropeDepartment,
+  getCommerceApiKey,
+  getBusinessApiKey,
   getFinanceApiKey,
   getEastAsiaApiKey,
   getEuropeApiKey,
@@ -264,7 +272,7 @@ async function ensureDefaultModelConfig(ctx: any, department?: string): Promise<
   try {
     const settings = ctx.get('settings')
     if (settings?.replace) {
-      const { settingsNamespace } = await import('@deepseek-ai/dsh-settings')
+      const { settingsNamespace } = (await import('@deepseek-ai/dsh-settings')) as any
       const piAiNs = settingsNamespace('llm-pi-ai')
       const currentPiAi = (await settings.get?.(piAiNs)) ?? {}
       const currentProviders = { ...(currentPiAi.providers ?? {}) }
@@ -416,7 +424,7 @@ async function removeDefaultModelConfig(ctx: any): Promise<void> {
   try {
     const settings = ctx.get('settings')
     if (settings?.replace) {
-      const { settingsNamespace } = await import('@deepseek-ai/dsh-settings')
+      const { settingsNamespace } = (await import('@deepseek-ai/dsh-settings')) as any
       const piAiNs = settingsNamespace('llm-pi-ai')
       const currentPiAi = (await settings.get?.(piAiNs)) ?? {}
       const currentProviders = { ...(currentPiAi.providers ?? {}) }
@@ -620,7 +628,7 @@ export async function checkUserAllowed(
           const tokenQuota = parseQuota(member.tokenQuota)
           const matchedDepartment = (typeof member.department === 'string' && member.department.trim())
             ? member.department.trim()
-            : deptName
+            : (department && isCommerceDepartment(department) ? department : deptName)
           return { allowed: true, tokenQuota, department: matchedDepartment }
         }
       }
@@ -635,7 +643,7 @@ export async function checkUserAllowed(
           const tokenQuota = parseQuota(member.tokenQuota) ?? deptQuota
           const matchedDepartment = (typeof member.department === 'string' && member.department.trim())
             ? member.department.trim()
-            : deptName
+            : (department && isCommerceDepartment(department) ? department : deptName)
           return { allowed: true, tokenQuota, department: matchedDepartment }
         }
       }
@@ -649,14 +657,16 @@ export async function checkUserAllowed(
         department &&
         (department === deptName || department.includes(deptName) || deptName.includes(department))
       ) {
-        return { allowed: true, department: deptName }
+        const matchedDept = isCommerceDepartment(department) ? department : deptName
+        return { allowed: true, department: matchedDept }
       }
     } else if (config && typeof config === 'object' && (config as any).all === true) {
       if (
         department &&
         (department === deptName || department.includes(deptName) || deptName.includes(department))
       ) {
-        return { allowed: true, tokenQuota: parseQuota((config as any).tokenQuota), department: deptName }
+        const matchedDept = isCommerceDepartment(department) ? department : deptName
+        return { allowed: true, tokenQuota: parseQuota((config as any).tokenQuota), department: matchedDept }
       }
     }
   }
@@ -727,7 +737,10 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
           if (check.department && session.setWhitelistDepartment) {
             await session.setWhitelistDepartment(check.department)
           }
-          const effectiveDept = check.department || snapshot.whitelistDepartment || snapshot.personalInfo?.department
+          const effectiveDept =
+            (snapshot.personalInfo?.department && isCommerceDepartment(snapshot.personalInfo.department))
+              ? snapshot.personalInfo.department
+              : (check.department || snapshot.whitelistDepartment || snapshot.personalInfo?.department)
           await ensureDefaultModelConfig(ctx, effectiveDept)
         } else {
           await session.clear()
@@ -823,7 +836,10 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
             await session.setWhitelistDepartment(check.department)
           }
 
-          const effectiveDept = check.department || personalInfo?.department
+          const effectiveDept =
+            (personalInfo?.department && isCommerceDepartment(personalInfo.department))
+              ? personalInfo.department
+              : (check.department || personalInfo?.department)
           await ensureDefaultModelConfig(ctx, effectiveDept)
           finishJson(res, 200, { status_code: 200, message: '登录成功', user, personalInfo })
         } catch (err) {
@@ -907,7 +923,10 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
             await session.setWhitelistDepartment(check.department)
           }
 
-          const effectiveDept = check.department || snapshot.whitelistDepartment || personalInfo?.department
+          const effectiveDept =
+            (personalInfo?.department && isCommerceDepartment(personalInfo.department))
+              ? personalInfo.department
+              : (check.department || snapshot.whitelistDepartment || personalInfo?.department)
           if (effectiveDept && effectiveDept !== activeDepartment) {
             await ensureDefaultModelConfig(ctx, effectiveDept)
           }

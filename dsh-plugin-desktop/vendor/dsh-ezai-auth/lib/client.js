@@ -2288,8 +2288,8 @@ function installModelLockObserver(ctx) {
     const badges = document.querySelectorAll('span[class*="previewBadge"], span[class*="HeroShell_previewBadge"]');
     for (const badge of badges) {
       const text = badge.textContent?.trim();
-      if (text !== "\u7248\u672C 2.1.4" && (text === "\u9884\u89C8\u7248" || text === "Preview" || text && /^版本\s*2\./.test(text))) {
-        badge.textContent = "\u7248\u672C 2.1.4";
+      if (text !== "\u7248\u672C 2.1.5" && (text === "\u9884\u89C8\u7248" || text === "Preview" || text && /^版本\s*2\./.test(text))) {
+        badge.textContent = "\u7248\u672C 2.1.5";
       }
     }
     ensureSidebarWidgetMounted(ctx);

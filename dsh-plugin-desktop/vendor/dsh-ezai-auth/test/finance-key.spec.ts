@@ -1,9 +1,11 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert'
 import {
+  isCommerceDepartment,
   isFinanceDepartment,
   isEastAsiaDepartment,
   isEuropeDepartment,
+  getCommerceApiKey,
   getFinanceApiKey,
   getEastAsiaApiKey,
   getEuropeApiKey,
@@ -17,10 +19,21 @@ import {
   patchLaunchEnvironment,
 } from '../src/index.ts'
 
-describe('Finance, East Asia & Europe Departments dedicated DeepSeek API Keys', () => {
+describe('Commerce, Finance, East Asia & Europe Departments dedicated DeepSeek API Keys', () => {
   it('correctly identifies departments', () => {
+    // 商务部（金石易服/财务管理中心/商务部 独立专属 Key）
+    assert.equal(isCommerceDepartment('金石易服/财务管理中心/商务部'), true)
+    assert.equal(isCommerceDepartment('商务部'), true)
+    assert.equal(isCommerceDepartment('公司/商务部/国际商务组'), true)
+    assert.equal(isCommerceDepartment('财务管理中心'), false)
+    assert.equal(isCommerceDepartment('东亚大区'), false)
+    assert.equal(isCommerceDepartment(undefined), false)
+
+    // 财务管理中心（排除商务部后使用财务专属 Key）
     assert.equal(isFinanceDepartment('财务管理中心'), true)
     assert.equal(isFinanceDepartment('公司/财务管理中心/会计组'), true)
+    assert.equal(isFinanceDepartment('金石易服/财务管理中心/商务部'), false)
+    assert.equal(isFinanceDepartment('商务部'), false)
     assert.equal(isFinanceDepartment('东亚大区'), false)
     assert.equal(isFinanceDepartment('欧洲大区'), false)
     assert.equal(isFinanceDepartment('聚服中心'), false)
@@ -42,17 +55,24 @@ describe('Finance, East Asia & Europe Departments dedicated DeepSeek API Keys', 
   })
 
   it('dedicated API keys match expected format and are mutually distinct', () => {
+    const commerceKey = getCommerceApiKey()
     const financeKey = getFinanceApiKey()
     const eastAsiaKey = getEastAsiaApiKey()
     const europeKey = getEuropeApiKey()
     const defaultKey = getBootstrapApiKey('聚服中心')
 
-    for (const key of [financeKey, eastAsiaKey, europeKey, defaultKey]) {
+    assert.equal(commerceKey, 'sk-dfb957ab39aa4c35860379d322f4784c')
+
+    for (const key of [commerceKey, financeKey, eastAsiaKey, europeKey, defaultKey]) {
       assert.equal(typeof key, 'string')
       assert.equal(key.startsWith('sk-'), true)
       assert.equal(key.length, 35)
     }
 
+    assert.notEqual(commerceKey, financeKey)
+    assert.notEqual(commerceKey, defaultKey)
+    assert.notEqual(commerceKey, eastAsiaKey)
+    assert.notEqual(commerceKey, europeKey)
     assert.notEqual(financeKey, defaultKey)
     assert.notEqual(eastAsiaKey, defaultKey)
     assert.notEqual(europeKey, defaultKey)
@@ -62,25 +82,32 @@ describe('Finance, East Asia & Europe Departments dedicated DeepSeek API Keys', 
   })
 
   it('getBootstrapApiKey returns dedicated keys for specific departments, default key for others', () => {
+    const commerceKey1 = getBootstrapApiKey('金石易服/财务管理中心/商务部')
+    const commerceKey2 = getBootstrapApiKey('商务部')
     const financeKey = getBootstrapApiKey('财务管理中心')
     const eastAsiaKey = getBootstrapApiKey('东亚大区')
     const europeKey = getBootstrapApiKey('欧洲大区')
     const defaultKey = getBootstrapApiKey('聚服中心')
 
+    assert.equal(commerceKey1, getCommerceApiKey())
+    assert.equal(commerceKey2, getCommerceApiKey())
     assert.equal(financeKey, getFinanceApiKey())
     assert.equal(eastAsiaKey, getEastAsiaApiKey())
     assert.equal(europeKey, getEuropeApiKey())
+    assert.notEqual(commerceKey1, financeKey)
     assert.notEqual(financeKey, defaultKey)
     assert.notEqual(eastAsiaKey, defaultKey)
     assert.notEqual(europeKey, defaultKey)
   })
 
   it('resolveApiKey resolves dedicated keys for respective departments', async () => {
+    const commerceResolved = await resolveApiKey('金石易服/财务管理中心/商务部')
     const financeResolved = await resolveApiKey('财务管理中心')
     const eastAsiaResolved = await resolveApiKey('东亚大区')
     const europeResolved = await resolveApiKey('欧洲大区')
     const defaultResolved = await resolveApiKey('销售中心')
 
+    assert.equal(commerceResolved, getCommerceApiKey())
     assert.equal(financeResolved, getFinanceApiKey())
     assert.equal(eastAsiaResolved, getEastAsiaApiKey())
     assert.equal(europeResolved, getEuropeApiKey())
@@ -93,6 +120,11 @@ describe('Finance, East Asia & Europe Departments dedicated DeepSeek API Keys', 
       describe: async () => ({ configured: true }),
     }
     patchCredentialsService(fakeCredentials)
+
+    // When department is 金石易服/财务管理中心/商务部
+    setActiveDepartment('金石易服/财务管理中心/商务部')
+    const commerceCred = await fakeCredentials.resolve('DEEPSEEK_API_KEY')
+    assert.equal(commerceCred.value, getCommerceApiKey())
 
     // When department is 财务管理中心
     setActiveDepartment('财务管理中心')
@@ -124,6 +156,11 @@ describe('Finance, East Asia & Europe Departments dedicated DeepSeek API Keys', 
       getFrom: () => undefined,
     }
     patchLaunchEnvironment(fakeEnv)
+
+    setActiveDepartment('金石易服/财务管理中心/商务部')
+    process.env.DEEPSEEK_API_KEY = getBootstrapApiKey('金石易服/财务管理中心/商务部')
+    const commerceResult = fakeEnv.get('DEEPSEEK_API_KEY')
+    assert.equal(commerceResult.value, getCommerceApiKey())
 
     setActiveDepartment('财务管理中心')
     process.env.DEEPSEEK_API_KEY = getBootstrapApiKey('财务管理中心')
