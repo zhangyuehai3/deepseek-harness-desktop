@@ -164,5 +164,25 @@ describe('dynamic whitelist verification', () => {
     assert.equal(check2.allowed, true)
     assert.equal(check2.department, '欧洲大区')
   })
+
+  it('correctly preserves and maps commerce department (金石易服/财务管理中心/商务部)', async () => {
+    const whitelistWithFinance = {
+      ...FIXTURE_WHITELIST,
+      财务管理中心: 'all',
+    }
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => whitelistWithFinance,
+    } as any)
+    clearWhitelistCache()
+
+    const check = await checkUserAllowed(
+      { name: '商务专员', email: 'shangwu@ezaigc.com' },
+      { department: '金石易服/财务管理中心/商务部' },
+    )
+    assert.equal(check.allowed, true)
+    assert.equal(check.department, '金石易服/财务管理中心/商务部')
+  })
 })
 
