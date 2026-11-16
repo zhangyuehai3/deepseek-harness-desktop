@@ -23,22 +23,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@agents-anywhere/dsh-bridge-next@file:vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7.tgz::locator=deepseek-harness-desktop%40workspace%3A.":
-  version: 2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7
-  resolution: "@agents-anywhere/dsh-bridge-next@file:vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7.tgz#vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7.tgz::hash=c818b9&locator=deepseek-harness-desktop%40workspace%3A."
+"@agents-anywhere/dsh-bridge-next@file:vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.2.0-desktop.c0ed3ed212ae4.r5dbd817f.tgz::locator=deepseek-harness-desktop%40workspace%3A.":
+  version: 2.2.0-desktop.c0ed3ed212ae4.r5dbd817f
+  resolution: "@agents-anywhere/dsh-bridge-next@file:vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.2.0-desktop.c0ed3ed212ae4.r5dbd817f.tgz#vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.2.0-desktop.c0ed3ed212ae4.r5dbd817f.tgz::hash=f181d6&locator=deepseek-harness-desktop%40workspace%3A."
   dependencies:
     "@dataiku/uv": "npm:0.12.0"
     clsx: "npm:2.1.1"
     lucide-react: "npm:1.41.0"
+    meshcall: "npm:0.3.0"
     qrcode: "npm:1.5.4"
   peerDependencies:
-    "@deepseek-ai/cordis": 4.0.4
-    "@deepseek-ai/dsh-llm": 0.1.5-rc.2
-    "@deepseek-ai/dsh-session": 0.1.5-rc.2
-    "@deepseek-ai/dsh-typert-protocol": 0.1.5-rc.2
-    "@deepseek-ai/schemastery": 3.18.4
+    "@deepseek-ai/cordis": ~4.0.4 || ~4.1.0
+    "@deepseek-ai/dsh-llm": 0.2.1-rc.3 || 0.2.2-rc.1
+    "@deepseek-ai/dsh-session": 0.2.1-rc.3 || 0.2.2-rc.1
+    "@deepseek-ai/dsh-typert-protocol": 0.2.1-rc.3 || 0.2.2-rc.1
+    "@deepseek-ai/schemastery": ~3.18.4 || ~3.19.0
     react: ^18.3.1
-  checksum: 10c0/2f6324961a18d998a261e9f5d5ae8325566aa56bc17a5169cf600ea1cc0f8fe16995fc0edf4c289f9f462b98fa995673e758573bfe62f4f7997d365e9d7fb5b7
+  checksum: 10c0/ef663e8d0a9e8e0640e978ca05460b9f6870ce165d669a4796a05e96469455dcdf58b334ada01f48553debebf8f2cf34661bcd5ffca775afae32426f601e0027
   languageName: node
   linkType: hard
 
@@ -1075,26 +1076,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@deepseek-ai/cordis@npm:4.0.3":
-  version: 4.0.3
-  resolution: "@deepseek-ai/cordis@npm:4.0.3"
-  dependencies:
-    "@deepseek-ai/cosmokit": "npm:^1.8.4"
-    "@standard-schema/spec": "npm:^1.1.0"
-  peerDependencies:
-    "@deepseek-ai/cordis-plugin-include": ^1.0.8
-    "@deepseek-ai/cordis-plugin-loader": ^1.0.4
-  peerDependenciesMeta:
-    "@deepseek-ai/cordis-plugin-include":
-      optional: true
-    "@deepseek-ai/cordis-plugin-loader":
-      optional: true
-  bin:
-    cordis: bin.js
-  checksum: 10c0/72471633b61fafb72cbde02174351a7dcc5810d3de2d200dec49623978bcd5ed6506b8d66376d3961b7b37187f6c599f310a226336575f3e3206666dffcd6e8f
-  languageName: node
-  linkType: hard
-
 "@deepseek-ai/cordis@npm:4.0.5, @deepseek-ai/cordis@npm:~4.0.5":
   version: 4.0.5
   resolution: "@deepseek-ai/cordis@npm:4.0.5"
@@ -1132,13 +1113,6 @@ __metadata:
   bin:
     cordis: bin.js
   checksum: 10c0/dd1a230193131f00655a9b67aba5d69f8030185196793bc5e10f920dc802acb2b6ae87f01484627b0f63e2961828d1b02f6af67e21af5a46d7a4bfa52cec97ab
-  languageName: node
-  linkType: hard
-
-"@deepseek-ai/cosmokit@npm:^1.8.4, @deepseek-ai/cosmokit@npm:~1.8.5":
-  version: 1.8.5
-  resolution: "@deepseek-ai/cosmokit@npm:1.8.5"
-  checksum: 10c0/b7c8c2f1b6c08e3e6ce3bc0804d77ef43035229811afb89a43a680e0c198ed93cd0f2bb1cfbf30c8626ac839e1eaf58f655a31c577c69cd7b0bf3237278e156e
   languageName: node
   linkType: hard
 
@@ -2372,15 +2346,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@deepseek-ai/dsh-brand@npm:^0.1.7-alpha.1":
-  version: 0.1.7-rc.2
-  resolution: "@deepseek-ai/dsh-brand@npm:0.1.7-rc.2"
-  peerDependencies:
-    "@deepseek-ai/cordis": ~4.0.4
-  checksum: 10c0/5d5b18a8e3c614fe6fa21da0dd93cd136f80ee78a8fdf9b7bd72550739b165b4ffe3d8c9d89da4bac7230546a3c727448eaf1b4ae0b35e4caf161a7b14776507
-  languageName: node
-  linkType: hard
-
 "@deepseek-ai/dsh-chunked-list@file:vendor/dsh-runtime/0.2.1-rc.3/deepseek-ai-dsh-chunked-list-0.2.1-rc.3.tgz::locator=deepseek-harness-desktop%40workspace%3A.":
   version: 0.2.1-rc.3
   resolution: "@deepseek-ai/dsh-chunked-list@file:vendor/dsh-runtime/0.2.1-rc.3/deepseek-ai-dsh-chunked-list-0.2.1-rc.3.tgz#vendor/dsh-runtime/0.2.1-rc.3/deepseek-ai-dsh-chunked-list-0.2.1-rc.3.tgz::hash=b7e9e2&locator=deepseek-harness-desktop%40workspace%3A."
@@ -2779,23 +2744,23 @@ __metadata:
 
 "@deepseek-ai/dsh-client-ui-conversation@patch:@deepseek-ai/dsh-client-ui-conversation@file%3Avendor/dsh-runtime/0.2.1-rc.3/deepseek-ai-dsh-client-ui-conversation-0.2.1-rc.3.tgz#./patches/dsh-client-ui-conversation@0.2.1-rc.3.patch::locator=deepseek-harness-desktop%40workspace%3A.":
   version: 0.2.1-rc.3
-  resolution: "@deepseek-ai/dsh-client-ui-conversation@patch:@deepseek-ai/dsh-client-ui-conversation@file%3Avendor/dsh-runtime/0.2.1-rc.3/deepseek-ai-dsh-client-ui-conversation-0.2.1-rc.3.tgz%23vendor/dsh-runtime/0.2.1-rc.3/deepseek-ai-dsh-client-ui-conversation-0.2.1-rc.3.tgz%3A%3Ahash=094585&locator=deepseek-harness-desktop%2540workspace%253A.#./patches/dsh-client-ui-conversation@0.2.1-rc.3.patch::version=0.2.1-rc.3&hash=669585&locator=deepseek-harness-desktop%40workspace%3A."
+  resolution: "@deepseek-ai/dsh-client-ui-conversation@patch:@deepseek-ai/dsh-client-ui-conversation@file%3Avendor/dsh-runtime/0.2.1-rc.3/deepseek-ai-dsh-client-ui-conversation-0.2.1-rc.3.tgz%23vendor/dsh-runtime/0.2.1-rc.3/deepseek-ai-dsh-client-ui-conversation-0.2.1-rc.3.tgz%3A%3Ahash=094585&locator=deepseek-harness-desktop%2540workspace%253A.#./patches/dsh-client-ui-conversation@0.2.1-rc.3.patch::version=0.2.1-rc.3&hash=36ba0a&locator=deepseek-harness-desktop%40workspace%3A."
   dependencies:
     "@deepseek-ai/schemastery": "npm:~3.18.5"
   peerDependencies:
     "@deepseek-ai/cordis": ~4.0.5
-  checksum: 10c0/34fab8cd461684b1889eb73ab398ee6af06d7d07b23b6cedbdda34dc909a5c80563b24da72f9df2a017b0e35410830cf2b20b183a49c8bf61bc951cc7e297ec0
+  checksum: 10c0/4c91239da19b5ac74794bd4c87f1821a332a3e53f770726ade78ce92315d7681693c9b1cf737c71471d0872df4f283629b60463319819d2368ca567666b8535f
   languageName: node
   linkType: hard
 
 "@deepseek-ai/dsh-client-ui-conversation@patch:@deepseek-ai/dsh-client-ui-conversation@file%3Avendor/dsh-runtime/0.2.2-rc.1/deepseek-ai-dsh-client-ui-conversation-0.2.2-rc.1.tgz#./patches/dsh-client-ui-conversation@0.2.2-rc.1.patch::locator=deepseek-harness-desktop%40workspace%3A.":
   version: 0.2.2-rc.1
-  resolution: "@deepseek-ai/dsh-client-ui-conversation@patch:@deepseek-ai/dsh-client-ui-conversation@file%3Avendor/dsh-runtime/0.2.2-rc.1/deepseek-ai-dsh-client-ui-conversation-0.2.2-rc.1.tgz%23vendor/dsh-runtime/0.2.2-rc.1/deepseek-ai-dsh-client-ui-conversation-0.2.2-rc.1.tgz%3A%3Ahash=608974&locator=deepseek-harness-desktop%2540workspace%253A.#./patches/dsh-client-ui-conversation@0.2.2-rc.1.patch::version=0.2.2-rc.1&hash=d9cd21&locator=deepseek-harness-desktop%40workspace%3A."
+  resolution: "@deepseek-ai/dsh-client-ui-conversation@patch:@deepseek-ai/dsh-client-ui-conversation@file%3Avendor/dsh-runtime/0.2.2-rc.1/deepseek-ai-dsh-client-ui-conversation-0.2.2-rc.1.tgz%23vendor/dsh-runtime/0.2.2-rc.1/deepseek-ai-dsh-client-ui-conversation-0.2.2-rc.1.tgz%3A%3Ahash=608974&locator=deepseek-harness-desktop%2540workspace%253A.#./patches/dsh-client-ui-conversation@0.2.2-rc.1.patch::version=0.2.2-rc.1&hash=414ec9&locator=deepseek-harness-desktop%40workspace%3A."
   dependencies:
     "@deepseek-ai/schemastery": "npm:~3.19.0"
   peerDependencies:
     "@deepseek-ai/cordis": ~4.1.0
-  checksum: 10c0/f41cedd80387cffc36c78cfc420c6a7546ca89cbfb62cada563e5700397fb837a42859c5c0e2529cc8d3bf5f06877bf7de3c908d7a15827c7069cb3eae656987
+  checksum: 10c0/c84708afffe8e1953476a1188d7a165f80779b3b50f4acd033374fd2d26b3e3044594b0631f06cb5706e52d3b63a18cbd48c3630067d0dee7d0f7ed769374097
   languageName: node
   linkType: hard
 
@@ -3225,15 +3190,6 @@ __metadata:
   peerDependencies:
     "@deepseek-ai/cordis": ~4.1.0
   checksum: 10c0/e13ce1b912da9828d22bf679db058691eb434a1b385d700319133766a3662b1afa50da0c31b3e893bc5ec87d646a58002fa211385a21d56c9a65eb3fc62af4c4
-  languageName: node
-  linkType: hard
-
-"@deepseek-ai/dsh-client-ui-primitives@npm:0.1.7-alpha.1":
-  version: 0.1.7-alpha.1
-  resolution: "@deepseek-ai/dsh-client-ui-primitives@npm:0.1.7-alpha.1"
-  peerDependencies:
-    "@deepseek-ai/cordis": ^4.0.3
-  checksum: 10c0/ae176899a2980e3a7d71a622f73d797a051b124d4bced330a5e6560ec25e6745d9885bd2ab669614ffc31c1bf0891037735bc205a5d469c335381415a1ec992f
   languageName: node
   linkType: hard
 
@@ -5684,19 +5640,6 @@ __metadata:
     "@deepseek-ai/dsh-llm": 0.2.2-rc.1
     "@deepseek-ai/dsh-sandbox": 0.2.2-rc.1
   checksum: 10c0/6bc3f97bee2b295474c66bf9cd5e497c40bfa0ef5f1c8a995065ebe286d584d5f8935b9bf5e303bd267e0182f0758cae00713490df865f815cb4632ffdf5e083
-  languageName: node
-  linkType: hard
-
-"@deepseek-ai/dsh-fs@npm:0.1.7-alpha.1":
-  version: 0.1.7-alpha.1
-  resolution: "@deepseek-ai/dsh-fs@npm:0.1.7-alpha.1"
-  peerDependencies:
-    "@deepseek-ai/cordis": ^4.0.3
-    "@deepseek-ai/dsh-brand": ^0.1.7-alpha.1
-    "@deepseek-ai/dsh-invariants": ^0.1.7-alpha.1
-    "@deepseek-ai/dsh-llm": ^0.1.7-alpha.1
-    "@deepseek-ai/dsh-sandbox": ^0.1.7-alpha.1
-  checksum: 10c0/b6d6273aecf22753389974dc42417bbf0cb9c4e79c1bbdf37883f93aecc08c5f36451b513aa36fe8cd14898e78200eb886cdb4cda1a815b92268d44fa802ab1f
   languageName: node
   linkType: hard
 
@@ -10659,29 +10602,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@deepseek-ai/dsh-tools@npm:0.1.7-alpha.1":
-  version: 0.1.7-alpha.1
-  resolution: "@deepseek-ai/dsh-tools@npm:0.1.7-alpha.1"
-  dependencies:
-    "@deepseek-ai/dsh-brand": "npm:^0.1.7-alpha.1"
-    "@deepseek-ai/dsh-util-values": "npm:^0.1.7-alpha.1"
-    "@deepseek-ai/schemastery": "npm:^3.18.3"
-  peerDependencies:
-    "@deepseek-ai/cordis": ^4.0.3
-    "@deepseek-ai/dsh-agent": ^0.1.7-alpha.1
-    "@deepseek-ai/dsh-invariants": ^0.1.7-alpha.1
-    "@deepseek-ai/dsh-llm": ^0.1.7-alpha.1
-    "@deepseek-ai/dsh-ptc-runtime": ^0.1.7-alpha.1
-    "@deepseek-ai/dsh-sandbox": ^0.1.7-alpha.1
-    "@deepseek-ai/dsh-sandbox-policy": ^0.1.7-alpha.1
-    "@deepseek-ai/dsh-scope": ^0.1.7-alpha.1
-    "@deepseek-ai/dsh-session": ^0.1.7-alpha.1
-    "@deepseek-ai/dsh-system-prompt": ^0.1.7-alpha.1
-    "@deepseek-ai/dsh-user-approval": ^0.1.7-alpha.1
-  checksum: 10c0/f48a480fbe2ee57461f095ec14c79782363db737e57ca9683a85621a9eef984dec0cbcafbbbc369815cf5b0a35bff89638f57c3009abc4ae0986506bb30ed4dd
-  languageName: node
-  linkType: hard
-
 "@deepseek-ai/dsh-typert-loader@file:vendor/dsh-runtime/0.2.1-rc.3/deepseek-ai-dsh-typert-loader-0.2.1-rc.3.tgz::locator=deepseek-harness-desktop%40workspace%3A.":
   version: 0.2.1-rc.3
   resolution: "@deepseek-ai/dsh-typert-loader@file:vendor/dsh-runtime/0.2.1-rc.3/deepseek-ai-dsh-typert-loader-0.2.1-rc.3.tgz#vendor/dsh-runtime/0.2.1-rc.3/deepseek-ai-dsh-typert-loader-0.2.1-rc.3.tgz::hash=69b2cf&locator=deepseek-harness-desktop%40workspace%3A."
@@ -10909,15 +10829,6 @@ __metadata:
   peerDependencies:
     "@deepseek-ai/cordis": ~4.1.0
   checksum: 10c0/45eec99c492968475266dd516b4cf48a1016fc5dc468d2e8e254dd7ed747cf2e2bc878042bd83bdcde0350940e8942f51df2d7dbe48a93400d83a53ecb925958
-  languageName: node
-  linkType: hard
-
-"@deepseek-ai/dsh-util-values@npm:^0.1.7-alpha.1":
-  version: 0.1.7-rc.2
-  resolution: "@deepseek-ai/dsh-util-values@npm:0.1.7-rc.2"
-  peerDependencies:
-    "@deepseek-ai/cordis": ~4.0.4
-  checksum: 10c0/e25558854a7b8775a7042bb137948ff7136ed217579f3c98c30a7f6315697da8293923c44a12f310dc6d6da16be9b274347a080090438329e4c04d3538555e03
   languageName: node
   linkType: hard
 
@@ -12428,26 +12339,6 @@ __metadata:
     "@deepseek-ai/node-addon-system-linux-x64":
       optional: true
   checksum: 10c0/8d8f831f5b695cd67938b588a32c0c330514620052ff1b0573012549f76a0507b5347cddf8196232d66d78ff01a428b25836844fba75203c6894ff11645e1898
-  languageName: node
-  linkType: hard
-
-"@deepseek-ai/schemastery@npm:3.18.3":
-  version: 3.18.3
-  resolution: "@deepseek-ai/schemastery@npm:3.18.3"
-  dependencies:
-    "@deepseek-ai/cosmokit": "npm:^1.8.4"
-    "@standard-schema/spec": "npm:^1.1.0"
-  checksum: 10c0/adc220647c353f06d2775a824ee69399e8ce08e893fd2588cec977835b096478f9863b7e8691088835bd5e9557f5b8adbf14df92b31aa7c86ca5f07004573031
-  languageName: node
-  linkType: hard
-
-"@deepseek-ai/schemastery@npm:^3.18.3":
-  version: 3.18.4
-  resolution: "@deepseek-ai/schemastery@npm:3.18.4"
-  dependencies:
-    "@deepseek-ai/cosmokit": "npm:~1.8.5"
-    "@standard-schema/spec": "npm:^1.1.0"
-  checksum: 10c0/eb2afd90404460ea88a510f20bc6751a70f9e9973bac9342279999277928fc827c2aba1bbb37f134a92b6475e261e5dd97c1ddbc6f0ca8588d07d34303ec4a1d
   languageName: node
   linkType: hard
 
@@ -15665,7 +15556,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ajv-formats@npm:^3.0.1":
+"ajv-formats@npm:^3, ajv-formats@npm:^3.0.1":
   version: 3.0.1
   resolution: "ajv-formats@npm:3.0.1"
   dependencies:
@@ -15679,7 +15570,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ajv@npm:^8.0.0, ajv@npm:^8.17.1, ajv@npm:^8.18.0, ajv@npm:^8.20.0, ajv@npm:^8.6.3":
+"ajv@npm:^8, ajv@npm:^8.0.0, ajv@npm:^8.17.1, ajv@npm:^8.18.0, ajv@npm:^8.20.0, ajv@npm:^8.6.3":
   version: 8.20.0
   resolution: "ajv@npm:8.20.0"
   dependencies:
@@ -17273,7 +17164,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "dsh-desktop-next@workspace:dsh-desktop-next"
   dependencies:
-    "@agents-anywhere/dsh-bridge-next": "file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.1.0-desktop.cc1883dad3ff4.r5dbd817f.tgz"
+    "@agents-anywhere/dsh-bridge-next": "file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.2.0-desktop.c0ed3ed212ae4.r5dbd817f.tgz"
     "@base-ui/react": "npm:^1.7.0"
     "@deepseek-ai/cordis": "npm:4.1.0"
     "@deepseek-ai/cordis-plugin-group": "npm:1.1.0"
@@ -17563,24 +17454,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"dsh-files@https://api.github.com/repos/taxueseek/dsh-files/tarball/8f2d0bdf874b3e30ff19b40ab3f19a8a50e168a0":
-  version: 0.5.3
-  resolution: "dsh-files@https://api.github.com/repos/taxueseek/dsh-files/tarball/8f2d0bdf874b3e30ff19b40ab3f19a8a50e168a0"
+"dsh-files@https://api.github.com/repos/taxueseek/dsh-files/tarball/5759656699e1c4d5c3bea5bac51e674ef52158cd":
+  version: 0.7.0
+  resolution: "dsh-files@https://api.github.com/repos/taxueseek/dsh-files/tarball/5759656699e1c4d5c3bea5bac51e674ef52158cd"
   dependencies:
-    "@deepseek-ai/cordis": "npm:4.0.3"
-    "@deepseek-ai/dsh-client-ui-primitives": "npm:0.1.7-alpha.1"
-    "@deepseek-ai/dsh-fs": "npm:0.1.7-alpha.1"
-    "@deepseek-ai/dsh-tools": "npm:0.1.7-alpha.1"
-    "@deepseek-ai/schemastery": "npm:3.18.3"
+    jszip: "npm:^3.10.1"
     mammoth: "npm:^1.8.0"
     pdfjs-dist: "npm:^4.10.38"
     read-excel-file: "npm:^5.8.7"
     word-extractor: "npm:^1.0.4"
   peerDependencies:
-    "@deepseek-ai/cordis": "*"
-    "@deepseek-ai/dsh-client-runtime": ^0.1.0-rc.6 || ^0.1.1-rc.2
+    "@deepseek-ai/cordis": ^4.0.3
+    "@deepseek-ai/dsh-client-runtime": ^0.1.0-rc.6 || ^0.1.1-rc.2 || ^0.2.0-rc.1 || ^0.2.1-alpha.1 || ^0.2.2-0
+    "@deepseek-ai/dsh-client-ui-primitives": ^0.2.0-rc.1 || ^0.2.1-alpha.1 || ^0.2.2-0
+    "@deepseek-ai/dsh-fs": ^0.2.0-rc.1 || ^0.2.1-alpha.1 || ^0.2.2-0
+    "@deepseek-ai/dsh-tools": ^0.1.0-rc.6 || ^0.2.0-rc.1 || ^0.2.1-alpha.1 || ^0.2.2-0
+    "@deepseek-ai/schemastery": ^3.18.1
     react: ^18.2.0
-  checksum: 10c0/3376774c9569045e852a78f9a0a6f1c4bdd4dcd8cd3594de3a485eb5e7d842cb8e869a9f8e2a15f74d02c9bd135b713aef296336a17266640b89c46da32c5ef3
+  checksum: 10c0/ee0de7c4a8bb1eb8c8eabe16b5d1ffc91474a1d74fc2b05de61d0676461a627cc35b5a53e14456bb0f93794da16b6ddde71f476fef09cc3c7e16f9419ec96878
   languageName: node
   linkType: hard
 
@@ -17588,7 +17479,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "dsh-plugin-desktop-beta@workspace:dsh-plugin-desktop-beta"
   dependencies:
-    "@agents-anywhere/dsh-bridge-next": "file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7.tgz"
+    "@agents-anywhere/dsh-bridge-next": "file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.2.0-desktop.c0ed3ed212ae4.r5dbd817f.tgz"
     "@base-ui/react": "npm:^1.7.0"
     "@deepseek-ai/cordis": "npm:4.1.0"
     "@deepseek-ai/cordis-plugin-group": "npm:1.1.0"
@@ -17844,7 +17735,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "dsh-plugin-desktop@workspace:dsh-plugin-desktop"
   dependencies:
-    "@agents-anywhere/dsh-bridge-next": "file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.0.1-desktop.c873f4ae93bb3.rd2c7a8f7.tgz"
+    "@agents-anywhere/dsh-bridge-next": "file:../vendor/agents-anywhere/agents-anywhere-dsh-bridge-next-2.2.0-desktop.c0ed3ed212ae4.r5dbd817f.tgz"
     "@base-ui/react": "npm:^1.7.0"
     "@deepseek-ai/cordis": "npm:4.0.5"
     "@deepseek-ai/cordis-plugin-group": "npm:1.0.5"
@@ -18042,7 +17933,7 @@ __metadata:
     dsh-community-market: "npm:0.1.0-dev.0"
     dsh-ezai-auth: "workspace:^"
     dsh-ezai-brand: "workspace:^"
-    dsh-files: "https://api.github.com/repos/taxueseek/dsh-files/tarball/8f2d0bdf874b3e30ff19b40ab3f19a8a50e168a0"
+    dsh-files: "https://api.github.com/repos/taxueseek/dsh-files/tarball/5759656699e1c4d5c3bea5bac51e674ef52158cd"
     dsh-session-purge: "workspace:^"
     dshmarket: "npm:1.73.10"
     electron: "npm:44.7.0"
@@ -20040,7 +19931,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jszip@npm:^3.7.1":
+"jszip@npm:^3.10.1, jszip@npm:^3.7.1":
   version: 3.10.2
   resolution: "jszip@npm:3.10.2"
   dependencies:
@@ -20871,6 +20762,228 @@ __metadata:
   version: 1.4.1
   resolution: "merge2@npm:1.4.1"
   checksum: 10c0/254a8a4605b58f450308fc474c82ac9a094848081bf4c06778200207820e5193726dc563a0d2c16468810516a5c97d9d3ea0ca6585d23c58ccfff2403e8dbbeb
+  languageName: node
+  linkType: hard
+
+"meshcall-router-darwin-arm64@npm:0.3.0":
+  version: 0.3.0
+  resolution: "meshcall-router-darwin-arm64@npm:0.3.0"
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"meshcall-router-darwin-x64@npm:0.3.0":
+  version: 0.3.0
+  resolution: "meshcall-router-darwin-x64@npm:0.3.0"
+  conditions: os=darwin & cpu=x64
+  languageName: node
+  linkType: hard
+
+"meshcall-router-freebsd-arm64@npm:0.3.0":
+  version: 0.3.0
+  resolution: "meshcall-router-freebsd-arm64@npm:0.3.0"
+  conditions: os=freebsd & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"meshcall-router-freebsd-x64@npm:0.3.0":
+  version: 0.3.0
+  resolution: "meshcall-router-freebsd-x64@npm:0.3.0"
+  conditions: os=freebsd & cpu=x64
+  languageName: node
+  linkType: hard
+
+"meshcall-router-linux-arm64@npm:0.3.0":
+  version: 0.3.0
+  resolution: "meshcall-router-linux-arm64@npm:0.3.0"
+  conditions: os=linux & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"meshcall-router-linux-arm@npm:0.3.0":
+  version: 0.3.0
+  resolution: "meshcall-router-linux-arm@npm:0.3.0"
+  conditions: os=linux & cpu=arm
+  languageName: node
+  linkType: hard
+
+"meshcall-router-linux-ia32@npm:0.3.0":
+  version: 0.3.0
+  resolution: "meshcall-router-linux-ia32@npm:0.3.0"
+  conditions: os=linux & cpu=ia32
+  languageName: node
+  linkType: hard
+
+"meshcall-router-linux-ppc64@npm:0.3.0":
+  version: 0.3.0
+  resolution: "meshcall-router-linux-ppc64@npm:0.3.0"
+  conditions: os=linux & cpu=ppc64
+  languageName: node
+  linkType: hard
+
+"meshcall-router-linux-riscv64@npm:0.3.0":
+  version: 0.3.0
+  resolution: "meshcall-router-linux-riscv64@npm:0.3.0"
+  conditions: os=linux & cpu=riscv64
+  languageName: node
+  linkType: hard
+
+"meshcall-router-linux-s390x@npm:0.3.0":
+  version: 0.3.0
+  resolution: "meshcall-router-linux-s390x@npm:0.3.0"
+  conditions: os=linux & cpu=s390x
+  languageName: node
+  linkType: hard
+
+"meshcall-router-linux-x64@npm:0.3.0":
+  version: 0.3.0
+  resolution: "meshcall-router-linux-x64@npm:0.3.0"
+  conditions: os=linux & cpu=x64
+  languageName: node
+  linkType: hard
+
+"meshcall-router-win32-arm64@npm:0.3.0":
+  version: 0.3.0
+  resolution: "meshcall-router-win32-arm64@npm:0.3.0"
+  conditions: os=win32 & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"meshcall-router-win32-ia32@npm:0.3.0":
+  version: 0.3.0
+  resolution: "meshcall-router-win32-ia32@npm:0.3.0"
+  conditions: os=win32 & cpu=ia32
+  languageName: node
+  linkType: hard
+
+"meshcall-router-win32-x64@npm:0.3.0":
+  version: 0.3.0
+  resolution: "meshcall-router-win32-x64@npm:0.3.0"
+  conditions: os=win32 & cpu=x64
+  languageName: node
+  linkType: hard
+
+"meshcall@npm:0.3.0":
+  version: 0.3.0
+  resolution: "meshcall@npm:0.3.0"
+  dependencies:
+    ajv: "npm:^8"
+    ajv-formats: "npm:^3"
+    meshcall-router-darwin-arm64: "npm:0.3.0"
+    meshcall-router-darwin-x64: "npm:0.3.0"
+    meshcall-router-freebsd-arm64: "npm:0.3.0"
+    meshcall-router-freebsd-x64: "npm:0.3.0"
+    meshcall-router-linux-arm: "npm:0.3.0"
+    meshcall-router-linux-arm64: "npm:0.3.0"
+    meshcall-router-linux-ia32: "npm:0.3.0"
+    meshcall-router-linux-ppc64: "npm:0.3.0"
+    meshcall-router-linux-riscv64: "npm:0.3.0"
+    meshcall-router-linux-s390x: "npm:0.3.0"
+    meshcall-router-linux-x64: "npm:0.3.0"
+    meshcall-router-win32-arm64: "npm:0.3.0"
+    meshcall-router-win32-ia32: "npm:0.3.0"
+    meshcall-router-win32-x64: "npm:0.3.0"
+    ws: "npm:^8.21.3"
+    zod: "npm:^4"
+  peerDependencies:
+    "@opentelemetry/api": ^1.4.0
+  dependenciesMeta:
+    meshcall-router-darwin-arm64:
+      optional: true
+    meshcall-router-darwin-x64:
+      optional: true
+    meshcall-router-freebsd-arm64:
+      optional: true
+    meshcall-router-freebsd-x64:
+      optional: true
+    meshcall-router-linux-arm:
+      optional: true
+    meshcall-router-linux-arm64:
+      optional: true
+    meshcall-router-linux-ia32:
+      optional: true
+    meshcall-router-linux-ppc64:
+      optional: true
+    meshcall-router-linux-riscv64:
+      optional: true
+    meshcall-router-linux-s390x:
+      optional: true
+    meshcall-router-linux-x64:
+      optional: true
+    meshcall-router-win32-arm64:
+      optional: true
+    meshcall-router-win32-ia32:
+      optional: true
+    meshcall-router-win32-x64:
+      optional: true
+  peerDependenciesMeta:
+    "@opentelemetry/api":
+      optional: true
+  bin:
+    meshcall: dist/src/launcher.js
+  checksum: 10c0/c744bfbcd579aa5365ff9da40c8696d872b64d90b659424909e42df50bc66ecf8cf6cf153053551f7ffa93f37eb6830fa2cb8da1caa2fc4dbab5b635834f4f41
+  languageName: node
+  linkType: hard
+
+"meshcall@patch:meshcall@npm%3A0.3.0#./patches/meshcall@0.3.0.patch::locator=deepseek-harness-desktop%40workspace%3A.":
+  version: 0.3.0
+  resolution: "meshcall@patch:meshcall@npm%3A0.3.0#./patches/meshcall@0.3.0.patch::version=0.3.0&hash=32c325&locator=deepseek-harness-desktop%40workspace%3A."
+  dependencies:
+    ajv: "npm:^8"
+    ajv-formats: "npm:^3"
+    meshcall-router-darwin-arm64: "npm:0.3.0"
+    meshcall-router-darwin-x64: "npm:0.3.0"
+    meshcall-router-freebsd-arm64: "npm:0.3.0"
+    meshcall-router-freebsd-x64: "npm:0.3.0"
+    meshcall-router-linux-arm: "npm:0.3.0"
+    meshcall-router-linux-arm64: "npm:0.3.0"
+    meshcall-router-linux-ia32: "npm:0.3.0"
+    meshcall-router-linux-ppc64: "npm:0.3.0"
+    meshcall-router-linux-riscv64: "npm:0.3.0"
+    meshcall-router-linux-s390x: "npm:0.3.0"
+    meshcall-router-linux-x64: "npm:0.3.0"
+    meshcall-router-win32-arm64: "npm:0.3.0"
+    meshcall-router-win32-ia32: "npm:0.3.0"
+    meshcall-router-win32-x64: "npm:0.3.0"
+    ws: "npm:^8.21.3"
+    zod: "npm:^4"
+  peerDependencies:
+    "@opentelemetry/api": ^1.4.0
+  dependenciesMeta:
+    meshcall-router-darwin-arm64:
+      optional: true
+    meshcall-router-darwin-x64:
+      optional: true
+    meshcall-router-freebsd-arm64:
+      optional: true
+    meshcall-router-freebsd-x64:
+      optional: true
+    meshcall-router-linux-arm:
+      optional: true
+    meshcall-router-linux-arm64:
+      optional: true
+    meshcall-router-linux-ia32:
+      optional: true
+    meshcall-router-linux-ppc64:
+      optional: true
+    meshcall-router-linux-riscv64:
+      optional: true
+    meshcall-router-linux-s390x:
+      optional: true
+    meshcall-router-linux-x64:
+      optional: true
+    meshcall-router-win32-arm64:
+      optional: true
+    meshcall-router-win32-ia32:
+      optional: true
+    meshcall-router-win32-x64:
+      optional: true
+  peerDependenciesMeta:
+    "@opentelemetry/api":
+      optional: true
+  bin:
+    meshcall: dist/src/launcher.js
+  checksum: 10c0/25bfead9eb03080d279b0fc68aa86a4f7f327a120a8ff06c39088e2bdcee10d784b5c2015f2da8206c916b6898091fe0d53404e6f12ffffa222734b6ae4716b9
   languageName: node
   linkType: hard
 
@@ -24990,6 +25103,13 @@ __metadata:
   version: 3.25.76
   resolution: "zod@npm:3.25.76"
   checksum: 10c0/5718ec35e3c40b600316c5b4c5e4976f7fee68151bc8f8d90ec18a469be9571f072e1bbaace10f1e85cf8892ea12d90821b200e980ab46916a6166a4260a983c
+  languageName: node
+  linkType: hard
+
+"zod@npm:^4":
+  version: 4.6.7
+  resolution: "zod@npm:4.6.7"
+  checksum: 10c0/4ce2eb14034317b7254e347ca37b5ad591cf8333147030cf05b9b5d31692d45073f7f2747aa50cf8c6b29012194d2b22978cecc89969cf34a0d18e89d0ee7d7b
   languageName: node
   linkType: hard
 

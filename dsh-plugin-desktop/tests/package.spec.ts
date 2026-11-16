@@ -400,7 +400,7 @@ describe('published package surface', () => {
   })
 
   it('restores the EZAI hero headline through the conversation patch', () => {
-    const patchPath = './patches/dsh-client-ui-conversation@0.1.5-rc.2.patch'
+    const patchPath = './patches/dsh-client-ui-conversation@0.2.1-rc.3.patch'
     expect(dshResolution('@deepseek-ai/dsh-client-ui-conversation')).toContain(patchPath)
     const patch = readFileSync(new URL(patchPath, workspaceRoot), 'utf8')
     const installed = readFileSync(new URL(
@@ -857,7 +857,7 @@ describe('published package surface', () => {
 
   it('fixes the installed application identity', () => {
     expect(workspaceManifest.version).toBeUndefined()
-    expect(manifest.version).toBe('2.1.5')
+    expect(manifest.version).toBe('2.2.0')
     expect(manifest.build?.productName).toBe('EZAI Desktop')
     expect(manifest.build?.appId).toBe('ai.deepseek.dsh.desktop')
     expect(manifest.build?.asar).toBe(false)
@@ -960,7 +960,8 @@ describe('published package surface', () => {
     expect(manifest.scripts?.['dist:win-portable']).toBe('node scripts/package-win-portable.ts')
     expect(manifest.scripts?.['check:win-package:platform']).toContain('yarn workspace dsh-community-market build')
     expect(manifest.scripts?.['check:win-package:platform']).toContain('yarn run build')
-    expect(manifest.scripts?.['check:win-package']).toBe('yarn run check:win-package:platform && yarn run typecheck')
+    // EZAI's forks prepend the auth and brand workspace builds so the gate always compiles them.
+    expect(manifest.scripts?.['check:win-package']).toBe('yarn workspace dsh-ezai-auth build && yarn workspace dsh-ezai-brand build && yarn run check:win-package:platform && yarn run typecheck')
     expect(manifest.scripts?.['check:win-package:platform']).not.toContain('typecheck')
     expect(manifest.scripts?.['check:win-package:platform']).toContain('tests/package-win.spec.ts')
     expect(manifest.scripts?.['check:win-package:platform']).toContain('tests/desktop-installer-quit.spec.ts')
@@ -973,13 +974,13 @@ describe('published package surface', () => {
     expect(manifest.scripts?.['check:win-package:platform']).toContain('yarn run verify:closure')
     expect(manifest.scripts?.['check:mac-package:platform']).toContain('yarn workspace dsh-community-market build')
     expect(manifest.scripts?.['check:mac-package:platform']).toContain('yarn run build')
-    expect(manifest.scripts?.['check:mac-package']).toBe('yarn run check:mac-package:platform && yarn run typecheck')
+    expect(manifest.scripts?.['check:mac-package']).toBe('yarn workspace dsh-ezai-auth build && yarn workspace dsh-ezai-brand build && yarn run check:mac-package:platform && yarn run typecheck')
     expect(manifest.scripts?.['check:mac-package:platform']).not.toContain('typecheck')
     expect(manifest.scripts?.['check:mac-package:platform']).toContain('tests/package-mac.spec.ts')
     expect(manifest.scripts?.['check:mac-package:platform']).toContain('tests/verify-mac-smoke.spec.ts')
     expect(manifest.scripts?.['check:mac-package:platform']).toContain('tests/mac-universal.spec.ts')
     expect(manifest.scripts?.['check:mac-package:platform']).toContain('yarn run verify:closure')
-    expect(manifest.scripts?.['check:linux-package']).toBe('yarn run check:linux-package:platform && yarn run typecheck')
+    expect(manifest.scripts?.['check:linux-package']).toBe('yarn workspace dsh-ezai-auth build && yarn workspace dsh-ezai-brand build && yarn run check:linux-package:platform && yarn run typecheck')
     expect(manifest.scripts?.['check:linux-package:platform']).not.toContain('typecheck')
     expect(manifest.scripts?.['verify:cli']).toBe('node scripts/verify-cli-runtime.mjs')
     expect(manifest.scripts?.check).toContain('yarn run verify:cli')
@@ -1191,8 +1192,10 @@ describe('published package surface', () => {
       '@earendil-works/pi-telemetry@npm:^1.1.0': '1.1.0',
     })
     // The only npm resolution is the source the patch applies to, so no range escapes it.
+    // The 0.2.2 line's OAR/coding-agent packages additionally resolve an exact pi-ai 1.4.0;
+    // the shipped Stable runtime resolves the patched 1.1.0 verified below.
     expect([...lockfile.matchAll(/resolution: "@earendil-works\/pi-ai@npm:([^"]+)"/gu)].map(match => match[1]))
-      .toEqual(['1.1.0'])
+      .toEqual(['1.1.0', '1.4.0'])
     expect(lockfile).toContain(`"@earendil-works/pi-ai@${patchResolution}::`)
     expect(lockfile).toContain('resolution: "@earendil-works/pi-telemetry@npm:1.1.0"')
     expect(installedPiAi.version).toBe('1.1.0')

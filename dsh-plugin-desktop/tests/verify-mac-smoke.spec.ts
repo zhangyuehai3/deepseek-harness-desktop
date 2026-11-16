@@ -135,7 +135,7 @@ describe('macOS DMG smoke artifact verification', () => {
     const seen: string[] = []
     const harness = options({ makeMountPoint: () => value.root, verifyRuntime: appPath => { seen.push(appPath) } }, value.modeOverrides)
     verifyMacSmoke(harness.value)
-    expect(seen).toEqual([join(value.root, 'DSH Desktop.app')])
+    expect(seen).toEqual([join(value.root, 'EZAI Desktop.app')])
     expect(harness.calls.at(-1)).toEqual({ command: 'hdiutil', args: ['detach', value.root] })
   })
 

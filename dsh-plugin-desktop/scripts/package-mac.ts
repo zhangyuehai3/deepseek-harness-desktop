@@ -196,6 +196,11 @@ export function packageMacSmoke(options: MacSmokePackageOptions = defaultOptions
       'never',
       '--config.mac.notarize=false',
       '--config.npmRebuild=false',
+      // EZAI packaging hosts without Xcode 26 cannot run actool for the `.icon` asset
+      // catalog; DSH_MAC_PACKAGE_ICON lets them fall back to a prebuilt `.icns` icon.
+      ...(options.env.DSH_MAC_PACKAGE_ICON
+        ? [`--config.mac.icon=${options.env.DSH_MAC_PACKAGE_ICON}`]
+        : []),
       `--config.directories.output=${options.outputDir}`,
       ...(compression === undefined ? [] : [`--config.mac.compression=${compression}`]),
       ...(compression === 'store' ? ['--config.dmg.writeUpdateInfo=false'] : []),

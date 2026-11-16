@@ -22,3 +22,39 @@ index 713f2d6..7da099b 100644
  				if (clean === this.projection.clipboardText && this.projection.occurrences.length === 0 && this.projection.quotes.length === 0) return;
  				this.editor.update(() => {
  					nl().clear();
+@@ -16480,7 +16484,7 @@ window.__ModuleLoader__.load({
+ 			"settings.enter.description": "智能体运行时 Enter 键和发送按钮的行为；Cmd/Ctrl+Enter 使用另一行为",
+ 			"settings.enter.queue": "排队发送",
+ 			"settings.enter.steer": "插话发送",
+-			"hero.headline": "探索未至之境",
++			"hero.headline": "金石易服",
+ 			"hero.preview": "预览版",
+ 			"hero.chooseWorkspace": "选择工作区",
+ 			"session.hierarchy": "会话层级",
+@@ -16866,7 +16870,7 @@ window.__ModuleLoader__.load({
+ 			"settings.enter.description": "What Enter and the Send button do while the agent is running; Cmd/Ctrl+Enter uses the other behavior",
+ 			"settings.enter.queue": "Queue",
+ 			"settings.enter.steer": "Steer",
+-			"hero.headline": "Into the Unknown",
++			"hero.headline": "金石易服",
+ 			"hero.preview": "Preview",
+ 			"hero.chooseWorkspace": "Choose workspace",
+ 			"session.hierarchy": "Session hierarchy",
+@@ -17252,7 +17256,7 @@ window.__ModuleLoader__.load({
+ 			"settings.enter.description": "エージェントの実行中にEnterキーと送信ボタンが行う動作。Cmd/Ctrl+Enterではもう一方の動作になります",
+ 			"settings.enter.queue": "キュー",
+ 			"settings.enter.steer": "指示を変更",
+-			"hero.headline": "未知への挑戦",
++			"hero.headline": "金石易服",
+ 			"hero.preview": "プレビュー",
+ 			"hero.chooseWorkspace": "ワークスペースを選択",
+ 			"session.hierarchy": "セッション階層",
+@@ -17638,7 +17642,7 @@ window.__ModuleLoader__.load({
+ 			"settings.enter.description": "Qué hacen los botones Intro y Enviar mientras el agente se está ejecutando; Cmd/Ctrl+Enter usa el otro comportamiento",
+ 			"settings.enter.queue": "cola",
+ 			"settings.enter.steer": "Redirigir",
+-			"hero.headline": "Hacia lo desconocido",
++			"hero.headline": "金石易服",
+ 			"hero.preview": "Vista previa",
+ 			"hero.chooseWorkspace": "Elige espacio de trabajo",
+ 			"session.hierarchy": "Jerarquía de sesiones",
