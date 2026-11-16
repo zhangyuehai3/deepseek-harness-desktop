@@ -637,10 +637,14 @@ window.__ModuleLoader__.load({
 				ctx.effect(() => locale.register(NS, { zh, en }), "dsh-session-purge: dictionaries");
 			}
 
-			// Settings dialog section: right under EZAI Account (order: 120)
+			// Settings dialog section: right under EZAI Account (order: 120).
+			// NB: the id intentionally avoids the literal "session-purge" — upstream
+			// SettingsPanel.navIcon hardcodes a branch for that id that renders
+			// IconListPenOutline16, which does not exist in @deepseek-ai/dsh-client-ui-primitives
+			// 0.2.x (removed export), crashing the whole settings panel with React #130.
 			ctx.slots.inject("settings.section", () => ctx.slots.register({
 				name: "settings.section",
-				id: "session-purge",
+				id: "ezai-session-purge",
 				order: 120,
 				label: () => {
 					const t = ctx.locale?.bind?.(NS) ?? ((k) => (k === "manage.title" ? zh["manage.title"] : k));
