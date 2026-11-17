@@ -31,13 +31,51 @@ interface HeroBrandMarkProps extends BrandMarkProps {
  * Scoped companion stylesheet for the sidebar brand occupant. The expanded
  * brand row and the collapsed rail share one slot with identical owner props,
  * so the rail resize is anchored on the vendored sidebar's rail wrapper
- * class (`_muAxG_railMark`, pinned by the 0.1.5-rc.2 vendored runtime). The
- * brand button height restores the pre-migration 35px row geometry.
+ * class SUFFIX (`_railMark`) — the module hash prefix changes with every
+ * upstream build (0.1.5 `_muAxG_`, 0.2.1 `Wl6W_`), while the suffixed key is
+ * stable. The brand button height is the EZAI 60px row geometry, matching
+ * the 0.2.x sidebar logo row height.
  */
 const SIDEBAR_MARK_CSS = `
 .ezaiBrandMarkImg{display:block;height:40px;width:auto;}
-._muAxG_railMark .ezaiBrandMarkImg{height:24px;width:24px;}
-._muAxG_brand{height:35px;min-width:0;color:inherit;cursor:pointer;}
+[class*="_railMark"] .ezaiBrandMarkImg{height:24px;width:24px;}
+button[class*="_brand"]{height:60px;min-width:0;color:inherit;cursor:pointer;}
+`
+
+/**
+ * EZAI green brand basis. The 0.2.x theme derives every interactive blue
+ * (links, primary buttons, focus rings, business states) from the
+ * `--dsw-static-deepseek-*` ramp; recoloring that ramp at `body` level turns
+ * the whole chrome green without touching component code. `!important` keeps
+ * the skin winning when the theme re-injects its own stylesheet on dark-mode
+ * switches. Values follow the EZAI palette (#265C5A primary teal, #98C455
+ * accent green), keeping enough contrast for white text on 400/500 fills.
+ */
+const EZAI_GREEN_THEME_CSS = `
+body{
+  --dsw-static-deepseek-50:#f0f6ec !important;
+  --dsw-static-deepseek-100:#e2eed3 !important;
+  --dsw-static-deepseek-200:#c8dfb0 !important;
+  --dsw-static-deepseek-300:#a9cd7f !important;
+  --dsw-static-deepseek-400:#98C455 !important;
+  --dsw-static-deepseek-450:#82ad43 !important;
+  --dsw-static-deepseek-500:#2e6d64 !important;
+  --dsw-static-deepseek-600:#265C5A !important;
+  --dsw-static-deepseek-800:#2f4441 !important;
+  --dsw-static-deepseek-900:#22302d !important;
+}
+body[data-ds-dark-theme]{
+  --dsw-static-deepseek-50:#22302d !important;
+  --dsw-static-deepseek-100:#2f4441 !important;
+  --dsw-static-deepseek-200:#265C5A !important;
+  --dsw-static-deepseek-300:#2e6d64 !important;
+  --dsw-static-deepseek-400:#4d8a7d !important;
+  --dsw-static-deepseek-450:#98C455 !important;
+  --dsw-static-deepseek-500:#a9cd7f !important;
+  --dsw-static-deepseek-600:#c8dfb0 !important;
+  --dsw-static-deepseek-800:#e2eed3 !important;
+  --dsw-static-deepseek-900:#f0f6ec !important;
+}
 `
 
 /**
@@ -48,6 +86,7 @@ export function EzaiBrandMark(_props: BrandMarkProps): ReactElement {
   return (
     <>
       <style>{SIDEBAR_MARK_CSS}</style>
+      <style>{EZAI_GREEN_THEME_CSS}</style>
       <img
         className="ezaiBrandMarkImg"
         src={EZAI_MARK_DATA_URI}
