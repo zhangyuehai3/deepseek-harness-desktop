@@ -3,16 +3,26 @@
 import { describe, it, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert'
 import { patchCredentialsService, patchLaunchEnvironment } from '../src/index.ts'
-import { getBootstrapApiKey } from '../src/vault.ts'
 
 describe('credentials & launchEnvironment patching', () => {
   const originalEnvKey = process.env.DEEPSEEK_API_KEY
 
+  const MOCK_KEY = 'sk-mock-key-for-test'
+
+  const origDshHome = process.env.DSH_HOME
+  const testDshHome = `/tmp/dsh_test_cred_${Date.now()}`
+
   beforeEach(() => {
-    process.env.DEEPSEEK_API_KEY = getBootstrapApiKey()
+    process.env.DSH_HOME = testDshHome
+    process.env.DEEPSEEK_API_KEY = MOCK_KEY
   })
 
   afterEach(() => {
+    if (origDshHome !== undefined) {
+      process.env.DSH_HOME = origDshHome
+    } else {
+      delete process.env.DSH_HOME
+    }
     if (originalEnvKey !== undefined) {
       process.env.DEEPSEEK_API_KEY = originalEnvKey
     } else {
@@ -30,7 +40,7 @@ describe('credentials & launchEnvironment patching', () => {
 
     const resolved = await fakeCredentials.resolve('DEEPSEEK_API_KEY')
     assert.deepEqual(resolved, {
-      value: getBootstrapApiKey(),
+      value: MOCK_KEY,
       source: 'env',
     })
 
@@ -76,13 +86,13 @@ describe('credentials & launchEnvironment patching', () => {
 
     const entry = fakeEnv.get('DEEPSEEK_API_KEY')
     assert.deepEqual(entry, {
-      value: getBootstrapApiKey(),
+      value: MOCK_KEY,
       source: 'process',
     })
 
     const entryFrom = fakeEnv.getFrom('DEEPSEEK_API_KEY', ['process'])
     assert.deepEqual(entryFrom, {
-      value: getBootstrapApiKey(),
+      value: MOCK_KEY,
       source: 'process',
     })
   })

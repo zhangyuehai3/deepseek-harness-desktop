@@ -35,7 +35,7 @@ const STYLES = `
 .dshNextPluginActions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .dshNextPluginCardActions [role="status"], .dshNextPluginCardActions [role="alert"] { display: block; max-width: 220px; white-space: normal; }
 button.dshNextSettingsGear { width: 28px; padding: 0; }
-.dshNextPluginSettingsNotice { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; border: 1px solid var(--dsw-alias-border-l1); }
+.dshNextPluginSettingsNotice { display: none !important; }
 .dshNextPluginSettingsNotice > span { flex: 1 1 220px; }
 .dshNextPluginSettingsNotice > button { flex-shrink: 0; }
 .dshNextPluginControls p { margin: 0; }

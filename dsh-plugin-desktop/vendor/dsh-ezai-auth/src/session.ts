@@ -2,6 +2,7 @@
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
+import { createHmac } from 'node:crypto'
 import { dshHomePath } from '@deepseek-ai/dsh-home-paths'
 import { getTrustedDate } from './trusted-time.ts'
 import type { AccountWeeklyUsage, EzaiPersonalInfo, EzaiUser, SessionSnapshot } from './types.ts'
@@ -11,6 +12,33 @@ const DEFAULT_SESSION_FILE = 'session.json'
 const DEFAULT_TOKENS_FILE = 'account_tokens.json'
 const DIR_MODE = 0o700
 const FILE_MODE = 0o600
+
+/**
+ * Secret salt used to compute HMAC integrity signatures for local files.
+ * Prevents employees from tampering with session.json or account_tokens.json to alter token usage.
+ */
+const HMAC_INTEGRITY_SALT = 'EZAI_TOKEN_LEDGER_INTEGRITY_SALT_20261117'
+
+export function computeLedgerSignature(accountKey: string, week: string, used: number, totalUsed: number = 0, lastActiveTime: number = 0): string {
+  const payload = `${accountKey}|${week}|${Math.round(used)}|${Math.round(totalUsed)}|${Math.round(lastActiveTime)}`
+  return createHmac('sha256', HMAC_INTEGRITY_SALT).update(payload).digest('hex')
+}
+
+export function verifyLedgerSignature(entry: AccountWeeklyUsage | number | undefined, accountKey: string): boolean {
+  if (entry === undefined || typeof entry === 'number') return false
+  if (!entry._sig || typeof entry._sig !== 'string') return false
+  const expected = computeLedgerSignature(
+    accountKey,
+    entry.week || '',
+    entry.used || 0,
+    entry.totalUsed || 0,
+    entry.lastActiveTime || 0,
+  )
+  return entry._sig === expected
+}
+
+/** In-memory authoritative server checkpoints to enforce monotonicity and prevent file tampering. */
+const inMemoryServerCheckpoints: Record<string, { week: string; used: number; totalUsed: number; quota?: number; timestamp: number }> = {}
 
 /**
  * Returns the current weekly cycle key (Monday 00:00:00 to Sunday 24:00:00).
@@ -85,6 +113,8 @@ export interface EzaiSessionStore {
   getSnapshot(): Promise<SessionSnapshot | undefined>
   addTokenUsage(tokens: number): Promise<number>
   getTokenUsage(): Promise<number>
+  getTotalTokenUsage?(): Promise<number>
+  syncServerUsage?(used: number, totalUsed: number, quota?: number): Promise<void>
   getAccountTokenUsage(userId: string): Promise<number>
   isCurrentPeakHours(): Promise<boolean>
   getTokenRateMultiplier(): Promise<number>
@@ -92,6 +122,10 @@ export interface EzaiSessionStore {
   setTokenQuota?(quota: number): Promise<void>
   getWhitelistDepartment?(): Promise<string | undefined>
   setWhitelistDepartment?(dept: string): Promise<void>
+  getApiKey?(): Promise<string | undefined>
+  setApiKey?(key: string): Promise<void>
+  getDepartmentName?(): Promise<string | undefined>
+  setDepartmentName?(dept: string): Promise<void>
 }
 
 function parseSnapshot(text: string): SessionSnapshot | undefined {
@@ -118,6 +152,16 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
       await writeFile(filePath, '', { mode: FILE_MODE })
       return
     }
+    if (snapshot.user) {
+      const accountKey = snapshot.user.id || snapshot.user.login_name || snapshot.user.email || 'default'
+      snapshot._sig = computeLedgerSignature(
+        accountKey,
+        snapshot.weekKey || '',
+        snapshot.tokenUsed || 0,
+        snapshot.totalTokenUsed || 0,
+        Date.now(),
+      )
+    }
     await writeFile(filePath, JSON.stringify(snapshot, null, 2), { mode: FILE_MODE })
   }
 
@@ -125,7 +169,21 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
     try {
       const text = await readFile(filePath, 'utf8')
       if (text.trim() === '') return undefined
-      return parseSnapshot(text)
+      const snapshot = parseSnapshot(text)
+      if (!snapshot) return undefined
+
+      // Reconcile snapshot against in-memory authoritative checkpoints
+      if (snapshot.user) {
+        const accountKey = snapshot.user.id || snapshot.user.login_name || snapshot.user.email || 'default'
+        const checkpoint = inMemoryServerCheckpoints[accountKey]
+        if (checkpoint) {
+          if (checkpoint.week === snapshot.weekKey) {
+            snapshot.tokenUsed = Math.max(snapshot.tokenUsed || 0, checkpoint.used)
+          }
+          snapshot.totalTokenUsed = Math.max(snapshot.totalTokenUsed || 0, checkpoint.totalUsed)
+        }
+      }
+      return snapshot
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
       throw error
@@ -173,20 +231,64 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
     return getCurrentWeekKey(getTrustedDate(activeTime))
   }
 
-  function resolveUsageForWeek(entry: AccountWeeklyUsage | number | undefined, currentWeek: string): number {
-    if (entry === undefined) return 0
-    if (typeof entry === 'number') {
-      return entry
+  function resolveUsageForWeek(
+    entry: AccountWeeklyUsage | number | undefined,
+    currentWeek: string,
+    accountKey?: string,
+  ): number {
+    const checkpoint = accountKey ? inMemoryServerCheckpoints[accountKey] : undefined
+    const checkpointUsed = (checkpoint && checkpoint.week === currentWeek) ? checkpoint.used : 0
+
+    if (entry === undefined) {
+      return checkpointUsed
     }
+
+    if (typeof entry === 'number') {
+      return Math.max(entry, checkpointUsed)
+    }
+
     if (typeof entry === 'object' && entry !== null) {
-      // If the record matches the current weekly cycle, return its usage;
-      // otherwise, Sunday 24:00 (Monday 00:00) has passed and it automatically resets to 0!
+      // Check if entry matches the current weekly cycle
       if (entry.week === currentWeek) {
-        return Number(entry.used) || 0
+        if (accountKey) {
+          const isValid = verifyLedgerSignature(entry, accountKey)
+          if (!isValid) {
+            // File tampered with! Discard tampered number, use authoritative checkpoint
+            return checkpointUsed
+          }
+        }
+        const rawUsed = Number(entry.used) || 0
+        return Math.max(rawUsed, checkpointUsed)
       }
       return 0
     }
-    return 0
+
+    return checkpointUsed
+  }
+
+  function resolveTotalUsage(
+    entry: AccountWeeklyUsage | number | undefined,
+    snapshot?: SessionSnapshot,
+    accountKey?: string,
+  ): number {
+    const checkpoint = accountKey ? inMemoryServerCheckpoints[accountKey] : undefined
+    const checkpointTotal = checkpoint ? checkpoint.totalUsed : 0
+
+    let localTotal = 0
+    if (typeof entry === 'object' && entry !== null && typeof entry.totalUsed === 'number') {
+      if (accountKey) {
+        const isValid = verifyLedgerSignature(entry, accountKey)
+        if (isValid) {
+          localTotal = entry.totalUsed
+        }
+      } else {
+        localTotal = entry.totalUsed
+      }
+    } else if (snapshot && typeof snapshot.totalTokenUsed === 'number') {
+      localTotal = snapshot.totalTokenUsed
+    }
+
+    return Math.max(localTotal, checkpointTotal)
   }
 
   return {
@@ -211,7 +313,7 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
       const ledger = await readAccountTokens()
       const maxActive = getMaxLastActiveTime(ledger)
       const currentWeek = getWeekForEntry(ledger[accountKey], maxActive)
-      const userTokens = resolveUsageForWeek(ledger[accountKey], currentWeek)
+      const userTokens = resolveUsageForWeek(ledger[accountKey], currentWeek, accountKey)
 
       const snapshot = (await readSnapshot()) ?? { cookies: '', user, loggedInAt: new Date().toISOString(), tokenUsed: userTokens, weekKey: currentWeek, accountTokens: ledger }
       snapshot.user = user
@@ -251,6 +353,26 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
       snapshot.whitelistDepartment = dept
       await writeSnapshot(snapshot)
     },
+    async getApiKey(): Promise<string | undefined> {
+      const snapshot = await readSnapshot()
+      return snapshot?.apiKey
+    },
+    async setApiKey(key: string): Promise<void> {
+      const snapshot = await readSnapshot()
+      if (snapshot === undefined) return
+      snapshot.apiKey = key
+      await writeSnapshot(snapshot)
+    },
+    async getDepartmentName(): Promise<string | undefined> {
+      const snapshot = await readSnapshot()
+      return snapshot?.departmentName
+    },
+    async setDepartmentName(dept: string): Promise<void> {
+      const snapshot = await readSnapshot()
+      if (snapshot === undefined) return
+      snapshot.departmentName = dept
+      await writeSnapshot(snapshot)
+    },
     async clear(): Promise<void> {
       // Clear active session snapshot while safely keeping account_tokens ledger untouched
       await writeSnapshot(undefined)
@@ -262,9 +384,12 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
         const ledger = await readAccountTokens()
         const maxActive = getMaxLastActiveTime(ledger)
         const currentWeek = getWeekForEntry(ledger[accountKey], maxActive)
-        const currentUsed = resolveUsageForWeek(ledger[accountKey], currentWeek)
-        if (snapshot.tokenUsed !== currentUsed || snapshot.weekKey !== currentWeek) {
+        const currentUsed = resolveUsageForWeek(ledger[accountKey], currentWeek, accountKey)
+        const currentTotal = resolveTotalUsage(ledger[accountKey], snapshot, accountKey)
+
+        if (snapshot.tokenUsed !== currentUsed || snapshot.weekKey !== currentWeek || snapshot.totalTokenUsed !== currentTotal) {
           snapshot.tokenUsed = currentUsed
+          snapshot.totalTokenUsed = currentTotal
           snapshot.weekKey = currentWeek
           snapshot.accountTokens = ledger
           await writeSnapshot(snapshot)
@@ -285,23 +410,96 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
       const nowTrusted = getTrustedDate(maxActive)
       const currentWeek = getCurrentWeekKey(nowTrusted)
 
-      const currentLedgerTokens = resolveUsageForWeek(existingEntry, currentWeek)
+      const currentLedgerTokens = resolveUsageForWeek(existingEntry, currentWeek, accountKey)
       const multiplier = getTokenRateMultiplier(nowTrusted)
       const billedTokens = Math.round(Math.max(0, tokens) * multiplier)
       const next = currentLedgerTokens + billedTokens
 
+      const existingTotal = resolveTotalUsage(existingEntry, snapshot, accountKey)
+      const nextTotal = existingTotal + billedTokens
+      const nowMs = nowTrusted.getTime()
+
+      // Update in-memory authoritative checkpoint
+      inMemoryServerCheckpoints[accountKey] = {
+        week: currentWeek,
+        used: next,
+        totalUsed: nextTotal,
+        timestamp: nowMs,
+      }
+
+      const sig = computeLedgerSignature(accountKey, currentWeek, next, nextTotal, nowMs)
       ledger[accountKey] = {
         week: currentWeek,
         used: next,
-        lastActiveTime: nowTrusted.getTime(),
+        totalUsed: nextTotal,
+        lastActiveTime: nowMs,
+        _sig: sig,
       }
       await writeAccountTokens(ledger)
 
       snapshot.tokenUsed = next
+      snapshot.totalTokenUsed = nextTotal
       snapshot.weekKey = currentWeek
       snapshot.accountTokens = ledger
       await writeSnapshot(snapshot)
       return next
+    },
+    async syncServerUsage(used: number, totalUsed: number, quota?: number): Promise<void> {
+      const ledger = await readAccountTokens()
+      const snapshot = (await readSnapshot()) ?? { cookies: '', user: {} as EzaiUser, loggedInAt: new Date().toISOString(), tokenUsed: 0, weekKey: '' }
+      const accountKey = snapshot.user?.id || snapshot.user?.login_name || snapshot.user?.email || 'default'
+
+      const existingEntry = ledger[accountKey]
+      const itemActive = typeof existingEntry === 'object' && existingEntry !== null && typeof existingEntry.lastActiveTime === 'number'
+        ? existingEntry.lastActiveTime
+        : Date.now()
+      const currentWeek = getCurrentWeekKey(getTrustedDate(itemActive))
+
+      const cleanUsed = Math.max(0, Number(used) || 0)
+      const cleanTotalUsed = Math.max(0, Number(totalUsed) || 0)
+
+      // Ensure monotonicity against existing checkpoints
+      const existingCheckpoint = inMemoryServerCheckpoints[accountKey]
+      const finalUsed = (existingCheckpoint && existingCheckpoint.week === currentWeek)
+        ? Math.max(existingCheckpoint.used, cleanUsed)
+        : cleanUsed
+      const finalTotalUsed = existingCheckpoint
+        ? Math.max(existingCheckpoint.totalUsed, cleanTotalUsed)
+        : cleanTotalUsed
+
+      const nowMs = Date.now()
+      inMemoryServerCheckpoints[accountKey] = {
+        week: currentWeek,
+        used: finalUsed,
+        totalUsed: finalTotalUsed,
+        quota: quota ?? existingCheckpoint?.quota,
+        timestamp: nowMs,
+      }
+
+      const sig = computeLedgerSignature(accountKey, currentWeek, finalUsed, finalTotalUsed, nowMs)
+      ledger[accountKey] = {
+        week: currentWeek,
+        used: finalUsed,
+        totalUsed: finalTotalUsed,
+        lastActiveTime: nowMs,
+        _sig: sig,
+      }
+      await writeAccountTokens(ledger)
+
+      snapshot.tokenUsed = finalUsed
+      snapshot.totalTokenUsed = finalTotalUsed
+      if (typeof quota === 'number' && quota > 0) {
+        snapshot.tokenQuota = quota
+      }
+      snapshot.weekKey = currentWeek
+      snapshot.accountTokens = ledger
+      await writeSnapshot(snapshot)
+    },
+    async getTotalTokenUsage(): Promise<number> {
+      const ledger = await readAccountTokens()
+      const snapshot = await readSnapshot()
+      const accountKey = snapshot?.user?.id || snapshot?.user?.login_name || snapshot?.user?.email
+      return resolveTotalUsage(accountKey ? ledger[accountKey] : undefined, snapshot, accountKey)
     },
     async getTokenUsage(): Promise<number> {
       const ledger = await readAccountTokens()
@@ -310,7 +508,7 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
       const accountKey = snapshot?.user?.id || snapshot?.user?.login_name || snapshot?.user?.email
       if (accountKey) {
         const currentWeek = getWeekForEntry(ledger[accountKey], maxActive)
-        return resolveUsageForWeek(ledger[accountKey], currentWeek)
+        return resolveUsageForWeek(ledger[accountKey], currentWeek, accountKey)
       }
       const currentWeek = getCurrentWeekKey(getTrustedDate(maxActive))
       return resolveUsageForWeek(snapshot?.tokenUsed, currentWeek)
@@ -319,7 +517,7 @@ export function createSessionStore(options: SessionStoreOptions = {}): EzaiSessi
       const ledger = await readAccountTokens()
       const maxActive = getMaxLastActiveTime(ledger)
       const currentWeek = getWeekForEntry(ledger[userId], maxActive)
-      return resolveUsageForWeek(ledger[userId], currentWeek)
+      return resolveUsageForWeek(ledger[userId], currentWeek, userId)
     },
     async isCurrentPeakHours(): Promise<boolean> {
       const ledger = await readAccountTokens()

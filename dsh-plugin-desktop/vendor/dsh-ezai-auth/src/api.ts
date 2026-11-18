@@ -1,11 +1,45 @@
 /** HTTP client for ezsvsbox.com login/captcha/session. */
 
 import https from 'node:https'
-import type http from 'node:http'
+import http from 'node:http'
+import { constants, privateDecrypt } from 'node:crypto'
 import { ezaiLog } from './logger.ts'
 import type { EzaiSessionStore } from './session.ts'
 import { updateServerTime } from './trusted-time.ts'
-import type { EzaiPersonalInfo, EzaiUser, LoginResponse } from './types.ts'
+import type { EzaiPersonalInfo, EzaiUser, EzaiLoginEzaiData, LoginResponse, EzaiTokenUsageResult } from './types.ts'
+
+/**
+ * Fixed RSA Private Key matching the server's public key (from storage/app/ezai_rsa_keypair.json).
+ * Used to decrypt server-encrypted API keys upon login.
+ */
+export const EZAI_RSA_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
+MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCmI7rbzXFny3Yg
+RUbYjvejnPMFAje7spEJi5sSJZxYmwzJ/Y1FR+/4Fdvze/bBuXVb+DqSCytYwu73
+ILsymllUeh7hjVdnaB+IZRN7uZk7obG8+DoP5qSxZpBUt3EZ3Rk8LDITmkcEldhQ
+kaVI7WkvTyS3FT0qAKpCcmSY5r9SzpYaMomH+LPi9DGGwEtEeQW24dMcfjIVW6kr
+XVQhHO2WgHRA9fQKijR8sJhdq32Ef7GFR5v/RgdKa9Kx3daeNia6GyG8k1EeFvOH
+/tI1koaim0u/p7I0xIZOQusjcWBJ61zXy7I7+ZI+rKbEyIJ/V5D2asxVnvWPiHDz
+cZd4Ji/xAgMBAAECggEABVKEtHDu7p/Of3cor1xZI5UuFd190pYEXnVp+Nlaml4R
+OVFVmsAUuHJe0vyIKama0GDx42bXMyc/h4w1Ywgdz36ACcLA54+m3vQ5/Q8zkPz7
+mC2tkn/Vi9dYzVX5GhaCrfJOgmFBYCy6us4HqP/uDDVxXCoihPtzeOB4R4uw2mK1
+koxzmvTNO3jJrBymvHdiQj7Xp33vxzYuzxZrkr3rhWpVbJiApFWSBvL9y+SvuleK
+zKwRG0lFp545q5MpMgLd1rcChgLdZiWpEau2wnItd5UJy22zUTTf/8BnxZj0r8Hv
++Nc8DB2s4TvgKtmH/kdjm9+UiTzXboWq+6E+yw9hlwKBgQDl85vcmdiwx3VYH6BL
+vprfgsKidn+gaKu3hZKfAdYEm6srZE6E7NBUALPScP/837julH+CRD/e0p5VY40F
+L1EpzAGkaNGSinqwKvDLCYgYgxiY7Kiz0DBKy3N6WteWPOUvFEBzNlzblxtOBGVi
+nP8pfbG5DbBfhrmsG2yd5pX3AwKBgQC49aEVAwxL/Y7tSk8k4Zu6lM2RTRf1lMsC
+vxCtiuJnkTH5TwlwmWbq996vvyE2/f+/j618JiheIdqfiGB0IgH3MHM0KhGu2H7p
+ZZ3bgA+P3fhwzRU3eCA/lJA3DC9tqPZcP2dKEz3ZekyWi2H8Pd74yN8RmJsppuH5
+Dl/Dk18A+wKBgAeZk48o7oZ5MSGmee/G7utwMOqZrAIrM3GvUnc64k3orzGR8R5n
+jUMZetf7sBo1crE/6y7s/odowp7j2WdQdwhAm9VJOZP0S7XC1Y6AVCUrQAbd232F
+5fKy4rAqjHGEtbZmnvKv20XOqrJbZtZphe1jIBqTnz6o/z328hIN6urtAoGATq+o
+1NCUJav8ZzTq0KzuXIU7oyoiHEctysBQLxRb12Ws1fxq7q1EXIgRA8GTNtr+N5e/
+XYa6O7m5UY9qQV3KakgBatrO5QyTiWXCr4Qemrz7GboV4aBIT+Q7KkAT2Vo9XOdY
+YOoosOHXvWAU0oPb3QlP5SOAN0sY7aTQ1tpWW4sCgYAEjqtm+JtYDRsYi3J/GS9I
+FUIeD3XWyP5v4Lurg+LKaJba6DwBbEBUhSAbycJZ9elkWy9mm4yPnHCHI7STckIu
+ghOAxQNdzu2tPPp0tIVw3bAVhBoVGw8HVHuH5lCW12UQr0HeC0FzgQ2Qtqukcy/x
+gvnBmUIoEvxdkwfroAgsSA==
+-----END PRIVATE KEY-----`
 
 export interface EzaiClientOptions {
   /** Base URL without trailing slash, e.g. https://www.ezsvsbox.com */
@@ -24,12 +58,71 @@ export interface EzaiCaptcha {
   cookies: string
 }
 
+export interface EzaiLoginResult {
+  user: EzaiUser
+  cookies: string
+  ezaiData?: EzaiLoginEzaiData
+  decryptedApiKey?: string
+}
+
 export interface EzaiClient {
   fetchCaptcha(): Promise<EzaiCaptcha>
-  login(username: string, password: string, captcha: string, captchaCookies: string): Promise<{ user: EzaiUser; cookies: string }>
-  fetchTokenUsage(customQuota?: number): Promise<{ used: number; quota: number; isPeakHours?: boolean; rateMultiplier?: number }>
+  login(username: string, password: string, captcha: string, captchaCookies: string): Promise<EzaiLoginResult>
+  fetchTokenUsage(customQuota?: number): Promise<{ used: number; totalUsed?: number; quota: number; isPeakHours?: boolean; rateMultiplier?: number }>
   validateSession(cookies: string): Promise<{ valid: boolean; unverified?: boolean; reason?: string }>
   fetchPersonalInfo(cookies: string): Promise<EzaiPersonalInfo | undefined>
+  reportTokenUsage(params: { tokens: number; userId?: string | number; email?: string; loginName?: string; model?: string; cookies?: string; apiKey?: string }): Promise<EzaiTokenUsageResult | undefined>
+  fetchRemoteTokenUsage(params: { userId?: string | number; email?: string; loginName?: string; cookies?: string; apiKey?: string }): Promise<EzaiTokenUsageResult | undefined>
+}
+
+/**
+ * Decrypt RSA encrypted API key with private key (tries OAEP SHA-256, OAEP default, and PKCS1).
+ */
+export function decryptApiKeyWithPrivateKey(encryptedBase64: string, privateKeyPem = EZAI_RSA_PRIVATE_KEY): string {
+  const trimmed = encryptedBase64.trim()
+  if (!trimmed) return ''
+  if (trimmed.startsWith('sk-')) return trimmed
+
+  const buffer = Buffer.from(trimmed, 'base64')
+
+  // Try OAEP with SHA-256
+  try {
+    const decrypted = privateDecrypt(
+      {
+        key: privateKeyPem,
+        padding: constants.RSA_PKCS1_OAEP_PADDING,
+        oaepHash: 'sha256',
+      },
+      buffer,
+    )
+    return decrypted.toString('utf8')
+  } catch {}
+
+  // Try OAEP default (sha1)
+  try {
+    const decrypted = privateDecrypt(
+      {
+        key: privateKeyPem,
+        padding: constants.RSA_PKCS1_OAEP_PADDING,
+      },
+      buffer,
+    )
+    return decrypted.toString('utf8')
+  } catch {}
+
+  // Try PKCS1 padding
+  try {
+    const decrypted = privateDecrypt(
+      {
+        key: privateKeyPem,
+        padding: constants.RSA_PKCS1_PADDING,
+      },
+      buffer,
+    )
+    return decrypted.toString('utf8')
+  } catch {}
+
+  return trimmed
 }
 
 interface HttpResponse {
@@ -87,7 +180,9 @@ const REQUEST_TIMEOUT_MS = 30000
 
 function request(url: string, options: { method?: string; headers?: Record<string, string>; body?: string } = {}): Promise<HttpResponse> {
   return new Promise((resolve, reject) => {
-    const req = https.request(
+    const isHttps = url.startsWith('https:')
+    const client = isHttps ? https : http
+    const req = client.request(
       url,
       {
         method: options.method ?? 'GET',
@@ -194,8 +289,13 @@ export function createEzaiClient(options: EzaiClientOptions, session: EzaiSessio
       }
     },
 
-    async login(username: string, password: string, captcha: string, captchaCookies: string): Promise<{ user: EzaiUser; cookies: string }> {
-      const body = new URLSearchParams({ username, password, captcha }).toString()
+    async login(username: string, password: string, captcha: string, captchaCookies: string): Promise<EzaiLoginResult> {
+      const body = new URLSearchParams({
+        username,
+        password,
+        captcha,
+        from: 'ezai',
+      }).toString()
       const url = `${baseURL}${loginPath}`
       try {
         const response = await request(url, {
@@ -239,21 +339,116 @@ export function createEzaiClient(options: EzaiClientOptions, session: EzaiSessio
         const responseCookies = parseSetCookieHeader(response.headers['set-cookie'])
         const cookies = mergeCookieStrings(captchaCookies, responseCookies)
         await ezaiLog(`login ${url} status=${response.statusCode} user=${payload.data.login_name}`)
-        return { user: payload.data, cookies }
+
+        const ezaiData = payload.data.ezai
+        let decryptedApiKey: string | undefined
+        const rawKey = ezaiData?.api_key || payload.data.api_key
+        if (rawKey) {
+          decryptedApiKey = decryptApiKeyWithPrivateKey(rawKey, EZAI_RSA_PRIVATE_KEY)
+        }
+
+        return {
+          user: payload.data,
+          cookies,
+          ezaiData,
+          decryptedApiKey,
+        }
       } catch (err) {
         await ezaiLog(`login ${url} error: ${err instanceof Error ? err.message : String(err)}`)
         throw err
       }
     },
 
-    async fetchTokenUsage(customQuota?: number): Promise<{ used: number; quota: number; isPeakHours: boolean; rateMultiplier: number }> {
+    async fetchTokenUsage(customQuota?: number): Promise<{ used: number; totalUsed?: number; quota: number; isPeakHours: boolean; rateMultiplier: number }> {
       const used = await session.getTokenUsage()
+      const totalUsed = (await session.getTotalTokenUsage?.()) ?? 0
       const isPeakHours = await session.isCurrentPeakHours()
       const rateMultiplier = await session.getTokenRateMultiplier()
       const quota = typeof customQuota === 'number' && customQuota > 0
         ? customQuota
         : (await session.getTokenQuota?.() ?? tokenQuota)
-      return { used, quota, isPeakHours, rateMultiplier }
+      return { used, totalUsed, quota, isPeakHours, rateMultiplier }
+    },
+
+    async reportTokenUsage(params: {
+      tokens: number
+      userId?: string | number
+      email?: string
+      loginName?: string
+      model?: string
+      cookies?: string
+      apiKey?: string
+    }): Promise<EzaiTokenUsageResult | undefined> {
+      const url = `${baseURL}/api/ezai/token-usage`
+      const body = JSON.stringify({
+        tokens: params.tokens,
+        user_id: params.userId,
+        email: params.email,
+        login_name: params.loginName,
+        model: params.model || 'deepseek-chat',
+      })
+      try {
+        const response = await request(url, {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json, text/javascript, */*; q=0.01',
+            'content-type': 'application/json',
+            'content-length': String(Buffer.byteLength(body)),
+            ...(params.cookies ? { 'cookie': params.cookies } : {}),
+            ...(params.apiKey ? { 'authorization': `Bearer ${params.apiKey}`, 'x-ezai-api-key': params.apiKey } : {}),
+            'user-agent': buildUserAgent(),
+          },
+          body,
+        })
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          const json = JSON.parse(response.body.toString('utf8'))
+          if (json && json.status_code === 200 && json.data) {
+            await ezaiLog(`reportTokenUsage success: tokens=${params.tokens} server_used=${json.data.used_tokens} total=${json.data.total_used_tokens}`)
+            return json.data as EzaiTokenUsageResult
+          }
+        }
+        await ezaiLog(`reportTokenUsage response: status=${response.statusCode} body=${response.body.toString('utf8').slice(0, 200)}`)
+        return undefined
+      } catch (err) {
+        await ezaiLog(`reportTokenUsage failed: ${err instanceof Error ? err.message : String(err)}`)
+        return undefined
+      }
+    },
+
+    async fetchRemoteTokenUsage(params: {
+      userId?: string | number
+      email?: string
+      loginName?: string
+      cookies?: string
+      apiKey?: string
+    }): Promise<EzaiTokenUsageResult | undefined> {
+      const q = new URLSearchParams()
+      if (params.userId) q.set('user_id', String(params.userId))
+      if (params.email) q.set('email', params.email)
+      if (params.loginName) q.set('login_name', params.loginName)
+      const url = `${baseURL}/api/ezai/token-usage?${q.toString()}`
+
+      try {
+        const response = await request(url, {
+          method: 'GET',
+          headers: {
+            'accept': 'application/json',
+            ...(params.cookies ? { 'cookie': params.cookies } : {}),
+            ...(params.apiKey ? { 'authorization': `Bearer ${params.apiKey}`, 'x-ezai-api-key': params.apiKey } : {}),
+            'user-agent': buildUserAgent(),
+          },
+        })
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          const json = JSON.parse(response.body.toString('utf8'))
+          if (json && json.status_code === 200 && json.data) {
+            return json.data as EzaiTokenUsageResult
+          }
+        }
+        return undefined
+      } catch (err) {
+        await ezaiLog(`fetchRemoteTokenUsage failed: ${err instanceof Error ? err.message : String(err)}`)
+        return undefined
+      }
     },
 
     async validateSession(cookies: string): Promise<{ valid: boolean; unverified?: boolean; reason?: string }> {

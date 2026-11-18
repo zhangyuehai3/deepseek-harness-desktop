@@ -24,3 +24,13 @@
   disabled: true
 - id: product-analytics
   disabled: true
+
+# Disable official session log uploading by default
+- id: session-log-deepseek
+  config:
+    enabled: false
+  disabled: true
+
+# Hide and disable Session Log settings row in General settings
+- id: ui-settings-session-log
+  disabled: true

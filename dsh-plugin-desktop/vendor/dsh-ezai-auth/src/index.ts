@@ -4,6 +4,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import z from '@deepseek-ai/schemastery'
 import { createEzaiClient } from './api.ts'
 import { createSessionStore } from './session.ts'
+import { ezaiLog } from './logger.ts'
 import type { AccountResponse, CaptchaResponse, EzaiPersonalInfo, EzaiUser, LoginRequest } from './types.ts'
 
 export const name = 'dsh-ezai-auth'
@@ -123,56 +124,23 @@ process.env.NO_PROXY = mergedNoProxy
 process.env.no_proxy = mergedNoProxy
 
 import {
-  getBootstrapApiKey,
   resolveApiKey,
+  saveEncryptedApiKey,
   scrubDiskPlaintextCredentials,
-  isCommerceDepartment,
-  isBusinessDepartment,
-  isFinanceDepartment,
-  isEastAsiaDepartment,
-  isEuropeDepartment,
-  getCommerceApiKey,
-  getBusinessApiKey,
-  getFinanceApiKey,
-  getEastAsiaApiKey,
-  getEuropeApiKey,
   getSavedCredentials,
   saveSavedCredentials,
 } from './vault.ts'
-export {
-  isCommerceDepartment,
-  isBusinessDepartment,
-  isFinanceDepartment,
-  isEastAsiaDepartment,
-  isEuropeDepartment,
-  getCommerceApiKey,
-  getBusinessApiKey,
-  getFinanceApiKey,
-  getEastAsiaApiKey,
-  getEuropeApiKey,
-}
 
 const DEEPSEEK_OPENAI_BASE_URL = 'https://api.deepseek.com'
 const DEEPSEEK_ANTHROPIC_BASE_URL = 'https://api.deepseek.com/anthropic'
 
-let activeDepartment: string | undefined = undefined
-
-export function setActiveDepartment(department?: string): void {
-  activeDepartment = department
-}
-
-export function getActiveDepartment(): string | undefined {
-  return activeDepartment
-}
-
-// Initialize in-memory DEEPSEEK_API_KEY if not already provided
-if (!process.env.DEEPSEEK_API_KEY) {
-  process.env.DEEPSEEK_API_KEY = getBootstrapApiKey()
-}
 // Asynchronously hydrate from safeStorage vault and scrub plaintext credentials from disk
 void (async () => {
   try {
-    process.env.DEEPSEEK_API_KEY = await resolveApiKey()
+    const key = await resolveApiKey()
+    if (key) {
+      process.env.DEEPSEEK_API_KEY = key
+    }
     await scrubDiskPlaintextCredentials()
   } catch {}
 })()
@@ -196,9 +164,15 @@ export function patchCredentialsService(credentials: any): void {
   if (origResolve) {
     credentials.resolve = async (ref: string) => {
       if (ref === 'DEEPSEEK_API_KEY') {
-        if (!process.env.DEEPSEEK_API_KEY) return undefined
-        const apiKey = await resolveApiKey(activeDepartment)
+        let apiKey = process.env.DEEPSEEK_API_KEY
+        if (!apiKey) {
+          apiKey = await resolveApiKey()
+          if (apiKey) {
+            process.env.DEEPSEEK_API_KEY = apiKey
+          }
+        }
         if (apiKey) return { value: apiKey, source: 'env' }
+        return undefined
       }
       return origResolve(ref)
     }
@@ -208,10 +182,17 @@ export function patchCredentialsService(credentials: any): void {
   if (origDescribe) {
     credentials.describe = async (ref: string) => {
       if (ref === 'DEEPSEEK_API_KEY') {
-        if (!process.env.DEEPSEEK_API_KEY) {
-          return { configured: false, writable: true }
+        let apiKey = process.env.DEEPSEEK_API_KEY
+        if (!apiKey) {
+          apiKey = await resolveApiKey()
+          if (apiKey) {
+            process.env.DEEPSEEK_API_KEY = apiKey
+          }
         }
-        return { configured: true, source: 'env', writable: false }
+        if (apiKey) {
+          return { configured: true, source: 'env', writable: false }
+        }
+        return { configured: false, writable: true }
       }
       return origDescribe(ref)
     }
@@ -227,8 +208,7 @@ export function patchLaunchEnvironment(env: any): void {
     env.get = (name: string) => {
       if (name === 'DEEPSEEK_API_KEY') {
         if (!process.env.DEEPSEEK_API_KEY) return undefined
-        const key = process.env.DEEPSEEK_API_KEY || getBootstrapApiKey(activeDepartment)
-        return { value: key, source: 'process' }
+        return { value: process.env.DEEPSEEK_API_KEY, source: 'process' }
       }
       return origGet(name)
     }
@@ -239,18 +219,21 @@ export function patchLaunchEnvironment(env: any): void {
     env.getFrom = (name: string, sources: readonly string[]) => {
       if (name === 'DEEPSEEK_API_KEY' && (!sources || sources.includes('process'))) {
         if (!process.env.DEEPSEEK_API_KEY) return undefined
-        const key = process.env.DEEPSEEK_API_KEY || getBootstrapApiKey(activeDepartment)
-        return { value: key, source: 'process' }
+        return { value: process.env.DEEPSEEK_API_KEY, source: 'process' }
       }
       return origGetFrom(name, sources)
     }
   }
 }
 
-async function ensureDefaultModelConfig(ctx: any, department?: string): Promise<void> {
-  activeDepartment = department
-  const apiKey = await resolveApiKey(department)
-  process.env.DEEPSEEK_API_KEY = apiKey
+async function ensureDefaultModelConfig(ctx: any, explicitApiKey?: string): Promise<void> {
+  const apiKey = explicitApiKey || (await resolveApiKey())
+  if (apiKey) {
+    process.env.DEEPSEEK_API_KEY = apiKey
+    try {
+      await saveEncryptedApiKey(apiKey)
+    } catch {}
+  }
 
   // 1. Ensure in Cordis credentials
   try {
@@ -405,7 +388,6 @@ async function ensureDefaultModelConfig(ctx: any, department?: string): Promise<
 }
 
 async function removeDefaultModelConfig(ctx: any): Promise<void> {
-  activeDepartment = undefined
   // Clear in-memory env
   delete process.env.DEEPSEEK_API_KEY
 
@@ -582,18 +564,21 @@ export async function checkUserAllowed(
   personalInfo?: Partial<EzaiPersonalInfo>,
   username?: string,
 ): Promise<UserAllowedCheckResult> {
-  const remote = await fetchRemoteWhitelist()
-  if (!remote.success) {
+  let whitelist: WhitelistData = {}
+  try {
+    const remote = await fetchRemoteWhitelist()
+    if (remote.success) {
+      whitelist = remote.data
+    }
+  } catch {}
+
+  // If no whitelist is configured or available, grant access directly in all-API mode
+  if (!whitelist || Object.keys(whitelist).length === 0) {
     return {
-      allowed: false,
-      reason: 'whitelist_fetch_failed',
-      title: '网络连接异常提示',
-      message:
-        '网络连接异常，无法获取当前授权白名单配置。\n\n请检查您的网络连接是否正常，或稍后重试。如问题持续存在，请联系系统管理员确认服务状态。',
+      allowed: true,
+      department: personalInfo?.department,
     }
   }
-
-  const whitelist = remote.data
   const candidateEmails = [
     user?.email,
     personalInfo?.email,
@@ -628,7 +613,7 @@ export async function checkUserAllowed(
           const tokenQuota = parseQuota(member.tokenQuota)
           const matchedDepartment = (typeof member.department === 'string' && member.department.trim())
             ? member.department.trim()
-            : (department && isCommerceDepartment(department) ? department : deptName)
+            : (deptName || department)
           return { allowed: true, tokenQuota, department: matchedDepartment }
         }
       }
@@ -643,7 +628,7 @@ export async function checkUserAllowed(
           const tokenQuota = parseQuota(member.tokenQuota) ?? deptQuota
           const matchedDepartment = (typeof member.department === 'string' && member.department.trim())
             ? member.department.trim()
-            : (department && isCommerceDepartment(department) ? department : deptName)
+            : (deptName || department)
           return { allowed: true, tokenQuota, department: matchedDepartment }
         }
       }
@@ -657,16 +642,14 @@ export async function checkUserAllowed(
         department &&
         (department === deptName || department.includes(deptName) || deptName.includes(department))
       ) {
-        const matchedDept = isCommerceDepartment(department) ? department : deptName
-        return { allowed: true, department: matchedDept }
+        return { allowed: true, department: department || deptName }
       }
     } else if (config && typeof config === 'object' && (config as any).all === true) {
       if (
         department &&
         (department === deptName || department.includes(deptName) || deptName.includes(department))
       ) {
-        const matchedDept = isCommerceDepartment(department) ? department : deptName
-        return { allowed: true, tokenQuota: parseQuota((config as any).tokenQuota), department: matchedDept }
+        return { allowed: true, tokenQuota: parseQuota((config as any).tokenQuota), department: department || deptName }
       }
     }
   }
@@ -732,19 +715,12 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
     try {
       const snapshot = await session.getSnapshot()
       if (snapshot?.user && snapshot.cookies) {
-        const check = await checkUserAllowed(snapshot.user, snapshot.personalInfo, snapshot.user.login_name)
-        if (check.allowed) {
-          if (check.department && session.setWhitelistDepartment) {
-            await session.setWhitelistDepartment(check.department)
-          }
-          const effectiveDept =
-            (snapshot.personalInfo?.department && isCommerceDepartment(snapshot.personalInfo.department))
-              ? snapshot.personalInfo.department
-              : (check.department || snapshot.whitelistDepartment || snapshot.personalInfo?.department)
-          await ensureDefaultModelConfig(ctx, effectiveDept)
-        } else {
-          await session.clear()
-          await removeDefaultModelConfig(ctx)
+        const apiKey = snapshot.apiKey || (await resolveApiKey())
+        await ensureDefaultModelConfig(ctx, apiKey)
+      } else {
+        const storedKey = await resolveApiKey()
+        if (storedKey) {
+          await ensureDefaultModelConfig(ctx, storedKey)
         }
       }
     } catch {
@@ -797,7 +773,8 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
         try {
           const body = await readJson(req)
           const { username, password, captcha, cookies } = assertLoginRequest(body)
-          const { user, cookies: responseCookies } = await client.login(username, password, captcha, cookies)
+          const loginResult = await client.login(username, password, captcha, cookies)
+          const { user, cookies: responseCookies, ezaiData, decryptedApiKey } = loginResult
           await session.setCookies(responseCookies)
           await session.setUser(user)
 
@@ -810,37 +787,46 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
             }
           } catch {}
 
-          // Check access permission against dynamic whitelist
-          const department = (personalInfo?.department || '').trim()
-          const check = await checkUserAllowed(user, personalInfo, username)
-
-          if (!check.allowed) {
-            // Delete session and remove all model configurations immediately
+          // Validate EZAI seat permissions from login response
+          if (ezaiData && ezaiData.can_use !== 1) {
             await session.clear()
             await removeDefaultModelConfig(ctx)
-
             finishJson(res, 403, {
               status_code: 403,
-              title: check.title,
-              message: check.message,
-              error: check.reason,
+              title: '席位权限提示',
+              message: '您尚未开通EZAI使用权限，请联系管理员分配席位',
+              error: 'no_seat',
               departmentDisallowed: true,
-              department: department || '未知部门',
+              department: ezaiData.department_name || personalInfo?.department || '未知部门',
             })
             return
           }
 
-          const userQuota = check.tokenQuota ?? (Number(config.tokenQuota) || 200_000_000)
-          await session.setTokenQuota?.(userQuota)
-          if (check.department && session.setWhitelistDepartment) {
-            await session.setWhitelistDepartment(check.department)
+          // Persist server-issued API Key
+          if (decryptedApiKey) {
+            await session.setApiKey?.(decryptedApiKey)
+            await saveEncryptedApiKey(decryptedApiKey)
           }
 
-          const effectiveDept =
-            (personalInfo?.department && isCommerceDepartment(personalInfo.department))
-              ? personalInfo.department
-              : (check.department || personalInfo?.department)
-          await ensureDefaultModelConfig(ctx, effectiveDept)
+          const userQuota = (ezaiData && typeof ezaiData.token_quota === 'number' && ezaiData.token_quota > 0)
+            ? ezaiData.token_quota
+            : (Number(config.tokenQuota) || 200_000_000)
+          await session.setTokenQuota?.(userQuota)
+
+          if (ezaiData) {
+            await session.syncServerUsage?.(
+              Number(ezaiData.used_tokens) || 0,
+              Number(ezaiData.total_used_tokens) || 0,
+              userQuota,
+            )
+          }
+
+          const effectiveDept = ezaiData?.department_name || personalInfo?.department
+          if (effectiveDept && session.setDepartmentName) {
+            await session.setDepartmentName(effectiveDept)
+          }
+
+          await ensureDefaultModelConfig(ctx, decryptedApiKey)
           finishJson(res, 200, { status_code: 200, message: '登录成功', user, personalInfo })
         } catch (err) {
           const msg = err instanceof Error ? err.message : '登录失败'
@@ -902,43 +888,36 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
             } catch {}
           }
 
-          // 4. Access permission check against dynamic whitelist
-          const department = (personalInfo?.department || '').trim()
-          const check = await checkUserAllowed(snapshot.user, personalInfo, snapshot.user.login_name)
-          if (!check.allowed) {
-            await session.clear()
-            await removeDefaultModelConfig(ctx)
-            finishJson(res, 403, {
-              status_code: 403,
-              title: check.title,
-              message: check.message,
-              error: check.reason,
-              departmentDisallowed: true,
-              department: department || '未知部门',
+          const effectiveDept = snapshot.departmentName || personalInfo?.department || snapshot.whitelistDepartment
+          if (!process.env.DEEPSEEK_API_KEY) {
+            await ensureDefaultModelConfig(ctx, snapshot.apiKey)
+          }
+
+          // 4. Try refreshing token usage and quota from server
+          try {
+            const remoteUsage = await client.fetchRemoteTokenUsage({
+              userId: snapshot.user.id,
+              email: snapshot.user.email,
+              loginName: snapshot.user.login_name,
+              cookies: snapshot.cookies,
+              apiKey: snapshot.apiKey,
             })
-            return
-          }
+            if (remoteUsage) {
+              await session.syncServerUsage?.(
+                remoteUsage.used_tokens,
+                remoteUsage.total_used_tokens,
+                remoteUsage.token_quota,
+              )
+            }
+          } catch {}
 
-          if (check.department && session.setWhitelistDepartment) {
-            await session.setWhitelistDepartment(check.department)
-          }
-
-          const effectiveDept =
-            (personalInfo?.department && isCommerceDepartment(personalInfo.department))
-              ? personalInfo.department
-              : (check.department || snapshot.whitelistDepartment || personalInfo?.department)
-          if (effectiveDept && effectiveDept !== activeDepartment) {
-            await ensureDefaultModelConfig(ctx, effectiveDept)
-          }
-
-          const userQuota = check.tokenQuota ?? (Number(config.tokenQuota) || 200_000_000)
-          await session.setTokenQuota?.(userQuota)
-
+          const userQuota = snapshot.tokenQuota ?? (Number(config.tokenQuota) || 200_000_000)
           const tokenUsage = await client.fetchTokenUsage(userQuota)
           const payload: AccountResponse = {
             user: snapshot.user,
             personalInfo,
             tokenUsage,
+            departmentName: effectiveDept,
             warning: validation.unverified ? '网络连接异常，当前显示离线状态' : undefined,
           }
           finishJson(res, 200, payload)
@@ -1119,6 +1098,22 @@ export function apply(ctx: any, config: EzaiAuthConfig): void {
 
     if (requestTokens > 0) {
       await session.addTokenUsage(requestTokens)
+      const modelName = options?.model?.id || options?.model || 'deepseek-chat'
+      client.reportTokenUsage({
+        tokens: requestTokens,
+        userId: snapshot?.user?.id,
+        email: snapshot?.user?.email,
+        loginName: snapshot?.user?.login_name,
+        model: typeof modelName === 'string' ? modelName : 'deepseek-chat',
+        cookies: snapshot?.cookies,
+        apiKey: snapshot?.apiKey,
+      }).then((res) => {
+        if (res) {
+          session.syncServerUsage?.(res.used_tokens, res.total_used_tokens, res.token_quota)
+        }
+      }).catch((err) => {
+        ezaiLog(`reportTokenUsage failed: ${err instanceof Error ? err.message : String(err)}`)
+      })
     }
   })
 }

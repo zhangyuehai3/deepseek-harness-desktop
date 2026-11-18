@@ -8,122 +8,6 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 
-// XOR masked seed bytes for default key
-// XOR mask: 0x5a
-const SEED_MASK = 0x5a
-const DEFAULT_SEED_BYTES = [
-  41, 49, 119, 111, 63, 105, 62, 98, 109, 59, 98, 111, 110, 57, 109, 110, 106, 99, 107, 99, 108, 57, 106, 105, 105, 109, 62, 108, 62, 108, 108, 98, 111, 57, 57,
-]
-
-// XOR masked seed bytes for commerce key (商务部专用: 金石易服/财务管理中心/商务部)
-const COMMERCE_SEED_BYTES = [
-  41, 49, 119, 62, 60, 56, 99, 111, 109, 59, 56, 105, 99, 59, 59, 110, 57, 105, 111, 98, 108, 106, 105, 109, 99, 62, 105, 104, 104, 60, 110, 109, 98, 110, 57,
-]
-
-// XOR masked seed bytes for finance key (财务管理中心专用)
-const FINANCE_SEED_BYTES = [
-  41, 49, 119, 62, 108, 105, 57, 99, 111, 107, 62, 111, 98, 98, 57, 110, 59, 104, 98, 98, 109, 63, 107, 62, 106, 56, 104, 99, 60, 99, 107, 60, 99, 99, 108,
-]
-
-// XOR masked seed bytes for East Asia key (东亚大区专用)
-const EAST_ASIA_SEED_BYTES = [
-  41, 49, 119, 63, 105, 63, 107, 63, 98, 98, 111, 98, 108, 63, 106, 110, 109, 106, 106, 59, 57, 59, 109, 56, 104, 60, 60, 63, 99, 99, 104, 110, 107, 110, 104,
-]
-
-// XOR masked seed bytes for Europe key (欧洲大区专用)
-const EUROPE_SEED_BYTES = [
-  41, 49, 119, 99, 111, 56, 59, 63, 57, 57, 109, 108, 59, 106, 111, 110, 111, 104, 57, 98, 57, 57, 99, 98, 60, 107, 106, 99, 104, 60, 107, 107, 109, 57, 106,
-]
-
-export function isCommerceDepartment(department?: string): boolean {
-  return typeof department === 'string' && department.includes('商务部')
-}
-
-export const isBusinessDepartment = isCommerceDepartment
-
-export function isFinanceDepartment(department?: string): boolean {
-  return typeof department === 'string' && department.includes('财务管理中心') && !department.includes('商务部')
-}
-
-export function isEastAsiaDepartment(department?: string): boolean {
-  return typeof department === 'string' && department.includes('东亚大区')
-}
-
-export function isEuropeDepartment(department?: string): boolean {
-  if (typeof department !== 'string') return false
-  return (
-    department.includes('欧洲大区') ||
-    department.includes('欧洲') ||
-    department.toLowerCase().includes('zhangyin@ezaigc.com') ||
-    department.toLowerCase().includes('zhangyin@ezsvs.com')
-  )
-}
-
-export function getBootstrapApiKey(department?: string): string {
-  if (isCommerceDepartment(department)) {
-    return process.env.COMMERCE_DEEPSEEK_API_KEY || process.env.BUSINESS_DEEPSEEK_API_KEY || getCommerceApiKey()
-  }
-  if (isFinanceDepartment(department)) {
-    return process.env.FINANCE_DEEPSEEK_API_KEY || getFinanceApiKey()
-  }
-  if (isEastAsiaDepartment(department)) {
-    return process.env.EAST_ASIA_DEEPSEEK_API_KEY || getEastAsiaApiKey()
-  }
-  if (isEuropeDepartment(department)) {
-    return process.env.EUROPE_DEEPSEEK_API_KEY || getEuropeApiKey()
-  }
-  return process.env.DEFAULT_DEEPSEEK_API_KEY || String.fromCharCode(...DEFAULT_SEED_BYTES.map((b) => b ^ SEED_MASK))
-}
-
-export function getCommerceApiKey(): string {
-  return String.fromCharCode(...COMMERCE_SEED_BYTES.map((b) => b ^ SEED_MASK))
-}
-
-export const getBusinessApiKey = getCommerceApiKey
-
-export function getFinanceApiKey(): string {
-  return String.fromCharCode(...FINANCE_SEED_BYTES.map((b) => b ^ SEED_MASK))
-}
-
-export function getEastAsiaApiKey(): string {
-  return String.fromCharCode(...EAST_ASIA_SEED_BYTES.map((b) => b ^ SEED_MASK))
-}
-
-export function getEuropeApiKey(): string {
-  return String.fromCharCode(...EUROPE_SEED_BYTES.map((b) => b ^ SEED_MASK))
-}
-
-export function getDepartmentScopeInfo(department?: string): { scope: string; fallbackKey: string } {
-  if (isCommerceDepartment(department)) {
-    return {
-      scope: 'commerce',
-      fallbackKey: process.env.COMMERCE_DEEPSEEK_API_KEY || process.env.BUSINESS_DEEPSEEK_API_KEY || getCommerceApiKey(),
-    }
-  }
-  if (isFinanceDepartment(department)) {
-    return {
-      scope: 'finance',
-      fallbackKey: process.env.FINANCE_DEEPSEEK_API_KEY || getFinanceApiKey(),
-    }
-  }
-  if (isEastAsiaDepartment(department)) {
-    return {
-      scope: 'east_asia',
-      fallbackKey: process.env.EAST_ASIA_DEEPSEEK_API_KEY || getEastAsiaApiKey(),
-    }
-  }
-  if (isEuropeDepartment(department)) {
-    return {
-      scope: 'europe',
-      fallbackKey: process.env.EUROPE_DEEPSEEK_API_KEY || getEuropeApiKey(),
-    }
-  }
-  return {
-    scope: 'default',
-    fallbackKey: process.env.DEFAULT_DEEPSEEK_API_KEY || getBootstrapApiKey(),
-  }
-}
-
 interface VaultDocument {
   version: number
   encrypted: boolean
@@ -143,88 +27,97 @@ async function getSafeStorage() {
   return null
 }
 
+function getVaultDir(): string {
+  if (process.env.DSH_HOME) {
+    return join(process.env.DSH_HOME, '.dsh-ezai-auth')
+  }
+  return join(homedir(), '.dsh', '.dsh-ezai-auth')
+}
+
 function getVaultPath(): string {
-  return join(homedir(), '.dsh', '.dsh-ezai-auth', 'credentials.vault')
+  return join(getVaultDir(), 'credentials.vault')
 }
 
 /**
  * Encrypt and persist API key to vault file using system-level safeStorage.
  */
-export async function saveEncryptedApiKey(key: string, scope = 'default'): Promise<boolean> {
+export async function saveEncryptedApiKey(key: string): Promise<boolean> {
   const ss = await getSafeStorage()
   const vaultPath = getVaultPath()
-  await mkdir(join(homedir(), '.dsh', '.dsh-ezai-auth'), { recursive: true })
+  await mkdir(getVaultDir(), { recursive: true })
 
-  if (ss) {
-    const encryptedBuf = ss.encryptString(key)
-    let doc: VaultDocument = {
-      version: 2,
-      encrypted: true,
-      storage: 'safeStorage',
-      ciphers: {},
-    }
-    try {
-      const content = await readFile(vaultPath, 'utf8')
-      const parsed = JSON.parse(content) as VaultDocument
-      if (parsed && typeof parsed === 'object') {
-        doc = {
-          ...parsed,
-          version: 2,
-          ciphers: {
-            ...(parsed.ciphers || {}),
-            ...(parsed.cipher ? { default: parsed.cipher } : {}),
-          },
-        }
-      }
-    } catch {}
+  const encryptedBuf = ss
+    ? ss.encryptString(key)
+    : Buffer.from(key, 'utf8')
 
-    doc.ciphers = doc.ciphers || {}
-    doc.ciphers[scope] = encryptedBuf.toString('base64')
-    if (scope === 'default') {
-      doc.cipher = doc.ciphers[scope]
-    }
-
-    await writeFile(vaultPath, JSON.stringify(doc, null, 2), { mode: 0o600, encoding: 'utf8' })
-    return true
+  let doc: VaultDocument = {
+    version: 2,
+    encrypted: true,
+    storage: ss ? 'safeStorage' : 'inMemory',
+    ciphers: {},
   }
+  try {
+    const content = await readFile(vaultPath, 'utf8')
+    const parsed = JSON.parse(content) as VaultDocument
+    if (parsed && typeof parsed === 'object') {
+      doc = {
+        ...parsed,
+        version: 2,
+        storage: ss ? 'safeStorage' : (parsed.storage || 'inMemory'),
+        ciphers: {
+          ...(parsed.ciphers || {}),
+          ...(parsed.cipher ? { default: parsed.cipher } : {}),
+        },
+      }
+    }
+  } catch {}
 
-  return false
+  const base64Cipher = encryptedBuf.toString('base64')
+  doc.ciphers = doc.ciphers || {}
+  doc.ciphers['default'] = base64Cipher
+  doc.cipher = base64Cipher
+
+  await writeFile(vaultPath, JSON.stringify(doc, null, 2), { mode: 0o600, encoding: 'utf8' })
+  return true
 }
 
 /**
- * Decrypt API key from system-level safeStorage vault, or bootstrap and encrypt if first run.
+ * Decrypt API key from system-level safeStorage vault.
  */
-export async function resolveApiKey(department?: string): Promise<string> {
-  const { scope, fallbackKey } = getDepartmentScopeInfo(department)
-  const isDedicated = scope !== 'default'
-
+export async function resolveApiKey(): Promise<string> {
   const ss = await getSafeStorage()
   const vaultPath = getVaultPath()
 
-  if (ss) {
-    try {
-      const content = await readFile(vaultPath, 'utf8')
-      const doc = JSON.parse(content) as VaultDocument
-      if (doc.encrypted && doc.storage === 'safeStorage') {
-        const cipher = doc.ciphers?.[scope] || (!isDedicated ? doc.cipher : undefined)
-        if (cipher) {
+  try {
+    const content = await readFile(vaultPath, 'utf8')
+    const doc = JSON.parse(content) as VaultDocument
+    const cipher = doc.ciphers?.['default'] || doc.cipher
+    if (cipher) {
+      if (ss && doc.storage === 'safeStorage') {
+        try {
           const decrypted = ss.decryptString(Buffer.from(cipher, 'base64'))
           if (decrypted && decrypted.length > 0) {
             return decrypted
           }
-        }
+        } catch {}
       }
-    } catch {
-      // Vault does not exist or needs re-encryption
+      try {
+        const decrypted = Buffer.from(cipher, 'base64').toString('utf8')
+        if (decrypted && decrypted.length > 0) {
+          return decrypted
+        }
+      } catch {}
     }
+  } catch {
+    // Vault does not exist or needs re-encryption
   }
 
-  // Bootstrap from obfuscated seed and store encrypted in system vault
-  try {
-    await saveEncryptedApiKey(fallbackKey, scope)
-  } catch {}
+  // Fallback to process.env if provided
+  if (process.env.DEEPSEEK_API_KEY) {
+    return process.env.DEEPSEEK_API_KEY
+  }
 
-  return fallbackKey
+  return ''
 }
 
 /**
@@ -267,7 +160,7 @@ export interface SavedCredentials {
 export async function saveSavedCredentials(credentials: SavedCredentials | null): Promise<boolean> {
   const ss = await getSafeStorage()
   const vaultPath = getVaultPath()
-  await mkdir(join(homedir(), '.dsh', '.dsh-ezai-auth'), { recursive: true })
+  await mkdir(getVaultDir(), { recursive: true })
 
   let doc: VaultDocument = {
     version: 2,
@@ -300,6 +193,7 @@ export async function saveSavedCredentials(credentials: SavedCredentials | null)
       doc.storage = 'safeStorage'
     } else {
       doc.ciphers['saved_credentials'] = Buffer.from(payload, 'utf8').toString('base64')
+      doc.storage = 'inMemory'
     }
   }
 

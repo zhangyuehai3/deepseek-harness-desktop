@@ -55,6 +55,60 @@ body [data-slot="sidebar.footer.action"] > * {
   flex: none;
   min-width: 0;
 }
+
+/* Hide session log upload row and toast in General Settings */
+body [data-slot="settings.general.item"] > div:has([role="switch"][aria-label*="Session Log"]),
+body [data-slot="settings.general.item"] > div:has([role="switch"][aria-label*="session log"]),
+body [data-slot="settings.general.item"] > div:has([role="switch"][aria-label*="Session-log"]),
+body [data-slot="settings.general.item"] > div:has([role="switch"][aria-label*="会话日志"]),
+body [data-slot="settings.general.item"] > div:has([role="switch"][aria-label*="Sitzungsprotokoll"]),
+body [data-slot="settings.general.item"] > div:has([role="switch"][aria-label*="journal de session"]),
+body [data-slot="settings.general.item"] > div:has([role="switch"][aria-label*="registro de sesión"]),
+body [data-slot="settings.general.item"] > div:has([role="switch"][aria-label*="セッションログ"]),
+body [data-slot="settings.general.item"] > div:has([aria-label*="Session Log"]),
+body [data-slot="settings.general.item"] > div:has([aria-label*="会话日志"]),
+body [data-slot="shell.overlay"] [data-slot-id="session-log-upload-toast"],
+
+/* Hide sidebar top "插件" (Plugins) */
+div[class*="panelEntry"]:has(svg[data-icon*="plugin-pinwheel"]),
+div[class*="panelEntry"]:has(button[aria-label="插件"]),
+div[class*="panelEntry"]:has(button[aria-label="Plugins"]),
+button[class*="panelRow"]:has(svg[data-icon*="plugin-pinwheel"]),
+
+/* Hide sidebar top "更多" (More) */
+nav[class*="panelList"] [class*="moreAnchor"],
+nav[class*="panelList"] button[class*="moreRow"],
+nav[class*="panelList"] div:has(> button[class*="moreRow"]),
+nav[class*="panelList"] div:has(svg[data-icon*="more-outline"]),
+
+/* Hide "意见反馈" in popup menus */
+div[class*="itemWrap"]:has(svg[data-icon*="paper-plane"]),
+button[role="menuitem"]:has(svg[data-icon*="paper-plane"]),
+
+/* Hide "登录" and keep only "设置" in bottom-left "... 更多" popup menu */
+[class*="signedOutMenu"] > :nth-child(n+2),
+[class*="signedOutMenu"] div[class*="itemWrap"]:has(svg[data-icon*="user-outline"]),
+[class*="signedOutMenu"] button[role="menuitem"]:has(svg[data-icon*="user-outline"]),
+
+/* Hide right sidebar guide "更多工具" (More tools) */
+[data-sidebar-right-guide] div[class*="entryCell"]:has([class*="moreAnchor"]),
+[data-sidebar-right-guide] [class*="moreAnchor"],
+div[class*="entryCell"]:has(button[aria-label="更多工具"]),
+div[class*="entryCell"]:has(button[aria-label="More tools"]),
+
+/* Hide "当前版本" in General settings */
+[data-slot="settings.general.item"] > div:not(:has(button, input, select, a, [role])),
+[data-slot="settings.general.item"] > div:last-child,
+
+/* Hide notice card "插件市场和远程控制设置已移至插件页面" in Desktop settings */
+.dshNextPluginSettingsNotice,
+[data-next-plugin-settings-notice] {
+  display: none !important;
+}
+
+[data-slot="settings.general.item"] > div:has(+ div:last-child:not(:has(button, input, select, a, [role]))) {
+  border-bottom: none !important;
+}
 `
 
 /** Install the footer stacking sheet once; tolerate headless Client boot. */

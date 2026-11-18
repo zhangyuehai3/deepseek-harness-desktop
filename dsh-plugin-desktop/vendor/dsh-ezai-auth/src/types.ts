@@ -24,20 +24,44 @@ export interface EzaiUser {
   qrcode: string
 }
 
+/** EZAI quota and key information returned under data.ezai. */
+export interface EzaiLoginEzaiData {
+  can_use: number
+  quota_type: string
+  token_quota: number
+  used_tokens: number
+  total_used_tokens: number
+  api_key: string
+  key_id?: string
+  key_source?: string
+  department_id?: number | string | null
+  department_name?: string
+}
+
+/** User response payload with optional EZAI permissions and encrypted keys. */
+export interface EzaiUserData extends EzaiUser {
+  ezai?: EzaiLoginEzaiData
+  api_key?: string
+}
+
 /** Login response envelope from ezsvsbox.com. */
 export interface LoginResponse {
   status_code: number
   message: string
   error?: string
-  data?: EzaiUser
+  data?: EzaiUserData
 }
 
 /** Weekly token usage record per account. */
 export interface AccountWeeklyUsage {
   week: string
   used: number
+  /** Cumulative total tokens consumed across all time. */
+  totalUsed?: number
   /** Timestamp (ms) of the last token accounting activity under this week record. */
   lastActiveTime?: number
+  /** Cryptographic HMAC signature to prevent manual tampering of local files. */
+  _sig?: string
 }
 
 /** Session snapshot persisted to disk. */
@@ -49,14 +73,22 @@ export interface SessionSnapshot {
   loggedInAt: string
   /** Cumulative tokens consumed under this account in the current week. */
   tokenUsed?: number
+  /** Cumulative tokens consumed under this account across all time. */
+  totalTokenUsed?: number
+  /** Cryptographic HMAC signature to prevent manual tampering of local files. */
+  _sig?: string
   /** The weekly cycle identifier (Monday YYYY-MM-DD) for tokenUsed. */
   weekKey?: string
   /** Token usage mapping across all accounts on this machine: userId -> AccountWeeklyUsage | number */
   accountTokens?: Record<string, AccountWeeklyUsage | number>
-  /** Individual weekly token quota override from whitelist (if absent, defaults to 200,000,000). */
+  /** Individual weekly token quota override from whitelist or API (if absent, defaults to 200,000,000). */
   tokenQuota?: number
   /** Whitelist department override if matched in whitelist (e.g. 欧洲大区). */
   whitelistDepartment?: string
+  /** Decrypted API Key issued by server for this session. */
+  apiKey?: string
+  /** Effective department name returned from server or personal info. */
+  departmentName?: string
 }
 
 /** Enriched personal info parsed from /personalDetails. */
@@ -84,12 +116,29 @@ export interface AccountResponse {
   user: EzaiUser
   tokenUsage: {
     used: number
+    totalUsed?: number
     quota: number
     isPeakHours?: boolean
     rateMultiplier?: number
   }
   personalInfo?: EzaiPersonalInfo
   warning?: string
+  departmentName?: string
+}
+
+/** Server Token Usage response data. */
+export interface EzaiTokenUsageResult {
+  user_id: number | string
+  name: string
+  email: string
+  can_use: number
+  quota_type: string
+  token_quota: number
+  used_tokens: number
+  total_used_tokens: number
+  remaining_tokens: number
+  usage_percent?: number
+  last_active_at?: string | null
 }
 
 /** Captcha response surfaced to the client. */

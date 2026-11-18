@@ -1,22 +1,38 @@
 /** Unit tests for dsh-ezai-auth credential vault. */
 
-import { describe, it } from 'node:test'
+import { describe, it, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert'
-import { getBootstrapApiKey, resolveApiKey } from '../src/vault.ts'
+import { rm } from 'node:fs/promises'
+import { resolveApiKey, saveEncryptedApiKey } from '../src/vault.ts'
 
 describe('credential vault', () => {
-  it('unscrambles obfuscated bootstrap api key correctly', () => {
-    const key = getBootstrapApiKey()
-    assert.equal(typeof key, 'string')
-    assert.equal(key.startsWith('sk-'), true)
-    assert.equal(key.length, 35)
+  const origDshHome = process.env.DSH_HOME
+  const testDshHome = `/tmp/dsh_test_vault_${Date.now()}`
+
+  beforeEach(() => {
+    process.env.DSH_HOME = testDshHome
+  })
+
+  afterEach(async () => {
+    if (origDshHome !== undefined) {
+      process.env.DSH_HOME = origDshHome
+    } else {
+      delete process.env.DSH_HOME
+    }
+    try {
+      await rm(testDshHome, { recursive: true, force: true })
+    } catch {}
   })
 
   it('resolves active api key asynchronously without crashing', async () => {
-    const key = getBootstrapApiKey()
     const resolved = await resolveApiKey()
     assert.equal(typeof resolved, 'string')
-    assert.equal(resolved, key)
+  })
+
+  it('saves and resolves encrypted api key', async () => {
+    await saveEncryptedApiKey('sk-test-api-key-1234567890')
+    const resolved = await resolveApiKey()
+    assert.equal(resolved, 'sk-test-api-key-1234567890')
   })
 
   it('saves, retrieves, and clears saved login credentials', async () => {

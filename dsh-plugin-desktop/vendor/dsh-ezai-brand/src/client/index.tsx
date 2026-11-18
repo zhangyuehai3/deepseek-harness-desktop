@@ -76,6 +76,37 @@ body[data-ds-dark-theme]{
   --dsw-static-deepseek-800:#e2eed3 !important;
   --dsw-static-deepseek-900:#f0f6ec !important;
 }
+[data-slot="settings.general.item"] > div:has([role="switch"][aria-label*="Session Log"]),
+[data-slot="settings.general.item"] > div:has([role="switch"][aria-label*="会话日志"]),
+[data-slot="settings.general.item"] > div:has([aria-label*="Session Log"]),
+[data-slot="settings.general.item"] > div:has([aria-label*="会话日志"]),
+[data-slot="shell.overlay"] [data-slot-id="session-log-upload-toast"],
+div[class*="panelEntry"]:has(svg[data-icon*="plugin-pinwheel"]),
+div[class*="panelEntry"]:has(button[aria-label="插件"]),
+div[class*="panelEntry"]:has(button[aria-label="Plugins"]),
+button[class*="panelRow"]:has(svg[data-icon*="plugin-pinwheel"]),
+nav[class*="panelList"] [class*="moreAnchor"],
+nav[class*="panelList"] button[class*="moreRow"],
+nav[class*="panelList"] div:has(> button[class*="moreRow"]),
+nav[class*="panelList"] div:has(svg[data-icon*="more-outline"]),
+div[class*="itemWrap"]:has(svg[data-icon*="paper-plane"]),
+button[role="menuitem"]:has(svg[data-icon*="paper-plane"]),
+[class*="signedOutMenu"] > :nth-child(n+2),
+[class*="signedOutMenu"] div[class*="itemWrap"]:has(svg[data-icon*="user-outline"]),
+[class*="signedOutMenu"] button[role="menuitem"]:has(svg[data-icon*="user-outline"]),
+[data-sidebar-right-guide] div[class*="entryCell"]:has([class*="moreAnchor"]),
+[data-sidebar-right-guide] [class*="moreAnchor"],
+div[class*="entryCell"]:has(button[aria-label="更多工具"]),
+div[class*="entryCell"]:has(button[aria-label="More tools"]),
+[data-slot="settings.general.item"] > div:not(:has(button, input, select, a, [role])),
+[data-slot="settings.general.item"] > div:last-child,
+.dshNextPluginSettingsNotice,
+[data-next-plugin-settings-notice] {
+  display: none !important;
+}
+[data-slot="settings.general.item"] > div:has(+ div:last-child:not(:has(button, input, select, a, [role]))) {
+  border-bottom: none !important;
+}
 `
 
 /**
