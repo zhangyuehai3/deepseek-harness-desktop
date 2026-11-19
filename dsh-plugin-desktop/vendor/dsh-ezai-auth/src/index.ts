@@ -131,11 +131,13 @@ import {
   isFinanceDepartment,
   isEastAsiaDepartment,
   isEuropeDepartment,
+  isSoutheastAsiaDepartment,
   getCommerceApiKey,
   getBusinessApiKey,
   getFinanceApiKey,
   getEastAsiaApiKey,
   getEuropeApiKey,
+  getSoutheastAsiaApiKey,
   getSavedCredentials,
   saveSavedCredentials,
 } from './vault.ts'
@@ -145,11 +147,13 @@ export {
   isFinanceDepartment,
   isEastAsiaDepartment,
   isEuropeDepartment,
+  isSoutheastAsiaDepartment,
   getCommerceApiKey,
   getBusinessApiKey,
   getFinanceApiKey,
   getEastAsiaApiKey,
   getEuropeApiKey,
+  getSoutheastAsiaApiKey,
 }
 
 const DEEPSEEK_OPENAI_BASE_URL = 'https://api.deepseek.com'

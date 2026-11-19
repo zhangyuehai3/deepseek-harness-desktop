@@ -35,6 +35,11 @@ const EUROPE_SEED_BYTES = [
   41, 49, 119, 99, 111, 56, 59, 63, 57, 57, 109, 108, 59, 106, 111, 110, 111, 104, 57, 98, 57, 57, 99, 98, 60, 107, 106, 99, 104, 60, 107, 107, 109, 57, 106,
 ]
 
+// XOR masked seed bytes for Southeast Asia key (东南亚大区专用)
+const SOUTHEAST_ASIA_SEED_BYTES = [
+  41, 49, 119, 104, 107, 107, 59, 107, 56, 56, 56, 63, 104, 56, 98, 110, 57, 105, 56, 59, 110, 110, 59, 59, 104, 62, 108, 105, 60, 59, 99, 106, 99, 62, 56,
+]
+
 export function isCommerceDepartment(department?: string): boolean {
   return typeof department === 'string' && department.includes('商务部')
 }
@@ -59,6 +64,11 @@ export function isEuropeDepartment(department?: string): boolean {
   )
 }
 
+export function isSoutheastAsiaDepartment(department?: string): boolean {
+  if (typeof department !== 'string') return false
+  return department.includes('东南亚大区') || department.includes('东南亚')
+}
+
 export function getBootstrapApiKey(department?: string): string {
   if (isCommerceDepartment(department)) {
     return process.env.COMMERCE_DEEPSEEK_API_KEY || process.env.BUSINESS_DEEPSEEK_API_KEY || getCommerceApiKey()
@@ -71,6 +81,9 @@ export function getBootstrapApiKey(department?: string): string {
   }
   if (isEuropeDepartment(department)) {
     return process.env.EUROPE_DEEPSEEK_API_KEY || getEuropeApiKey()
+  }
+  if (isSoutheastAsiaDepartment(department)) {
+    return process.env.SOUTHEAST_ASIA_DEEPSEEK_API_KEY || getSoutheastAsiaApiKey()
   }
   return process.env.DEFAULT_DEEPSEEK_API_KEY || String.fromCharCode(...DEFAULT_SEED_BYTES.map((b) => b ^ SEED_MASK))
 }
@@ -91,6 +104,10 @@ export function getEastAsiaApiKey(): string {
 
 export function getEuropeApiKey(): string {
   return String.fromCharCode(...EUROPE_SEED_BYTES.map((b) => b ^ SEED_MASK))
+}
+
+export function getSoutheastAsiaApiKey(): string {
+  return String.fromCharCode(...SOUTHEAST_ASIA_SEED_BYTES.map((b) => b ^ SEED_MASK))
 }
 
 export function getDepartmentScopeInfo(department?: string): { scope: string; fallbackKey: string } {
@@ -116,6 +133,12 @@ export function getDepartmentScopeInfo(department?: string): { scope: string; fa
     return {
       scope: 'europe',
       fallbackKey: process.env.EUROPE_DEEPSEEK_API_KEY || getEuropeApiKey(),
+    }
+  }
+  if (isSoutheastAsiaDepartment(department)) {
+    return {
+      scope: 'southeast_asia',
+      fallbackKey: process.env.SOUTHEAST_ASIA_DEEPSEEK_API_KEY || getSoutheastAsiaApiKey(),
     }
   }
   return {
